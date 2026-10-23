@@ -46,6 +46,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Account unlock links (spec Section 8.3, Amendment 5)
+    |--------------------------------------------------------------------------
+    |
+    | When the aggregate defense locks an account, the owner also
+    | receives a one-time unlock link by email. The token is stored
+    | only as a hash, works once, and expires with the lock window, so
+    | the legitimate owner always has a way back in, Turnstile keys or
+    | not. Unlocking clears the aggregate lock and failure counter
+    | only; per-IP throttles and escalation state are untouched.
+    |
+    */
+
+    'account_unlock' => [
+        'token_ttl_seconds' => 3600,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Signup budget (spec Section 8.3)
+    |--------------------------------------------------------------------------
+    |
+    | Signup carries a per-IP budget at the route and this
+    | per-identifier budget in the form request, so rotating source
+    | addresses cannot multiply attempts against one email or phone.
+    |
+    */
+
+    'signup_throttle' => [
+        'per_identifier_max_attempts' => 10,
+        'per_identifier_window_seconds' => 3600,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Session lifetime (spec Section 8.4)
     |--------------------------------------------------------------------------
     |
@@ -58,6 +92,44 @@ return [
     'session' => [
         'absolute_lifetime_minutes' => 60 * 24,
         'rotation_minutes' => 30,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Two-factor authentication (spec Section 8.6, OD-9)
+    |--------------------------------------------------------------------------
+    |
+    | Policy per OD-9: staging runs option (a), optional for business
+    | owners and mandatory for platform admin accounts. The admin half
+    | of the policy binds when the Phase 3 console introduces admin
+    | accounts; the flag lives here so the policy has one home.
+    |
+    */
+
+    'two_factor' => [
+        'owner_required' => false,
+        'admin_required' => true,
+        'recovery_code_count' => 10,
+        // A pending enrollment (secret stored, never confirmed)
+        // dies this long after it was started; confirmation after
+        // the window is refused and the pending secret is cleared
+        // (finding N-2).
+        'pending_ttl_seconds' => 1800,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Step-up authentication (spec Section 8.7)
+    |--------------------------------------------------------------------------
+    |
+    | The money-moving and account-ending actions require a fresh
+    | verification (password re-entry, or a TOTP code where 2FA is
+    | enrolled) completed inside this window.
+    |
+    */
+
+    'step_up' => [
+        'window_seconds' => 600,
     ],
 
 ];

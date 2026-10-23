@@ -13,6 +13,15 @@
             <legend>Step 1: Business information</legend>
             <label for="business_name">Business name</label>
             <input id="business_name" name="business_name" type="text" value="{{ old('business_name') }}" required autofocus>
+
+            <label for="business_type">Business type (optional)</label>
+            <select id="business_type" name="business_type">
+                <option value="">No type selected</option>
+                @foreach (\App\Models\Business::TYPES as $type)
+                    <option value="{{ $type }}" @selected(old('business_type') === $type)>{{ ucfirst($type) }}</option>
+                @endforeach
+            </select>
+            <p>Your type tailors the starter reward wording and examples we suggest later. You can change it any time in settings.</p>
         </fieldset>
 
         <fieldset>

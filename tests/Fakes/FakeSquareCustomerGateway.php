@@ -6,8 +6,9 @@ use App\Contracts\SquareCustomerGateway;
 use App\Models\Business;
 
 /**
- * Test double for the Phase 4 Square gateway: behaves like a healthy
- * Square sandbox customer creation and records what it was asked for.
+ * Test double for the Square customer gateway contract: behaves like
+ * a healthy Square sandbox customer creation and records what it was
+ * asked for.
  */
 class FakeSquareCustomerGateway implements SquareCustomerGateway
 {

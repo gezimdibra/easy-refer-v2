@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Notifications\PasswordChangedNotification;
 use App\Services\Auth\RememberMeService;
+use App\Services\Auth\StepUpService;
 use App\Support\PasswordPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ use Illuminate\Validation\ValidationException;
  */
 class PasswordController extends Controller
 {
-    public function update(Request $request, RememberMeService $remember): RedirectResponse
+    public function update(Request $request, RememberMeService $remember, StepUpService $stepUp): RedirectResponse
     {
         $request->validate([
             'current_password' => ['required', 'string'],
@@ -32,7 +33,10 @@ class PasswordController extends Controller
 
         $user = $request->user();
 
-        if (! password_verify((string) $request->input('current_password'), $user->password)) {
+        // The current-password re-entry this action collects is its
+        // step-up verification (spec Section 8.7); it runs through
+        // StepUpService, the single implementation of the rule.
+        if (! $stepUp->verifyPassword($user, (string) $request->input('current_password'))) {
             throw ValidationException::withMessages([
                 'current_password' => trans('auth.password'),
             ]);
@@ -57,6 +61,10 @@ class PasswordController extends Controller
             ->delete();
 
         $request->session()->regenerate();
+
+        // A completed password change leaves the step-up window
+        // fresh: the owner has just proven the credential.
+        $stepUp->markVerified($request->session());
 
         $user->notify(new PasswordChangedNotification);
 

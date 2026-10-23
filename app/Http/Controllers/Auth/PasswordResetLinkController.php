@@ -23,13 +23,14 @@ class PasswordResetLinkController extends Controller
 
     /**
      * The response is identical in text and timing class whether or not
-     * the email belongs to an account (spec Sections 4.3 and 8.3): an
-     * unknown email performs the same class of work (token generation
-     * plus a full Argon2id verify) instead of returning early. Requests
-     * carry a per-email budget on top of the route-level per-IP
-     * throttle, so the endpoint cannot be used to flood a mailbox
-     * (audit M11). The audit row is written only when a link was
-     * actually sent, so the trail counts sends, not attempts.
+     * the email belongs to an account (spec Sections 4.3 and 8.3): both
+     * paths generate a token and pay one full Argon2id verify, and the
+     * reset mail itself is queued (ResetPasswordNotification), so
+     * mailer latency never enters the response. Requests carry a
+     * per-email budget on top of the route-level per-IP throttle, so
+     * the endpoint cannot be used to flood a mailbox (audit M11). The
+     * audit row is written only when a link was actually sent, so the
+     * trail counts sends, not attempts.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -42,9 +43,13 @@ class PasswordResetLinkController extends Controller
 
         $user = User::query()->where('canonical_email', CanonicalEmail::of($email))->first();
 
+        // One Argon2id-class verify on both paths (finding L-3): the
+        // unknown path has no other heavy work, and the known path
+        // must not become the faster one once its mail is queued.
+        password_verify('password-reset-timing', DummyHash::value());
+
         if ($user === null) {
             OpaqueToken::generate();
-            password_verify('password-reset-timing', DummyHash::value());
         } elseif (! RateLimiter::tooManyAttempts($budgetKey, 5)) {
             RateLimiter::hit($budgetKey, 3600);
 

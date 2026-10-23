@@ -20,10 +20,18 @@ class Business extends Model
     use HasFactory;
 
     /**
+     * The business types offered at signup Step 1 (spec Section 4.1).
+     *
+     * @var list<string>
+     */
+    public const TYPES = ['barber', 'salon', 'cafe', 'boutique', 'other'];
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
         'name',
+        'business_type',
         'slug',
         'contact_email',
         'contact_phone_e164',

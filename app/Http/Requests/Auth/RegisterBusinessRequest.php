@@ -2,13 +2,16 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\Business;
 use App\Models\User;
 use App\Support\CanonicalEmail;
 use App\Support\PasswordPolicy;
 use App\Support\PhoneNumber;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 
 /**
@@ -38,6 +41,40 @@ class RegisterBusinessRequest extends FormRequest
         }
 
         $this->merge($merge);
+
+        $this->enforceIdentifierBudget($merge['canonical_email'], $merge['phone_e164']);
+    }
+
+    /**
+     * The per-identifier half of the signup budget (spec Section 8.3,
+     * finding L-4). The route throttle keys by IP; this keys by the
+     * canonical email and the E.164 phone, so attempts against one
+     * identity are bounded no matter how the source address rotates.
+     * Every submission counts, including ones other rules will reject:
+     * the budget guards the identity, not the successful signups.
+     */
+    private function enforceIdentifierBudget(string $canonicalEmail, ?string $phoneE164): void
+    {
+        $max = (int) config('security.signup_throttle.per_identifier_max_attempts');
+        $window = (int) config('security.signup_throttle.per_identifier_window_seconds');
+
+        $keys = ['signup:email:'.hash('sha256', $canonicalEmail)];
+
+        if ($phoneE164 !== null) {
+            $keys[] = 'signup:phone:'.hash('sha256', $phoneE164);
+        }
+
+        foreach ($keys as $key) {
+            if (RateLimiter::tooManyAttempts($key, $max)) {
+                throw ValidationException::withMessages([
+                    'account' => 'Too many account creation attempts for these details. Please try again later.',
+                ]);
+            }
+        }
+
+        foreach ($keys as $key) {
+            RateLimiter::hit($key, $window);
+        }
     }
 
     /**
@@ -47,6 +84,7 @@ class RegisterBusinessRequest extends FormRequest
     {
         return [
             'business_name' => ['required', 'string', 'max:255'],
+            'business_type' => ['nullable', 'string', Rule::in(Business::TYPES)],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:32', function (string $attribute, mixed $value, Closure $fail) {

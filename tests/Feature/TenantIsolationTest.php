@@ -41,6 +41,8 @@ class TenantIsolationTest extends TestCase
             'password.email',
             'password.reset',
             'password.store',
+            'account.unlock.show',
+            'account.unlock',
         ];
 
         $checked = 0;

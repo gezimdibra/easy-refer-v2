@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\SquareCustomerGateway;
 use App\Services\Square\NullSquareCustomerGateway;
+use App\Services\Square\SdkSquareCustomerGateway;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -14,10 +15,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Phase 1 binds the null gateway: signup completes without a Square
-        // customer until Phase 4 binds the SDK gateway (spec Sections 4.1
-        // and 9). The contract keeps the signup flow identical either way.
-        $this->app->bind(SquareCustomerGateway::class, NullSquareCustomerGateway::class);
+        // Spec Sections 4.1 and 9: with a Square access token
+        // configured, signup provisions through the real SDK gateway;
+        // without one it uses the null gateway, which is the same
+        // pending-provisioning end state. A token is the whole switch,
+        // so no environment can half-configure provisioning.
+        $this->app->bind(SquareCustomerGateway::class, function ($app) {
+            return empty(config('services.square.access_token'))
+                ? $app->make(NullSquareCustomerGateway::class)
+                : $app->make(SdkSquareCustomerGateway::class);
+        });
     }
 
     /**

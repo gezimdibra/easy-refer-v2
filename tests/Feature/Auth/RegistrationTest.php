@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\Fakes\FakeSquareCustomerGateway;
+use Tests\Fakes\ThrowingSquareCustomerGateway;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -108,6 +109,24 @@ class RegistrationTest extends TestCase
         $business = Business::query()->where('name', 'Corner Deli')->first();
         $this->assertSame([$business->id], $gateway->createdForBusinessIds);
         $this->assertSame('sq_fake_customer_'.$business->id, $business->square_customer_id);
+    }
+
+    public function test_signup_completes_when_the_square_gateway_throws(): void
+    {
+        // AUTH-37 as rewritten in the Phase 1 fix wave (Spec 4.1): a
+        // Square provisioning failure, even a gateway that throws,
+        // leaves the signup completed with the customer ID null, in
+        // the pending provisioning state the Section 9.7 sweeper
+        // retries. The SquareGatewayTest covers the API-error leg
+        // through the real SDK gateway.
+        $this->app->instance(SquareCustomerGateway::class, new ThrowingSquareCustomerGateway);
+
+        $this->post(route('register'), $this->payload())->assertRedirect(route('dashboard'));
+
+        $business = Business::query()->where('name', 'Corner Deli')->firstOrFail();
+        $this->assertNull($business->square_customer_id);
+        $this->assertNotNull($business->owner);
+        $this->assertDatabaseHas('qr_codes', ['business_id' => $business->id]);
     }
 
     public function test_duplicate_email_is_rejected_with_the_generic_message(): void

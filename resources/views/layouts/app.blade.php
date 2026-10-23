@@ -13,7 +13,7 @@
         fieldset { margin: 0 0 1.5rem; padding: 1rem; border: 1px solid #cbd5e0; border-radius: 0.5rem; }
         legend { font-weight: 600; padding: 0 0.5rem; }
         label { display: block; font-weight: 600; margin: 0.75rem 0 0.25rem; }
-        input { width: 100%; padding: 0.5rem; border: 1px solid #a0aec0; border-radius: 0.375rem; box-sizing: border-box; }
+        input, select { width: 100%; padding: 0.5rem; border: 1px solid #a0aec0; border-radius: 0.375rem; box-sizing: border-box; }
         button { padding: 0.55rem 1.1rem; border: 0; border-radius: 0.375rem; background: #2b6cb0; color: #fff; cursor: pointer; }
         .errors { background: #fff5f5; border: 1px solid #feb2b2; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
         .status { background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }

@@ -14,6 +14,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -43,6 +44,7 @@ class RegisteredUserController extends Controller
             $user = DB::transaction(function () use ($data, $request) {
                 $business = Business::create([
                     'name' => $data['business_name'],
+                    'business_type' => $data['business_type'] ?? null,
                     'contact_email' => $data['email'],
                     'contact_phone_e164' => $request->input('phone_e164'),
                     'country' => $data['country'],
@@ -73,7 +75,17 @@ class RegisteredUserController extends Controller
             ]);
         }
 
-        $squareCustomerId = $square->createCustomerFor($user->business);
+        // Belt and braces on the contract: a gateway that throws
+        // anyway gets the same end state as one that returns null.
+        try {
+            $squareCustomerId = $square->createCustomerFor($user->business);
+        } catch (\Throwable) {
+            Log::error('Square customer gateway threw during signup; provisioning deferred.', [
+                'business_id' => $user->business->id,
+            ]);
+
+            $squareCustomerId = null;
+        }
 
         if ($squareCustomerId !== null) {
             $user->business->forceFill(['square_customer_id' => $squareCustomerId])->save();

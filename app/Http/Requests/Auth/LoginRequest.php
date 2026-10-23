@@ -4,7 +4,9 @@ namespace App\Http\Requests\Auth;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Notifications\AccountUnlockNotification;
 use App\Notifications\LoginAttemptAlertNotification;
+use App\Services\Auth\AccountUnlockService;
 use App\Support\CanonicalEmail;
 use App\Support\DummyHash;
 use App\Support\PhoneNumber;
@@ -219,6 +221,14 @@ class LoginRequest extends FormRequest
             if ($failures === (int) config('security.login_throttle.account_max_failures')) {
                 $user->notify(new LoginAttemptAlertNotification($failures));
 
+                // Amendment 5: the owner also receives a one-time
+                // unlock link, so the lock can never strand the
+                // legitimate owner, Turnstile keys or not (finding
+                // M-1). The link clears this aggregate lock only.
+                $user->notify(new AccountUnlockNotification(
+                    app(AccountUnlockService::class)->issue($user, $identifier)
+                ));
+
                 AuditLog::write('owner.login_lockout', null, [
                     'failure_count' => $failures,
                 ], $user->business, $user);
@@ -244,8 +254,8 @@ class LoginRequest extends FormRequest
     /**
      * Server-side verification of the Turnstile challenge (spec Section
      * 8.3). Only meaningful while the account lock is active; without
-     * configured keys there is no challenge and the lock simply runs
-     * its course.
+     * configured keys there is no challenge, and the owner's emailed
+     * unlock link (Amendment 5) is the way through instead.
      */
     private function turnstileChallengeSatisfied(): bool
     {

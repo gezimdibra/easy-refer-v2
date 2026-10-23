@@ -7,20 +7,36 @@ use Tests\TestCase;
 
 /**
  * Spec Section 11: APP_URL is the single config point for the mount.
- * The default test environment runs the whole suite mounted at the
- * staging mount; this test proves the config propagation and that the
- * same build, unchanged, also serves from the root mount.
+ * Every expectation here is derived from the configured mount, so
+ * the same assertions run at the staging mount under the default
+ * test environment and at the root mount under a root-flavored one
+ * (finding FB-06: the earlier version hardcoded the staging values,
+ * which made its root-mount runs fail on tautologies instead of
+ * evidence). The dual-mount proof is the two full-suite runs
+ * recorded in the Phase 1 fix report.
  */
 class BasePathSmokeTest extends TestCase
 {
-    public function test_app_url_is_the_single_config_point_for_generated_urls(): void
+    /**
+     * The mount path the current configuration declares: the path
+     * component of APP_URL, or "/" at the root mount.
+     */
+    private function configuredMountPath(): string
     {
-        $this->assertSame('http://localhost/new', config('app.url'));
-        $this->assertSame('http://localhost/new/health', route('health'));
-        $this->assertSame('http://localhost/new/auth/login', url('auth/login'));
+        $path = parse_url((string) config('app.url'), PHP_URL_PATH);
+
+        return is_string($path) && $path !== '' ? $path : '/';
     }
 
-    public function test_health_endpoint_answers_under_the_staging_mount(): void
+    public function test_app_url_is_the_single_config_point_for_generated_urls(): void
+    {
+        $base = rtrim((string) config('app.url'), '/');
+
+        $this->assertSame($base.'/health', route('health'));
+        $this->assertSame($base.'/auth/login', url('auth/login'));
+    }
+
+    public function test_health_endpoint_answers_under_the_configured_mount(): void
     {
         $this->get(route('health'))
             ->assertOk()
@@ -34,10 +50,10 @@ class BasePathSmokeTest extends TestCase
             ->assertSee(config('app.name'));
     }
 
-    public function test_session_cookie_is_scoped_to_the_mount(): void
+    public function test_session_cookie_is_scoped_to_the_configured_mount(): void
     {
         $this->assertSame('er2_session', config('session.cookie'));
-        $this->assertSame('/new', config('session.path'));
+        $this->assertSame($this->configuredMountPath(), config('session.path'));
         $this->assertTrue(config('session.http_only'));
         $this->assertSame('lax', config('session.same_site'));
     }

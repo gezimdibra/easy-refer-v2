@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -54,6 +55,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_last_timestep' => 'integer',
+            'two_factor_pending_at' => 'datetime',
         ];
     }
 
@@ -62,8 +66,32 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Business::class);
     }
 
+    /**
+     * Reset emails go through the app notification, which is queued
+     * so the reset endpoint's response timing cannot reveal whether
+     * the account exists (spec Section 8.3, finding L-3).
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
     public function isOwner(): bool
     {
         return $this->role === 'owner';
+    }
+
+    /**
+     * Two-factor is active only once an enrollment is confirmed
+     * (spec Section 8.6); a stored secret alone is a pending setup.
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at !== null;
+    }
+
+    public function hasPendingTwoFactorEnrollment(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at === null;
     }
 }

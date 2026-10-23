@@ -8,7 +8,7 @@ use App\Models\Business;
 use App\Models\User;
 use App\Notifications\PasswordChangedNotification;
 use Database\Seeders\TwoBusinessFixtureSeeder;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\ResetPasswordNotification as ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;

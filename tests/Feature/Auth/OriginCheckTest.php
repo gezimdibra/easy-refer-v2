@@ -107,4 +107,95 @@ class OriginCheckTest extends TestCase
             ->get(route('login'))
             ->assertOk();
     }
+
+    public function test_the_check_compares_against_app_url_not_the_request_host(): void
+    {
+        // Finding L-1: under Host-header poisoning the request's own
+        // host is attacker-chosen; an Origin matching the configured
+        // APP_URL must still pass, because APP_URL is the target.
+        $this->withHeaders([
+            'Host' => 'attacker.example',
+            'Origin' => 'http://localhost',
+        ])->post(route('login'), [
+            'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
+            'password' => TwoBusinessFixtureSeeder::A_PASSWORD,
+        ])->assertRedirect(route('dashboard'));
+    }
+
+    public function test_an_origin_matching_only_the_poisoned_host_is_refused(): void
+    {
+        // The mirror image: an Origin that matches the attacker's
+        // Host header but not APP_URL is refused.
+        $this->withHeaders([
+            'Host' => 'attacker.example',
+            'Origin' => 'http://attacker.example',
+        ])->post(route('login'), [
+            'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
+            'password' => TwoBusinessFixtureSeeder::A_PASSWORD,
+        ])->assertForbidden();
+
+        $this->assertGuest();
+    }
+
+    public function test_a_foreign_origin_is_refused_on_logout(): void
+    {
+        $user = User::where('email', TwoBusinessFixtureSeeder::A_EMAIL)->firstOrFail();
+
+        $this->actingAs($user)
+            ->withHeaders(['Origin' => 'https://evil.example'])
+            ->post(route('logout'))
+            ->assertForbidden();
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_a_foreign_origin_is_refused_on_the_sign_out_posts(): void
+    {
+        $user = User::where('email', TwoBusinessFixtureSeeder::A_EMAIL)->firstOrFail();
+
+        $this->actingAs($user)
+            ->withHeaders(['Origin' => 'https://evil.example'])
+            ->post(route('security.sign-out-others'))
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->withHeaders(['Origin' => 'https://evil.example'])
+            ->post(route('security.sign-out-everywhere'))
+            ->assertForbidden();
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_a_foreign_origin_is_refused_on_verification_resend(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)
+            ->withHeaders(['Origin' => 'https://evil.example'])
+            ->post(route('verification.send'))
+            ->assertForbidden();
+    }
+
+    public function test_an_origin_with_the_wrong_scheme_is_refused(): void
+    {
+        // Scheme is part of the origin (spec Section 8.4): https
+        // against the http APP_URL of the test environment refuses
+        // even though the host agrees.
+        $this->withHeaders(['Origin' => 'https://localhost'])
+            ->post(route('login'), [
+                'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
+                'password' => TwoBusinessFixtureSeeder::A_PASSWORD,
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_an_unparseable_origin_is_refused(): void
+    {
+        $this->withHeaders(['Origin' => 'http://example.com:abc'])
+            ->post(route('login'), [
+                'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
+                'password' => TwoBusinessFixtureSeeder::A_PASSWORD,
+            ])
+            ->assertForbidden();
+    }
 }

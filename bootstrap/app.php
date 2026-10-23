@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\AuthenticateWithRememberToken;
 use App\Http\Middleware\EnforceSessionLifetime;
+use App\Http\Middleware\EnsureStepUpIsFresh;
+use App\Http\Middleware\EnsureTwoFactorChallengePassed;
 use App\Http\Middleware\VerifyRequestOrigin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'session.lifetime' => EnforceSessionLifetime::class,
             'origin.check' => VerifyRequestOrigin::class,
+            '2fa' => EnsureTwoFactorChallengePassed::class,
+            'step-up' => EnsureStepUpIsFresh::class,
         ]);
 
         // Selector/validator remember-me resolution (spec Section 8.4),
