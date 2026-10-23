@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
@@ -27,6 +28,8 @@ use Tests\TestCase;
  */
 class CsrfTest extends TestCase
 {
+    use RefreshDatabase;
+
     private function sessionWithToken(string $token): Store
     {
         $session = new Store('csrf-evidence', new ArraySessionHandler(120));

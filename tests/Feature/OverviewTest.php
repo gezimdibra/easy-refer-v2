@@ -1,0 +1,196 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Contracts\PhoneLookupGateway;
+use App\Contracts\PhoneVerificationGateway;
+use App\Contracts\SmsGateway;
+use App\Models\BillingEvent;
+use App\Models\Referral;
+use App\Models\Reward;
+use App\Services\Referral\RedemptionService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Tests\Fakes\FakePhoneLookupGateway;
+use Tests\Fakes\FakePhoneVerificationGateway;
+use Tests\Fakes\FakeSmsGateway;
+use Tests\Support\World;
+use Tests\TestCase;
+
+/**
+ * The owner Overview and QR page (spec Section 5, design amendment
+ * Section 6.4.1): the zero-referral retention state and the
+ * populated state whose Value panel reconciles with the billing
+ * event rows.
+ */
+class OverviewTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->instance(SmsGateway::class, new FakeSmsGateway);
+        $this->app->instance(PhoneVerificationGateway::class, new FakePhoneVerificationGateway);
+        $this->app->instance(PhoneLookupGateway::class, new FakePhoneLookupGateway);
+        Mail::fake();
+    }
+
+    public function test_zero_state_overview(): void
+    {
+        $business = World::business(['friend_reward_text' => null, 'referrer_reward_text' => null]);
+        $owner = World::owner($business);
+        $owner->forceFill(['email_verified_at' => now()])->save();
+
+        $response = $this->actingAs($owner)->get(route('dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Welcome to Easy Refer, '.$business->name.'.', false)
+            // The greeting's designed second sentence (F-09d).
+            ->assertSee('Your program is live. The first step is getting your code where customers can see it.')
+            // The action card's designed line and text actions (F-09c).
+            ->assertSee('Posters at the register get scanned. Posters in a drawer do not.')
+            ->assertSee('Download the on-screen poster')
+            ->assertSee('See how redemption works')
+            ->assertSee('Print your QR code')
+            // PACK-00: the starter pack card shows while rewards
+            // hold defaults, with the type's packs and cost notes.
+            ->assertSee('Start from a pack owners like you use')
+            ->assertSee('You can edit both rewards after picking.')
+            ->assertSee('10 percent off your first visit')
+            ->assertSee('Typical cost: The safe default pair.')
+            ->assertSee('Use this pack')
+            // The invented defaults editor is gone (F-07).
+            ->assertDontSee('Your starter rewards')
+            ->assertDontSee('popular defaults')
+            ->assertDontSee('$5 off')
+            // Honest zeros, the designed tile set (F-09a), and
+            // the standing counters suppressed in the zero state.
+            ->assertSee('Scans today')
+            ->assertSee('Completed referrals today')
+            ->assertDontSee('Rewards waiting to be claimed')
+            // The AUTH-SEC-03 checklist: four items, a progress
+            // line (F-09b).
+            ->assertSee('1 of 4 done')
+            ->assertSee('Add a card (required to activate your QR code)')
+            // The Value panel's zero variant (VAL-01, VAL-03): no
+            // estimate, no illustrative numbers.
+            ->assertSee('What Easy Refer brought you')
+            ->assertSee('After your first verified visit, this panel shows what Easy Refer brought you')
+            ->assertSee('Estimates use your average ticket of $50.00')
+            ->assertDontSee('Estimated first-visit sales');
+    }
+
+    public function test_starter_pack_saves_the_reward_pair(): void
+    {
+        $business = World::business(['friend_reward_text' => null, 'referrer_reward_text' => null]);
+
+        // Using a pack posts its pair through the one reward-text
+        // write path (the generic pack, G1, for an untyped
+        // business).
+        $this->actingAs(World::owner($business))
+            ->post(route('owner.reward-texts'), [
+                'friend_reward_text' => '10 percent off your first visit',
+                'referrer_reward_text' => '10 percent off your next visit',
+            ])
+            ->assertRedirect();
+
+        $business->refresh();
+        $this->assertSame('10 percent off your first visit', $business->friend_reward_text);
+        $this->assertSame('10 percent off your next visit', $business->referrer_reward_text);
+
+        // And the card leaves the Overview.
+        $this->actingAs(World::owner($business))
+            ->get(route('dashboard'))
+            ->assertDontSee('Start from a pack owners like you use');
+    }
+
+    public function test_populated_overview_value_panel_reconciles(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [$membership] = World::membership($business, $referrer);
+
+        // Two verified visits this month through the real path.
+        foreach (['+12125550777', '+12125550666'] as $phone) {
+            $friend = World::customer($phone, 'Fri', 'End');
+            [$referral] = World::referral($membership, $friend);
+            app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');
+        }
+
+        $this->assertSame(2, BillingEvent::count());
+
+        $response = $this->actingAs($owner)->get(route('dashboard'));
+        $response->assertOk()
+            // VAL-02 verbatim, with correct number agreement.
+            ->assertSee('2 verified visits this month')
+            // 2 visits x $50 average ticket = $100.00 estimated.
+            ->assertSee('About $100.00 in first-visit sales (estimate)')
+            // First five visits are free: fees are exactly zero and
+            // they reconcile with the billing rows.
+            ->assertSee('Fees so far this month: $0.00')
+            ->assertDontSee('After your first verified visit');
+    }
+
+    public function test_qr_page_shows_the_live_code_and_download_records(): void
+    {
+        $business = World::business();
+        World::qr($business);
+        $owner = World::owner($business);
+
+        $this->actingAs($owner)->get(route('owner.qr'))
+            ->assertOk()
+            ->assertSee('Your QR code')
+            ->assertSee('/refer/');
+
+        $this->actingAs($owner)->post(route('owner.qr.download'))->assertRedirect();
+        $this->assertDatabaseHas('referral_events', ['business_id' => $business->id, 'event_type' => 'poster_downloaded']);
+    }
+
+    public function test_value_panel_counts_billed_visits_past_the_free_allowance(): void
+    {
+        // Six visits in one month on the launch plan: the first
+        // five are free-credit, the sixth bills $2.00, and the
+        // panel's fee figure is exactly that.
+        $business = World::business(['daily_referral_cap' => 25]);
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [$membership] = World::membership($business, $referrer);
+
+        for ($i = 0; $i < 6; $i++) {
+            $friend = World::customer('+1212555'.str_pad((string) (700 + $i), 4, '0', STR_PAD_LEFT), 'Fri', 'End');
+            [$referral] = World::referral($membership, $friend);
+            app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');
+        }
+
+        $valuation = app(\App\Services\Billing\VisitValuation::class)->settle($business);
+        $this->assertSame(6, $valuation['verified_visits']);
+        $this->assertSame(200, $valuation['fees_cents']);
+        $coverages = array_column($valuation['settled'], 'coverage');
+        $this->assertSame(['free_credit', 'free_credit', 'free_credit', 'free_credit', 'free_credit', 'billable'], array_values($coverages));
+    }
+
+    public function test_monthly_cap_settles_at_49_billed_visits(): void
+    {
+        // BILL-40: the cents cap governs; a month never bills more
+        // than 49 visits ($98) no matter how many redeem.
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [$membership] = World::membership($business, $referrer);
+
+        for ($i = 0; $i < 60; $i++) {
+            $friend = World::customer('+1212555'.str_pad((string) (1000 + $i), 4, '0', STR_PAD_LEFT), 'Fri', 'End');
+            [$referral] = World::referral($membership, $friend);
+            BillingEvent::create([
+                'business_id' => $business->id,
+                'referral_id' => $referral->id,
+                'amount_cents' => 200,
+            ]);
+        }
+
+        $valuation = app(\App\Services\Billing\VisitValuation::class)->settle($business);
+        $this->assertSame(60, $valuation['verified_visits']);
+        $this->assertSame(9800, $valuation['fees_cents']);
+    }
+}

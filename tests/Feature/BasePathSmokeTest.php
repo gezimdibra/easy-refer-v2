@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -17,6 +18,8 @@ use Tests\TestCase;
  */
 class BasePathSmokeTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * The mount path the current configuration declares: the path
      * component of APP_URL, or "/" at the root mount.
@@ -67,6 +70,10 @@ class BasePathSmokeTest extends TestCase
         $this->refreshApplication();
         config(['app.url' => 'http://localhost', 'session.path' => '/']);
         URL::forceRootUrl('http://localhost');
+
+        // The refreshed application boots a fresh in-memory
+        // database; migrate it before serving pages from it.
+        $this->artisan('migrate:fresh');
 
         $this->assertSame('http://localhost', config('app.url'));
         $this->assertSame('http://localhost/health', route('health'));

@@ -50,6 +50,20 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Plain-language messages (design Section 4.4): no framework
+     * default text reaches the login form (F-03).
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'identifier.required' => 'Enter your email or phone number.',
+            'password.required' => 'Enter your password.',
+        ];
+    }
+
+    /**
      * Canonical form of a login identifier: canonical email for email
      * input, E.164 for phone input, lowercased raw string otherwise.
      */

@@ -8,6 +8,18 @@ use Illuminate\Testing\TestResponse;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Views reference the Vite build through @vite; the suite runs
+        // without a compiled asset manifest (assets are built at
+        // deploy time), so the Vite integration is disabled here the
+        // way the framework intends for tests. Asset compilation
+        // itself is proven by the build step, not by page tests.
+        $this->withoutVite();
+    }
+
     /**
      * Dispatch a test request the way the web server does when the app is
      * mounted under a subpath (spec Section 11): the front controller

@@ -130,7 +130,7 @@ class AuthCoverageTest extends TestCase
             'password' => TwoBusinessFixtureSeeder::A_PASSWORD,
         ])->assertSessionHasErrors('identifier');
 
-        $this->assertStringContainsString('Too many login attempts', session('errors')->get('identifier')[0]);
+        $this->assertStringContainsString('Too many attempts. Please wait a few minutes and try again.', session('errors')->get('identifier')[0]);
         $this->assertGuest();
     }
 

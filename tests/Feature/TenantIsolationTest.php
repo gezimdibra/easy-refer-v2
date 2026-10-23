@@ -36,7 +36,9 @@ class TenantIsolationTest extends TestCase
     {
         $publicNames = [
             'login',
+            'login.store',
             'register',
+            'register.store',
             'password.request',
             'password.email',
             'password.reset',

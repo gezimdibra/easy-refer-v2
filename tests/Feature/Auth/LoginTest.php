@@ -70,13 +70,13 @@ class LoginTest extends TestCase
             'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
             'password' => 'not the password at all',
         ]);
-        $wrongPassword->assertSessionHasErrors(['identifier' => 'These credentials do not match our records.']);
+        $wrongPassword->assertSessionHasErrors(['identifier' => 'The email or phone number and password do not match. Please try again.']);
 
         $unknown = $this->post(route('login'), [
             'identifier' => 'ghost@example.test',
             'password' => 'not the password at all',
         ]);
-        $unknown->assertSessionHasErrors(['identifier' => 'These credentials do not match our records.']);
+        $unknown->assertSessionHasErrors(['identifier' => 'The email or phone number and password do not match. Please try again.']);
 
         $this->assertGuest();
     }
@@ -86,7 +86,7 @@ class LoginTest extends TestCase
         $this->post(route('login'), [
             'identifier' => 'call-me-maybe',
             'password' => 'whatever password',
-        ])->assertSessionHasErrors(['identifier' => 'These credentials do not match our records.']);
+        ])->assertSessionHasErrors(['identifier' => 'The email or phone number and password do not match. Please try again.']);
 
         $this->assertGuest();
     }
@@ -97,7 +97,7 @@ class LoginTest extends TestCase
             $this->post(route('login'), [
                 'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
                 'password' => 'wrong password '.$i,
-            ])->assertSessionHasErrors(['identifier' => 'These credentials do not match our records.']);
+            ])->assertSessionHasErrors(['identifier' => 'The email or phone number and password do not match. Please try again.']);
         }
 
         $this->post(route('login'), [
@@ -106,7 +106,7 @@ class LoginTest extends TestCase
         ])->assertSessionHasErrors('identifier');
 
         $this->assertStringContainsString(
-            'Too many login attempts',
+            'Too many attempts. Please wait a few minutes and try again.',
             session('errors')->get('identifier')[0]
         );
 
@@ -116,7 +116,7 @@ class LoginTest extends TestCase
         ])->assertSessionHasErrors('identifier');
 
         $this->assertStringContainsString(
-            'Too many login attempts',
+            'Too many attempts. Please wait a few minutes and try again.',
             session('errors')->get('identifier')[0]
         );
         $this->assertGuest();

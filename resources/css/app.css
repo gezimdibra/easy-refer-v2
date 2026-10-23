@@ -4,8 +4,337 @@
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+/* Tests assert on class names as strings; automatic detection
+   would mint utilities for them and ship them (F-28). */
+@source not "../../tests";
 
+/*
+ | Design tokens (design-system.md Sections 2.1 to 2.3, amended by
+ | Section 6.2). Every color used by any surface comes from this table;
+ | AP-13 makes an off-palette hex a review finding. Input borders use
+ | the text-3 tone per T-2 (4.76:1 on white, above the 3:1 control
+ | boundary rule); the line token is decorative only.
+ */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-brand-500: #3b82f6;
+    --color-brand-600: #2563eb;
+    --color-brand-700: #1d4ed8;
+    --color-brand-800: #1e40af;
+
+    --color-ink-900: #0f172a;
+
+    --color-accent-400: #fbbf24;
+    --color-accent-500: #f59e0b;
+    --color-accent-600: #d97706;
+
+    --color-surface-0: #ffffff;
+    --color-surface-1: #f8fafc;
+    --color-surface-2: #f1f5f9;
+
+    --color-line: #e2e8f0;
+
+    --color-text-1: #0f172a;
+    --color-text-2: #475569;
+    --color-text-3: #64748b;
+    --color-text-disabled: #94a3b8;
+
+    --color-success-strong: #047857;
+    --color-success-fill: #ecfdf5;
+    --color-success-text: #065f46;
+
+    --color-warning-strong: #b45309;
+    --color-warning-fill: #fffbeb;
+    --color-warning-text: #92400e;
+
+    --color-error-strong: #b91c1c;
+    --color-error-fill: #fef2f2;
+    --color-error-text: #991b1b;
+    --color-danger: #dc2626;
+
+    --color-info-strong: #0369a1;
+    --color-info-fill: #f0f9ff;
+    --color-info-text: #075985;
+
+    --shadow-e1: 0 1px 2px rgb(15 23 42 / 0.06);
+    --shadow-e2: 0 4px 16px rgb(15 23 42 / 0.1);
+    --shadow-e3: 0 16px 40px rgb(15 23 42 / 0.18);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+}
+
+@layer base {
+    html {
+        scroll-padding-top: 5.5rem;
+        scroll-padding-bottom: 6rem;
+    }
+
+    body {
+        @apply bg-surface-1 font-sans text-text-1 antialiased;
+    }
+
+    /*
+     | Focus ring (design-system.md Section 6.6, normative): a 3px
+     | outline at 2px offset in brand-600 on light surfaces, rendered
+     | for :focus-visible on every interactive element without
+     | exception. On ink-900 surfaces the ring is accent-400 (T-3);
+     | on the brand-600 primary button itself it is brand-800 so it
+     | stays visible against the fill.
+     */
+    :focus-visible {
+        outline: 3px solid var(--color-brand-600);
+        outline-offset: 2px;
+    }
+
+    .on-dark :focus-visible {
+        outline-color: var(--color-accent-400);
+    }
+
+    /*
+     | Reduced motion (Section 6.6): every transition becomes instant;
+     | content, order, and meaning are unchanged.
+     */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        ::before,
+        ::after {
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+            scroll-behavior: auto !important;
+        }
+    }
+}
+
+@layer components {
+    /*
+     | Buttons (Section 2.5). Heights: 52px in the customer flow,
+     | 44px in the dashboard and marketing, never below 44px.
+     */
+    .btn {
+        @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-5 text-base font-semibold transition-colors duration-150 disabled:cursor-not-allowed;
+    }
+
+    .btn-primary {
+        @apply bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:bg-surface-2 disabled:text-text-disabled;
+    }
+
+    .btn-primary:focus-visible {
+        outline-color: var(--color-brand-800);
+    }
+
+    .btn-secondary {
+        @apply border border-line bg-surface-0 text-text-1 hover:bg-surface-1 active:bg-surface-2 disabled:bg-surface-2 disabled:text-text-disabled;
+    }
+
+    .btn-ghost {
+        @apply bg-transparent text-brand-700 hover:bg-surface-1 active:bg-surface-2 disabled:bg-transparent disabled:text-text-disabled;
+    }
+
+    .btn-danger {
+        @apply bg-danger text-white hover:bg-error-strong active:bg-error-text disabled:bg-surface-2 disabled:text-text-disabled;
+    }
+
+    .btn-danger-ghost {
+        @apply border border-error-strong bg-surface-0 text-error-strong hover:bg-error-fill active:bg-error-fill disabled:bg-surface-2 disabled:text-text-disabled;
+    }
+
+    .btn-flow {
+        @apply min-h-[52px] w-full text-lg;
+    }
+
+    .btn-counter {
+        @apply h-16 min-h-16 w-full text-lg;
+    }
+
+    .btn-accent {
+        @apply bg-accent-400 text-ink-900 hover:bg-accent-500 active:bg-accent-600 disabled:bg-surface-2 disabled:text-text-disabled;
+    }
+
+    /* Form controls (Sections 2.5, 6.2 T-2). Input text is never
+       below 16px: smaller input text triggers automatic zoom on
+       iOS Safari and breaks the in-store flow. */
+    .form-label {
+        @apply mb-1 block text-base font-semibold text-text-1;
+    }
+
+    .form-input {
+        @apply min-h-[44px] w-full rounded-md border border-text-3 bg-surface-0 px-3 text-base text-text-1 placeholder:text-text-3;
+    }
+
+    .form-input[aria-invalid='true'] {
+        @apply border-error-strong;
+    }
+
+    /* The flow input variant (design Section 2.5): 18px text in
+       the customer flow, where the person holding the phone is
+       often reading at arm's length. */
+    .form-input-flow {
+        @apply text-lg;
+    }
+
+    .form-help {
+        @apply mt-1 text-sm text-text-2;
+    }
+
+    .form-error {
+        @apply mt-1 text-sm font-medium text-error-strong;
+    }
+
+    /*
+     | Legacy form scope: the Phase 1 auth and owner views carry no
+     | utility classes; inside .ui-scope their semantic elements take
+     | the design system's form styling so the foundation commit
+     | restyles them without touching their fields, order, or copy
+     | (FND-1, FND-5, FND-6).
+     */
+    .ui-scope label {
+        @apply mb-1 block text-base font-semibold text-text-1;
+    }
+
+    .ui-scope input:not([type='checkbox']):not([type='radio']),
+    .ui-scope select,
+    .ui-scope textarea {
+        @apply min-h-[44px] w-full rounded-md border border-text-3 bg-surface-0 px-3 text-base text-text-1;
+    }
+
+    .ui-scope input[type='checkbox'],
+    .ui-scope input[type='radio'] {
+        @apply h-5 w-5 accent-brand-600;
+    }
+
+    .ui-scope button[type='submit'] {
+        @apply inline-flex min-h-[44px] items-center justify-center rounded-md bg-brand-600 px-5 text-base font-semibold text-white transition-colors duration-150 hover:bg-brand-700 active:bg-brand-800;
+    }
+
+    .ui-scope fieldset {
+        @apply mb-6 rounded-lg border border-line bg-surface-0 p-5;
+    }
+
+    .ui-scope legend {
+        @apply px-2 text-lg font-semibold text-text-1;
+    }
+
+    .ui-scope table {
+        @apply w-full border-collapse;
+    }
+
+    .ui-scope th,
+    .ui-scope td {
+        @apply border-b border-line px-2 py-2 text-left;
+    }
+
+    /* Banners and notices (Section 2.5). The .status and .gate
+       classes are Phase 1 view hooks kept as component aliases. */
+    .banner {
+        @apply mb-4 flex items-start gap-3 rounded-md px-4 py-3 text-base;
+    }
+
+    .banner-success,
+    .status {
+        @apply bg-success-fill text-success-text;
+    }
+
+    .banner-error,
+    .errors {
+        @apply bg-error-fill text-error-text;
+    }
+
+    .banner-warning,
+    .gate {
+        @apply bg-warning-fill text-warning-text;
+    }
+
+    .banner-info {
+        @apply bg-info-fill text-info-text;
+    }
+
+    .status,
+    .gate {
+        @apply mb-4 rounded-md px-4 py-3 text-base;
+    }
+
+    .errors {
+        @apply mb-4 rounded-md px-4 py-3 text-base;
+    }
+
+    /* Cards, tiles, pills (Section 2.5). */
+    .card {
+        @apply rounded-lg bg-surface-0 p-5 shadow-e1 md:p-6;
+    }
+
+    .tile-label {
+        @apply text-xs font-medium tracking-[0.02em] text-text-2 uppercase;
+    }
+
+    .tile-value {
+        @apply text-[28px] leading-8 font-semibold text-text-1 tabular-nums;
+    }
+
+    .pill {
+        @apply inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium whitespace-nowrap;
+    }
+
+    .pill-neutral {
+        @apply bg-surface-2 text-text-2;
+    }
+
+    .pill-success {
+        @apply bg-success-fill text-success-text;
+    }
+
+    .pill-warning {
+        @apply bg-warning-fill text-warning-text;
+    }
+
+    .pill-error {
+        @apply bg-error-fill text-error-text;
+    }
+
+    .pill-info {
+        @apply bg-info-fill text-info-text;
+    }
+
+    /*
+     | Success flood (Section 3.5): the check glyph scales in once
+     | over 150ms, the only animation on a result screen. The
+     | reduced-motion rule above makes it instant for anyone who
+     | asks for that.
+     */
+    .flood-check {
+        animation: flood-check-in 150ms ease-out;
+    }
+
+    @keyframes flood-check-in {
+        from {
+            transform: scale(0.6);
+            opacity: 0;
+        }
+
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* OTP boxes (Section 2.5): six boxes, at least 48px in both
+       dimensions at every width (Section 6.5 grid sizing). */
+    .otp-box {
+        @apply h-[52px] min-h-[48px] w-full min-w-[48px] rounded-md border border-text-3 bg-surface-0 text-center text-2xl font-semibold text-text-1 tabular-nums;
+    }
+
+    .otp-group-error .otp-box {
+        @apply border-error-strong;
+    }
+
+    /* Skip link (Section 6.6): first focusable element on dashboard
+       and marketing layouts, top of the T-5 z-index scale. */
+    .skip-link {
+        @apply sr-only z-[80] rounded-md bg-brand-600 px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2;
+    }
 }

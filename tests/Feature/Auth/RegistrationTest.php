@@ -64,9 +64,9 @@ class RegistrationTest extends TestCase
     {
         $this->get(route('register'))
             ->assertOk()
-            ->assertSee('Step 1: Business information')
-            ->assertSee('Step 2: Contact details')
-            ->assertSee('Step 3: Create password')
+            ->assertSee('Step 1: Business Information')
+            ->assertSee('Step 2: Contact Details')
+            ->assertSee('Step 3: Create Password')
             ->assertSee('Step 4: Location');
     }
 
@@ -139,7 +139,7 @@ class RegistrationTest extends TestCase
         ]));
 
         $response->assertSessionHasErrors([
-            'account' => 'An account with these details already exists. Sign in or reset your password instead.',
+            'account' => 'An account with these details already exists. Sign in or reset your password.',
         ]);
         $this->assertGuest();
         $this->assertSame(2, Business::count());

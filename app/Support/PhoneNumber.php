@@ -55,4 +55,28 @@ final class PhoneNumber
 
         return null;
     }
+
+    /**
+     * The display mask for the verification screen (REF-VERIFY-03):
+     * only the last four digits ever render.
+     */
+    public static function mask(string $phoneE164): string
+    {
+        return '*** *** '.substr($phoneE164, -4);
+    }
+
+    /**
+     * The normalized display form for the phone component's
+     * confirmation line (design-system.md Section 2.5): a +1
+     * number renders as +1 (212) 555-0142; anything else renders
+     * as the E.164 string itself.
+     */
+    public static function formatForDisplay(string $phoneE164): string
+    {
+        if (preg_match('/^\+1(\d{3})(\d{3})(\d{4})$/', $phoneE164, $m) === 1) {
+            return "+1 ({$m[1]}) {$m[2]}-{$m[3]}";
+        }
+
+        return $phoneE164;
+    }
 }

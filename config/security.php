@@ -96,6 +96,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Customer flow sessions (spec Sections 3 and 8.4, AUTH-40)
+    |--------------------------------------------------------------------------
+    |
+    | The public /refer flow carries its own 30-minute session,
+    | separate from the owner session: its own cookie, its own
+    | server-side record, no shared state. The cookie name is
+    | distinct from the owner session cookie (er2_session), and the
+    | owner cookie grants no shortcut inside the customer flow.
+    |
+    */
+
+    'flow' => [
+        'cookie' => env('FLOW_COOKIE_NAME', 'er2_flow'),
+        'ttl_minutes' => 30,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Two-factor authentication (spec Section 8.6, OD-9)
     |--------------------------------------------------------------------------
     |

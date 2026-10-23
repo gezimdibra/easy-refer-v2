@@ -61,6 +61,9 @@ BATTERY=(
     '/.git/config|gitconfig'
     '/vendor/autoload.php|vendor'
     '/storage/logs/laravel.log|log'
+    '/.env.backup|env'
+    '/.env.bak|env'
+    '/.env.old|env'
     '/../.env|env'
     '/%2e%2e/.env|env'
 )

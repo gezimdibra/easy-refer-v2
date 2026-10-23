@@ -26,6 +26,10 @@ class VerifyEmailController extends Controller
             $user->business?->forceFill(['email_verified_at' => $user->email_verified_at])->save();
 
             AuditLog::write('owner.email_verified', $user);
+
+            // E4 email_verified (spec Section 16), server-side.
+            app(\App\Services\Attribution\AttributionService::class)
+                ->record('E4', $user->business);
         }
 
         return redirect()->intended(route('dashboard').'?verified=1');

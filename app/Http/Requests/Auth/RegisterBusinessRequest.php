@@ -128,9 +128,51 @@ class RegisterBusinessRequest extends FormRequest
         ];
     }
 
+    /**
+     * Plain-language messages for every rule (design Section 4.4,
+     * F-03): a failed signup submit states each problem once, at
+     * its field, in the product's words, never a framework
+     * default. The password rule object's own messages are
+     * overridden in lang/en/validation.php.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'business_name.required' => 'Enter your business name.',
+            'business_type.in' => 'Select a business type from the list.',
+            'name.required' => 'Enter your name.',
+            'email.required' => 'Enter your email address.',
+            'email.email' => 'Enter a valid email address.',
+            'phone.required' => 'Enter your phone number.',
+            'password.required' => 'Create a password.',
+            'password.confirmed' => 'The passwords do not match. Enter the same password twice.',
+            'password.min' => 'Use at least 12 characters.',
+            'password.max' => 'That password is too long. Shorten it and try again.',
+            'country.required' => 'Select your country.',
+            'country.in' => 'Select your country from the list.',
+            'street.required' => 'Enter your street address.',
+            'city.required' => 'Enter your city.',
+            'state.required' => 'Enter your state or province.',
+            'postal_code.required' => 'Enter your postal code.',
+            'max' => 'That entry is too long. Shorten it and try again.',
+        ];
+    }
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            // SMS-11: the signup submit is Turnstile-protected when
+            // keys are configured (spec Section 10.4), verified
+            // server-side before anything else is decided.
+            if (! app(\App\Services\Security\TurnstileVerifier::class)
+                ->passes($this->input('cf-turnstile-response'), $this->ip())) {
+                $validator->errors()->add('account', 'We could not confirm this submission. Please try again.');
+
+                return;
+            }
+
             if ($validator->errors()->isNotEmpty()) {
                 return;
             }
@@ -145,7 +187,7 @@ class RegisterBusinessRequest extends FormRequest
                 // reveals whether the email or the phone matched.
                 $validator->errors()->add(
                     'account',
-                    'An account with these details already exists. Sign in or reset your password instead.'
+                    'An account with these details already exists. Sign in or reset your password.'
                 );
             }
         });

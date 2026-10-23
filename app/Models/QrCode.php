@@ -20,6 +20,7 @@ class QrCode extends Model
     protected $fillable = [
         'business_id',
         'token_hash',
+        'token_encrypted',
         'state',
         'label',
         'revoked_at',
@@ -33,6 +34,9 @@ class QrCode extends Model
         return [
             'created_at' => 'datetime',
             'revoked_at' => 'datetime',
+            // Sealed copy for re-presentation on the owner's QR page
+            // and posters (migration 000018); lookup stays by hash.
+            'token_encrypted' => 'encrypted',
         ];
     }
 
@@ -58,10 +62,21 @@ class QrCode extends Model
         static::create([
             'business_id' => $business->id,
             'token_hash' => OpaqueToken::hash($token),
+            'token_encrypted' => $token,
             'state' => 'active',
             'label' => $label,
         ]);
 
         return $token;
+    }
+
+    /**
+     * The plaintext token for owner-facing rendering (the QR page
+     * and poster downloads, spec Section 5.4). Null for codes issued
+     * before the sealed copy existed.
+     */
+    public function plainToken(): ?string
+    {
+        return $this->token_encrypted;
     }
 }

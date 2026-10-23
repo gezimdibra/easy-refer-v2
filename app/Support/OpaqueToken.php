@@ -43,4 +43,15 @@ final class OpaqueToken
 
         return hash_equals($storedHash, self::hash($plainToken));
     }
+
+    /**
+     * Whether a presented value has the shape of a generated token
+     * (URL-safe base64 of the full entropy, no padding). Malformed
+     * presentations are rejected before any lookup so junk input
+     * costs no query and reveals nothing.
+     */
+    public static function isWellFormed(string $plainToken): bool
+    {
+        return preg_match('/^[A-Za-z0-9\-_]{43}$/', $plainToken) === 1;
+    }
 }

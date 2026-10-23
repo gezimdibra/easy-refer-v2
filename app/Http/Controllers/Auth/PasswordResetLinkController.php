@@ -38,6 +38,16 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'string', 'email'],
         ]);
 
+        // SMS-11: the reset request is Turnstile-protected when keys
+        // are configured (spec Section 10.4). The failure message is
+        // the generic submission message, identical for every caller.
+        if (! app(\App\Services\Security\TurnstileVerifier::class)
+            ->passes($request->input('cf-turnstile-response'), $request->ip())) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'We could not confirm this submission. Please try again.',
+            ]);
+        }
+
         $email = (string) $request->input('email');
         $budgetKey = 'password-reset:'.hash('sha256', CanonicalEmail::of($email));
 

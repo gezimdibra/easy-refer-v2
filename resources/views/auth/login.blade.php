@@ -1,21 +1,37 @@
-@extends('layouts.app')
+@extends('layouts.auth')
 
 @section('title', 'Sign in')
+@section('notices_summary_only', '1')
 
 @section('content')
-    <h1>Sign in to your business portal</h1>
+    {{-- AUTH-IN-06, the header line. --}}
+    <p class="text-text-2">Easy Refer: your one-stop platform for managing referrals.</p>
 
-    <form method="POST" action="{{ route('login') }}">
+    {{-- AUTH-IN-01: heading and subheading. --}}
+    <h1 class="mt-3">Welcome back</h1>
+    <p class="mt-1 text-text-2">Sign in to your account.</p>
+
+    <form method="POST" action="{{ route('login.store') }}" class="mt-4">
         @csrf
 
         <label for="identifier">Email or phone number</label>
-        <input id="identifier" name="identifier" type="text" value="{{ old('identifier') }}" required autofocus autocomplete="username">
+        <input id="identifier" name="identifier" type="text" value="{{ old('identifier') }}" required autofocus autocomplete="username"
+            aria-invalid="{{ $errors->has('identifier') ? 'true' : 'false' }}"
+            @if ($errors->has('identifier')) aria-describedby="identifier-error" @endif>
+        @error('identifier')
+            <p class="form-error" id="identifier-error">{{ $message }}</p>
+        @enderror
 
         <label for="password">Password</label>
-        <input id="password" name="password" type="password" required autocomplete="current-password">
+        <input id="password" name="password" type="password" required autocomplete="current-password"
+            aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}"
+            @if ($errors->has('password')) aria-describedby="password-error" @endif>
+        @error('password')
+            <p class="form-error" id="password-error">{{ $message }}</p>
+        @enderror
 
         <label>
-            <input type="checkbox" name="remember" style="width: auto;"> Remember me
+            <input type="checkbox" name="remember"> Remember me
         </label>
 
         @if (config('services.turnstile.site_key'))
@@ -29,6 +45,6 @@
         <p><button type="submit">Sign in</button></p>
     </form>
 
-    <p><a href="{{ route('password.request') }}">Forgot your password?</a></p>
-    <p>New to {{ config('app.name') }}? <a href="{{ route('register') }}">Create a business account</a></p>
+    <p><a href="{{ route('password.request') }}">Forgot Password?</a></p>
+    <p>New to {{ config('app.name') }}? <a href="{{ route('register') }}">Create an account</a></p>
 @endsection

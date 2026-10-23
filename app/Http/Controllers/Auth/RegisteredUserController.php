@@ -20,9 +20,35 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    public function create(): View
+    public function create(\Illuminate\Http\Request $request): View
     {
-        return view('auth.register');
+        // E2 signup_start (spec Section 16): the first interaction
+        // with wizard Step 1, recorded once per session. Prefills
+        // from the value calculator and the vertical pages ride the
+        // signup session only (Section 2.6), never the URL beyond
+        // this landing.
+        if (! $request->session()->has('signup.e2_recorded')) {
+            $request->session()->put('signup.e2_recorded', true);
+            app(\App\Services\Attribution\AttributionService::class)->record('E2');
+        }
+
+        $prefill = $request->session()->get('signup.prefill', []);
+
+        if (in_array($request->query('type'), Business::TYPES, true)) {
+            $prefill['business_type'] = $request->query('type');
+        }
+
+        if (is_numeric($request->query('ticket'))) {
+            $prefill['average_ticket_dollars'] = max(0, min(100000, (int) $request->query('ticket')));
+        }
+
+        if ($prefill !== []) {
+            $request->session()->put('signup.prefill', $prefill);
+        }
+
+        return view('auth.register', [
+            'prefillType' => $prefill['business_type'] ?? null,
+        ]);
     }
 
     /**
@@ -53,6 +79,9 @@ class RegisteredUserController extends Controller
                     'state' => $data['state'],
                     'postal_code' => $data['postal_code'],
                     'free_visits_remaining' => (int) config('billing.free_visits_at_signup'),
+                    // OD-1: every business starts on the launch plan;
+                    // prices are read from the plans table everywhere.
+                    'current_plan_id' => \App\Models\Plan::launch()?->id,
                 ]);
 
                 $user = User::create([
@@ -71,7 +100,7 @@ class RegisteredUserController extends Controller
             });
         } catch (QueryException) {
             throw ValidationException::withMessages([
-                'account' => 'An account with these details already exists. Sign in or reset your password instead.',
+                'account' => 'An account with these details already exists. Sign in or reset your password.',
             ]);
         }
 
@@ -92,6 +121,25 @@ class RegisteredUserController extends Controller
         }
 
         event(new Registered($user));
+
+        // Section 16: the first touch is written onto the business
+        // at signup, and E3 signup_complete fires server-side. The
+        // calculator's ticket estimate becomes the business's
+        // average ticket (Section 2.6 prefill).
+        $attribution = app(\App\Services\Attribution\AttributionService::class);
+
+        if (($payload = $attribution->captured($request)) !== null) {
+            $attribution->captureForBusiness($user->business, $payload);
+        }
+
+        $attribution->record('E3', $user->business);
+
+        $ticketDollars = (int) $request->session()->pull('signup.prefill.average_ticket_dollars', 0);
+        $request->session()->forget('signup.prefill');
+
+        if ($ticketDollars > 0) {
+            $user->business->forceFill(['average_ticket_cents' => $ticketDollars * 100])->save();
+        }
 
         Auth::login($user);
         $request->session()->regenerate();

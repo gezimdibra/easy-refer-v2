@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateWithRememberToken;
+use App\Http\Middleware\CaptureAttribution;
 use App\Http\Middleware\EnforceSessionLifetime;
 use App\Http\Middleware\EnsureStepUpIsFresh;
 use App\Http\Middleware\EnsureTwoFactorChallengePassed;
@@ -17,11 +18,28 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trusted proxies are an explicit deployment decision
+        // (security verifier m-7): the default trusts nothing, so
+        // $request->ip() is the connection peer and every per-IP
+        // budget keys on it. Where the host's proxy shape hides the
+        // client address, set TRUSTED_PROXIES to the proxy's narrow
+        // addresses in .env; never a wildcard, which would make
+        // every DB budget header-spoofable at once.
+        $trustedProxies = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRUSTED_PROXIES', ''))
+        )));
+
+        if ($trustedProxies !== []) {
+            $middleware->trustProxies(at: $trustedProxies);
+        }
+
         $middleware->alias([
             'session.lifetime' => EnforceSessionLifetime::class,
             'origin.check' => VerifyRequestOrigin::class,
             '2fa' => EnsureTwoFactorChallengePassed::class,
             'step-up' => EnsureStepUpIsFresh::class,
+            'attribution' => CaptureAttribution::class,
         ]);
 
         // Selector/validator remember-me resolution (spec Section 8.4),

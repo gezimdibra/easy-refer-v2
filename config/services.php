@@ -65,6 +65,18 @@ return [
         'api_key_secret' => env('TWILIO_API_KEY_SECRET'),
         'verify_service_sid' => env('TWILIO_VERIFY_SERVICE_SID'),
         'messaging_service_sid' => env('TWILIO_MESSAGING_SERVICE_SID'),
+        // Used only to validate inbound webhook signatures (spec
+        // Section 10.2); outbound calls never authenticate with it.
+        'webhook_auth_token' => env('TWILIO_AUTH_TOKEN'),
+        // The exact public URL Twilio is configured to call. When
+        // set, inbound signatures validate against it instead of
+        // the request URL the proxy delivered, so a proxy or mount
+        // change cannot silently 403 every callback (security
+        // verifier m-5).
+        'webhook_url' => env('TWILIO_WEBHOOK_URL'),
+        // The marketing pool (spec Section 10.1): bulk sends never
+        // ride the transactional pool. Read by the campaign sender.
+        'marketing_messaging_service_sid' => env('TWILIO_MARKETING_MESSAGING_SERVICE_SID'),
     ],
 
 ];
