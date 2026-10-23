@@ -20,6 +20,7 @@
                 <a class="font-semibold text-brand-700 hover:underline" href="#how-it-works">See how it works</a>
             </div>
         </div>
+        <img src="{{ asset('images/dashboard-mobile.png') }}" alt="The Easy Refer owner dashboard on a phone, showing today's scans and completed referrals" class="mx-auto mt-10 w-full max-w-[420px] rounded-lg border border-line shadow-e2" loading="lazy">
     </section>
 
     <section id="how-it-works" class="mx-auto max-w-[1120px] px-5 py-10">

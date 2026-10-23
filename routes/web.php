@@ -8,6 +8,9 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Admin\AdminConsoleController;
+use App\Http\Controllers\Admin\AdminLoginController;
+use App\Http\Controllers\Admin\AdminTwoFactorController;
 use App\Http\Controllers\ConsentController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\MarketingController;
@@ -20,7 +23,11 @@ use App\Http\Controllers\Owner\QrPageController;
 use App\Http\Controllers\Owner\ReviewsController;
 use App\Http\Controllers\Owner\RewardTextController;
 use App\Http\Controllers\Owner\PasswordController;
+use App\Http\Controllers\Owner\CustomersController;
+use App\Http\Controllers\Owner\ReferralsController;
+use App\Http\Controllers\Owner\RewardsController;
 use App\Http\Controllers\Owner\SecurityController;
+use App\Http\Controllers\Owner\SettingsController;
 use App\Http\Controllers\Owner\StepUpController;
 use App\Http\Controllers\Owner\TwoFactorChallengeController;
 use App\Http\Controllers\Owner\TwoFactorController;
@@ -127,7 +134,7 @@ Route::middleware(['guest', 'attribution'])->group(function () {
         ->name('account.unlock');
 });
 
-Route::middleware(['auth', 'session.lifetime', '2fa'])->group(function () {
+Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(function () {
     Route::post('auth/logout', [AuthenticatedSessionController::class, 'destroy'])
         ->middleware('origin.check')
         ->name('logout');
@@ -147,6 +154,9 @@ Route::middleware(['auth', 'session.lifetime', '2fa'])->group(function () {
         ->name('verification.send');
 
     Route::get('auth/dashboard', DashboardController::class)->name('dashboard');
+    Route::post('auth/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist'])
+        ->middleware('origin.check')
+        ->name('dashboard.checklist.dismiss');
     Route::get('auth/security', [SecurityController::class, 'show'])->name('security');
     Route::get('auth/reviews', [ReviewsController::class, 'index'])->name('reviews');
     Route::post('auth/reviews/referrals/{referral}/release', [ReviewsController::class, 'releaseReferral'])->name('reviews.referrals.release');
@@ -187,4 +197,107 @@ Route::middleware(['auth', 'session.lifetime', '2fa'])->group(function () {
     Route::post('auth/security/sign-out-everywhere', [SecurityController::class, 'signOutEverywhere'])
         ->middleware('origin.check')
         ->name('security.sign-out-everywhere');
+
+    // Customers, Referrals, Rewards (spec Sections 5.2 to 5.4).
+    Route::get('auth/customers', [CustomersController::class, 'index'])->name('customers.index');
+    Route::get('auth/customers/add', [CustomersController::class, 'create'])->name('customers.create');
+    Route::post('auth/customers', [CustomersController::class, 'store'])
+        ->middleware('origin.check')
+        ->name('customers.store');
+    Route::get('auth/customers/{membership}', [CustomersController::class, 'show'])->name('customers.show');
+    Route::delete('auth/customers/{membership}', [CustomersController::class, 'destroy'])
+        ->middleware('origin.check')
+        ->name('customers.destroy');
+    Route::get('auth/referrals', [ReferralsController::class, 'index'])->name('referrals.index');
+    Route::get('auth/referrals/{referral}', [ReferralsController::class, 'show'])->name('referrals.show');
+    Route::post('auth/referrals/{referral}/regenerate', [ReferralsController::class, 'regenerate'])
+        ->middleware('origin.check')
+        ->name('referrals.regenerate');
+    Route::get('auth/rewards', [RewardsController::class, 'index'])->name('rewards.index');
+    Route::post('auth/rewards/{reward}/resend', [RewardsController::class, 'resend'])
+        ->middleware('origin.check')
+        ->name('rewards.resend');
+
+    // Settings (spec Section 5.5): an index of separate pages, one
+    // job each. The Security page above is the Settings security
+    // leg; it keeps its established routes and URL.
+    Route::get('auth/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::get('auth/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
+    Route::post('auth/settings/profile', [SettingsController::class, 'updateProfile'])
+        ->middleware('origin.check')
+        ->name('settings.profile.update');
+    Route::get('auth/settings/rewards', [SettingsController::class, 'rewards'])->name('settings.rewards');
+    Route::post('auth/settings/rewards', [SettingsController::class, 'updateRewards'])
+        ->middleware('origin.check')
+        ->name('settings.rewards.update');
+    Route::get('auth/settings/value', [SettingsController::class, 'value'])->name('settings.value');
+    Route::post('auth/settings/value', [SettingsController::class, 'updateValue'])
+        ->middleware('origin.check')
+        ->name('settings.value.update');
+    Route::get('auth/settings/reviews', [SettingsController::class, 'reviews'])->name('settings.reviews');
+    Route::post('auth/settings/reviews', [SettingsController::class, 'updateReviews'])
+        ->middleware('origin.check')
+        ->name('settings.reviews.update');
+    Route::get('auth/settings/notifications', [SettingsController::class, 'notifications'])->name('settings.notifications');
+    Route::post('auth/settings/notifications', [SettingsController::class, 'updateNotifications'])
+        ->middleware('origin.check')
+        ->name('settings.notifications.update');
+    Route::get('auth/settings/limits', [SettingsController::class, 'limits'])->name('settings.limits');
+    Route::post('auth/settings/limits', [SettingsController::class, 'updateLimits'])
+        ->middleware('origin.check')
+        ->name('settings.limits.update');
+    Route::get('auth/settings/account', [SettingsController::class, 'account'])->name('settings.account');
+    Route::post('auth/settings/checklist/reset', [SettingsController::class, 'resetChecklist'])
+        ->middleware('origin.check')
+        ->name('settings.checklist.reset');
+    Route::post('auth/settings/account/close', [SettingsController::class, 'closeAccount'])
+        ->middleware(['origin.check', 'step-up'])
+        ->name('settings.account.close');
+});
+
+// Platform admin console (spec Section 15): a separate guard, a
+// separate sign-in, and mandatory two-factor enforced by the
+// admin.2fa middleware on every route in the group, including
+// the 2FA surfaces themselves (which are the only ones reachable
+// before the binding is satisfied).
+Route::prefix('admin')->group(function () {
+    Route::get('login', [AdminLoginController::class, 'show'])->name('admin.login');
+    // No route-level throttle here on purpose: the controller's
+    // own limiter is the enforcement, so every failed attempt,
+    // including ones refused by the lockout itself, reaches the
+    // audit write (security verifier F-08). A middleware 429
+    // would swallow exactly the most attack-indicative attempts.
+    Route::post('login', [AdminLoginController::class, 'store'])
+        ->middleware(['origin.check'])
+        ->name('admin.login.store');
+
+    Route::middleware(['auth:admin', 'admin.2fa'])->group(function () {
+        Route::post('logout', [AdminLoginController::class, 'destroy'])
+            ->middleware('origin.check')
+            ->name('admin.logout');
+        Route::get('two-factor/setup', [AdminTwoFactorController::class, 'setup'])->name('admin.two-factor.setup');
+        Route::post('two-factor/start', [AdminTwoFactorController::class, 'start'])
+            ->middleware('origin.check')
+            ->name('admin.two-factor.start');
+        Route::post('two-factor/confirm', [AdminTwoFactorController::class, 'confirm'])
+            ->middleware(['throttle:5,1', 'origin.check'])
+            ->name('admin.two-factor.confirm');
+        Route::get('two-factor/challenge', [AdminTwoFactorController::class, 'challenge'])->name('admin.two-factor.challenge');
+        Route::post('two-factor/challenge', [AdminTwoFactorController::class, 'verifyChallenge'])
+            ->middleware(['throttle:5,1', 'origin.check'])
+            ->name('admin.two-factor.challenge.store');
+
+        Route::get('/', [AdminConsoleController::class, 'home'])->name('admin.home');
+        Route::get('businesses', [AdminConsoleController::class, 'businesses'])->name('admin.businesses');
+        Route::get('businesses/{business}', [AdminConsoleController::class, 'business'])->name('admin.businesses.show');
+        Route::post('businesses/{business}/suspend', [AdminConsoleController::class, 'suspend'])
+            ->middleware('origin.check')
+            ->name('admin.businesses.suspend');
+        Route::post('businesses/{business}/reinstate', [AdminConsoleController::class, 'reinstate'])
+            ->middleware('origin.check')
+            ->name('admin.businesses.reinstate');
+        Route::get('risk-feed', [AdminConsoleController::class, 'riskFeed'])->name('admin.risk-feed');
+        Route::get('holds', [AdminConsoleController::class, 'holds'])->name('admin.holds');
+        Route::get('audit', [AdminConsoleController::class, 'audit'])->name('admin.audit');
+    });
 });

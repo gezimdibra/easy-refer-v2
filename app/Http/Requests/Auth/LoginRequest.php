@@ -125,8 +125,18 @@ class LoginRequest extends FormRequest
 
     private function findUser(string $identifier): ?User
     {
+        // The owner sign-in authenticates owner-shaped rows only.
+        // A platform admin's credentials must never open a web
+        // session here: the two guards stay separate in both
+        // directions (spec Section 15; security verifier F-03).
+        // An unmatched shape takes the same generic failure path
+        // as an unknown identifier.
+        $owners = User::query()
+            ->where('role', 'owner')
+            ->whereNotNull('business_id');
+
         if (str_contains($identifier, '@')) {
-            return User::query()
+            return $owners
                 ->where('canonical_email', CanonicalEmail::of($identifier))
                 ->first();
         }
@@ -137,7 +147,7 @@ class LoginRequest extends FormRequest
             return null;
         }
 
-        return User::query()->where('phone_e164', $phone)->first();
+        return $owners->where('phone_e164', $phone)->first();
     }
 
     /**

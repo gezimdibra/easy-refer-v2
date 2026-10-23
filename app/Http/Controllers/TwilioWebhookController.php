@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendShareLinkSms;
 use App\Models\ConsentEvent;
 use App\Models\Membership;
 use App\Models\SmsMessage;
@@ -97,6 +98,62 @@ class TwilioWebhookController extends Controller
                         'flow' => 'campaign_reply',
                         'ip_address' => $request->ip(),
                     ]);
+                }
+            }
+        }
+
+        // The owner-add confirmation (spec Section 5.2): a YES
+        // reply confirms the membership whose confirmation text
+        // it answers, and only that one. Consent provenance is
+        // per-membership: a reply to one store's text must not
+        // manufacture confirmed consent at other stores whose
+        // confirmation the customer may never have seen (spec
+        // verifier finding 8). The message ledger names the
+        // business each confirmation text came from, so the YES
+        // credits the most recent still-unconfirmed one; a second
+        // YES can credit the next. An opted-out number confirms
+        // nothing.
+        if ($body === 'YES' && $from !== '' && ! SmsOptOut::optedOut($from)) {
+            $customer = \App\Models\Customer::query()->where('phone_e164', $from)->first();
+
+            if ($customer !== null) {
+                $pending = Membership::query()
+                    ->where('customer_id', $customer->id)
+                    ->where('consent_source', 'owner_asserted')
+                    ->where('sms_consent', true)
+                    ->whereNull('removed_at')
+                    ->get()
+                    ->keyBy('business_id');
+
+                $answeredBusinessId = \App\Models\SmsMessage::query()
+                    ->where('purpose', 'owner_add_confirmation')
+                    ->where('customer_id', $customer->id)
+                    ->orderByDesc('created_at')
+                    ->orderByDesc('id')
+                    ->pluck('business_id')
+                    ->first(fn ($businessId) => $pending->has($businessId));
+
+                $membership = $answeredBusinessId !== null ? $pending->get($answeredBusinessId) : null;
+
+                if ($membership !== null) {
+                    $membership->forceFill([
+                        'sms_consent' => true,
+                        'consent_source' => 'customer_reply',
+                        'consent_updated_at' => now(),
+                    ])->save();
+
+                    ConsentEvent::create([
+                        'membership_id' => $membership->id,
+                        'customer_id' => $membership->customer_id,
+                        'business_id' => $membership->business_id,
+                        'event_type' => 'confirmed',
+                        'source' => 'customer_reply',
+                        'consent_wording_version' => (string) config('referrals.consent_wording_version'),
+                        'flow' => 'owner_add_confirmation',
+                        'ip_address' => $request->ip(),
+                    ]);
+
+                    SendShareLinkSms::dispatch($membership->id);
                 }
             }
         }

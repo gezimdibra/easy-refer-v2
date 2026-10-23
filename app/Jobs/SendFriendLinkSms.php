@@ -48,7 +48,7 @@ class SendFriendLinkSms implements ShouldQueue
             'business_id' => $business->id,
             'customer_id' => $friend->id,
             'phone_e164' => $friend->phone_e164,
-            'rendered_body' => $body,
+            'rendered_body' => \App\Support\OpaqueToken::redact($body, (string) $referral->redeem_token_encrypted),
             'purpose' => 'friend_link',
             'template_key' => 'friend_link',
             'delivery_state' => 'queued',

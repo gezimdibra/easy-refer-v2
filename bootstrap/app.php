@@ -3,6 +3,8 @@
 use App\Http\Middleware\AuthenticateWithRememberToken;
 use App\Http\Middleware\CaptureAttribution;
 use App\Http\Middleware\EnforceSessionLifetime;
+use App\Http\Middleware\EnsureAdminTwoFactor;
+use App\Http\Middleware\EnsureBusinessNotClosed;
 use App\Http\Middleware\EnsureStepUpIsFresh;
 use App\Http\Middleware\EnsureTwoFactorChallengePassed;
 use App\Http\Middleware\VerifyRequestOrigin;
@@ -40,6 +42,8 @@ return Application::configure(basePath: dirname(__DIR__))
             '2fa' => EnsureTwoFactorChallengePassed::class,
             'step-up' => EnsureStepUpIsFresh::class,
             'attribution' => CaptureAttribution::class,
+            'owner.open' => EnsureBusinessNotClosed::class,
+            'admin.2fa' => EnsureAdminTwoFactor::class,
         ]);
 
         // Selector/validator remember-me resolution (spec Section 8.4),
@@ -50,8 +54,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Every protected owner route sits behind the single auth guard
         // group (spec Section 8.1). Guests land on the owner login;
-        // authenticated owners land on their dashboard.
-        $middleware->redirectGuestsTo(fn (Request $request) => route('login'));
+        // authenticated owners land on their dashboard. The platform
+        // console is a separate surface with its own guard (spec
+        // Section 15): guests there go to the admin sign-in.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('admin', 'admin/*')
+            ? route('admin.login')
+            : route('login'));
         $middleware->redirectUsersTo(fn (Request $request) => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

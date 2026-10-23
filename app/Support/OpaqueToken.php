@@ -54,4 +54,21 @@ final class OpaqueToken
     {
         return preg_match('/^[A-Za-z0-9\-_]{43}$/', $plainToken) === 1;
     }
+
+    /**
+     * Remove a live token from a message body before the body is
+     * stored as evidence (security verifier F-09): the SMS ledger
+     * is long-retention consent evidence, and a stored live bearer
+     * token would defeat the hash-only-at-rest rule everywhere
+     * else. The gateway still sends the full body; only the stored
+     * copy is redacted.
+     */
+    public static function redact(string $body, string $plainToken): string
+    {
+        if ($plainToken === '') {
+            return $body;
+        }
+
+        return str_replace($plainToken, '[redacted]', $body);
+    }
 }

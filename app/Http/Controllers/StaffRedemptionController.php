@@ -170,6 +170,10 @@ class StaffRedemptionController extends Controller
     private function showReward(Request $request, Reward $reward, string $token): View|Response
     {
         $reward->applyVesting();
+        // Past the closure wind-down the reward expires on read
+        // and the expired branch below answers generically (spec
+        // Section 5.5, RDM-29).
+        $reward->applyClosureExpiry();
         $business = $reward->business;
 
         if ($reward->state === Reward::STATE_DENIED) {

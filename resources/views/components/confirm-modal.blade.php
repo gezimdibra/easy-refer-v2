@@ -4,6 +4,8 @@
     'id',
     'confirmLabel' => 'Confirm',
     'confirmClass' => 'btn-danger',
+    'cancelLabel' => 'Cancel',
+    'method' => 'POST',
 ])
 
 {{--
@@ -53,7 +55,10 @@
             </div>
             <form method="POST" action="{{ $action }}" class="mt-5 flex justify-end gap-2">
                 @csrf
-                <button type="button" class="btn btn-secondary" x-ref="cancel" @click="cancel()">Cancel</button>
+                @if ($method !== 'POST')
+                    @method($method)
+                @endif
+                <button type="button" class="btn btn-secondary" x-ref="cancel" @click="cancel()">{{ $cancelLabel }}</button>
                 <button type="submit" class="btn {{ $confirmClass }}">{{ $confirmLabel }}</button>
             </form>
         </div>

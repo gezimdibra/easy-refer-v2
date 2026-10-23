@@ -42,6 +42,16 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // The platform console guard (spec Section 15): a separate
+        // session guard over the same users table, restricted at
+        // sign-in to role platform_admin rows with no business.
+        // Keeping the guard distinct means an owner session can
+        // never be presented as an admin session or the reverse.
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
     ],
 
     /*

@@ -69,7 +69,10 @@ class OverviewTest extends TestCase
             // the standing counters suppressed in the zero state.
             ->assertSee('Scans today')
             ->assertSee('Completed referrals today')
-            ->assertDontSee('Rewards waiting to be claimed')
+            // The rewards-waiting tile renders at zero too since
+            // the Sprint 3 fix wave (UI F-08): a stable tile set
+            // in every state, and the tile links to the list.
+            ->assertSee('Rewards waiting to be claimed')
             // The AUTH-SEC-03 checklist: four items, a progress
             // line (F-09b).
             ->assertSee('1 of 4 done')
@@ -82,27 +85,46 @@ class OverviewTest extends TestCase
             ->assertDontSee('Estimated first-visit sales');
     }
 
-    public function test_starter_pack_saves_the_reward_pair(): void
+    public function test_starter_pack_prefills_settings_rewards_without_saving(): void
     {
+        // Spec Section 5.5 and design 6.4.1 item 3 (Sprint 3
+        // spec verifier finding 13): choosing a pack PREFILLS
+        // the two reward fields and lands the owner in Settings
+        // Rewards with the values in place and editable. Nothing
+        // is saved until that form is submitted.
         $business = World::business(['friend_reward_text' => null, 'referrer_reward_text' => null]);
+        $owner = World::owner($business);
 
-        // Using a pack posts its pair through the one reward-text
-        // write path (the generic pack, G1, for an untyped
-        // business).
-        $this->actingAs(World::owner($business))
-            ->post(route('owner.reward-texts'), [
-                'friend_reward_text' => '10 percent off your first visit',
-                'referrer_reward_text' => '10 percent off your next visit',
-            ])
-            ->assertRedirect();
+        $dashboard = $this->actingAs($owner)->get(route('dashboard'));
+        $dashboard->assertSee('Use this pack');
+
+        $prefillUrl = route('settings.rewards', [
+            'pack_friend' => '10 percent off your first visit',
+            'pack_referrer' => '10 percent off your next visit',
+        ]);
+        $dashboard->assertSee('pack_friend=', false);
+
+        $this->actingAs($owner)->get($prefillUrl)
+            ->assertOk()
+            ->assertSee('value="10 percent off your first visit"', false)
+            ->assertSee('value="10 percent off your next visit"', false);
+
+        // Nothing was written by choosing the pack.
+        $business->refresh();
+        $this->assertNull($business->friend_reward_text);
+        $this->assertNull($business->referrer_reward_text);
+
+        // Submitting the settings form saves the pair, and the
+        // card leaves the Overview.
+        $this->actingAs($owner)->post(route('settings.rewards.update'), [
+            'friend_reward_text' => '10 percent off your first visit',
+            'referrer_reward_text' => '10 percent off your next visit',
+            'redemption_window_days' => 30,
+        ])->assertSessionHas('status', 'Rewards saved.');
 
         $business->refresh();
         $this->assertSame('10 percent off your first visit', $business->friend_reward_text);
-        $this->assertSame('10 percent off your next visit', $business->referrer_reward_text);
-
-        // And the card leaves the Overview.
-        $this->actingAs(World::owner($business))
-            ->get(route('dashboard'))
+        $this->actingAs($owner)->get(route('dashboard'))
             ->assertDontSee('Start from a pack owners like you use');
     }
 

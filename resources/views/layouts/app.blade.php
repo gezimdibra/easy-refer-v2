@@ -24,13 +24,22 @@
                     <a href="{{ route('dashboard') }}" @if (request()->routeIs('dashboard')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('dashboard') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Overview</a>
                 </li>
                 <li>
+                    <a href="{{ route('customers.index') }}" @if (request()->routeIs('customers.*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('customers.*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Customers</a>
+                </li>
+                <li>
+                    <a href="{{ route('referrals.index') }}" @if (request()->routeIs('referrals.*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('referrals.*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Referrals</a>
+                </li>
+                <li>
+                    <a href="{{ route('rewards.index') }}" @if (request()->routeIs('rewards.*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('rewards.*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Rewards</a>
+                </li>
+                <li>
                     <a href="{{ route('reviews') }}" @if (request()->routeIs('reviews*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('reviews*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Review @if (($reviewQueueCount ?? 0) > 0) <span class="pill pill-danger">{{ $reviewQueueCount }}</span> @endif</a>
                 </li>
                 <li>
                     <a href="{{ route('owner.qr') }}" @if (request()->routeIs('owner.qr')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('owner.qr') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">QR Code</a>
                 </li>
                 <li>
-                    <a href="{{ route('security') }}" @if (request()->routeIs('security')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('security') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Security</a>
+                    <a href="{{ route('settings') }}" @if (request()->routeIs('settings*') || request()->routeIs('security*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('settings*') || request()->routeIs('security*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Settings</a>
                 </li>
             </ul>
 
@@ -52,10 +61,13 @@
                 <div class="relative lg:hidden" x-data="{ open: false }">
                     <button type="button" class="btn btn-secondary" aria-haspopup="true" :aria-expanded="open.toString()" @click="open = ! open">Menu</button>
                     <nav aria-label="Primary" x-show="open" x-cloak class="absolute left-0 z-40 mt-2 w-56 rounded-lg border border-line bg-surface-0 p-3 shadow-e2">
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('dashboard') }}">Overview</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('reviews') }}">Review @if (($reviewQueueCount ?? 0) > 0) <span class="pill pill-danger">{{ $reviewQueueCount }}</span> @endif</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('owner.qr') }}">QR Code</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('security') }}">Security</a>
+                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('dashboard')) aria-current="page" @endif href="{{ route('dashboard') }}">Overview</a>
+                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('customers.*')) aria-current="page" @endif href="{{ route('customers.index') }}">Customers</a>
+                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('referrals.*')) aria-current="page" @endif href="{{ route('referrals.index') }}">Referrals</a>
+                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('rewards.*')) aria-current="page" @endif href="{{ route('rewards.index') }}">Rewards</a>
+                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('reviews*')) aria-current="page" @endif href="{{ route('reviews') }}">Review @if (($reviewQueueCount ?? 0) > 0) <span class="pill pill-danger">{{ $reviewQueueCount }}</span> @endif</a>
+                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('owner.qr')) aria-current="page" @endif href="{{ route('owner.qr') }}">QR Code</a>
+                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('settings*') || request()->routeIs('security*')) aria-current="page" @endif href="{{ route('settings') }}">Settings</a>
                         <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t border-line pt-2">
                             @csrf
                             <button type="submit" class="btn btn-ghost w-full justify-start">Sign out</button>
@@ -70,7 +82,18 @@
             </header>
 
             <main id="main" aria-label="@yield('title')" class="ui-scope mx-auto max-w-[1200px] px-5 py-6">
-                @include('partials.notices')
+                {{-- Same notices contract as the auth layout: a
+                     page whose forms mark their fields declares
+                     notices_summary_only so each problem is stated
+                     exactly once, at its field (design 4.4 rule
+                     6); cross-field errors ride the banner keys
+                     the page names. Pages that declare neither
+                     keep the list mode their forms were built
+                     against. --}}
+                @include('partials.notices', [
+                    'summaryOnly' => trim($__env->yieldContent('notices_summary_only')) === '1',
+                    'bannerKeys' => array_filter(array_map('trim', explode(',', trim($__env->yieldContent('notices_banner_keys'))))),
+                ])
                 @yield('content')
             </main>
         </div>

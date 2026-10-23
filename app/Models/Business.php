@@ -57,6 +57,10 @@ class Business extends Model
         'average_ticket_cents',
         'google_review_url',
         'owner_text_notifications',
+        'weekly_digest_opt_out',
+        'nudge_opt_out',
+        'checklist_dismissed_at',
+        'closed_at',
         'acq_source',
         'acq_medium',
         'acq_campaign',
@@ -84,6 +88,10 @@ class Business extends Model
             'current_plan_id' => 'integer',
             'average_ticket_cents' => 'integer',
             'owner_text_notifications' => 'boolean',
+            'weekly_digest_opt_out' => 'boolean',
+            'nudge_opt_out' => 'boolean',
+            'checklist_dismissed_at' => 'datetime',
+            'closed_at' => 'datetime',
             'acq_captured_at' => 'datetime',
         ];
     }
@@ -153,6 +161,30 @@ class Business extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    /**
+     * A closed business (spec Section 5.5 closure) keeps its owner
+     * login in restricted, read-only mode for the 30-day wind-down;
+     * a disabled business (platform suspension, Section 15) is a
+     * different state with a different owner experience.
+     */
+    public function isClosed(): bool
+    {
+        return $this->status === 'closed';
+    }
+
+    /**
+     * Whether the 30-day closure wind-down (spec Section 5.5) has
+     * run out: minted rewards stayed claimable for exactly 30 days
+     * after closure; past that they expire and their claim links
+     * answer with the generic page (RDM-29, second leg).
+     */
+    public function closureWindowEnded(): bool
+    {
+        return $this->isClosed()
+            && $this->closed_at !== null
+            && $this->closed_at->copy()->addDays(30)->isPast();
     }
 
     /**

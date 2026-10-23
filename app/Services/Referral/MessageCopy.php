@@ -30,6 +30,27 @@ final class MessageCopy
     }
 
     /**
+     * CUST-09, the owner-add confirmation text (spec Section
+     * 5.2): an owner-added number is owner-asserted and
+     * unconfirmed until the customer replies YES, which is also
+     * what delivers their referral link.
+     */
+    public static function ownerAddConfirmation(Business $business): string
+    {
+        return "{$business->name} added you to Easy Refer. Reply YES to confirm and get your referral link, or ignore this text to stay out.";
+    }
+
+    /**
+     * CUST-11, the share link text: sent when an owner-added
+     * customer confirms with a YES reply (spec Section 5.2), the
+     * moment their membership becomes fully theirs.
+     */
+    public static function shareLink(Business $business, string $url): string
+    {
+        return "{$business->name}: Here is your referral link: {$url}. Share it with friends; when they visit, you earn your reward. Reply STOP to opt out.";
+    }
+
+    /**
      * ALERT-03, the first-visit owner alert SMS variant.
      */
     public static function firstVisitAlert(Business $business, string $dashboardUrl): string

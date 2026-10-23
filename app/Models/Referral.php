@@ -97,6 +97,24 @@ class Referral extends Model
      * loses exactly once (spec Section 7.4 rule 2, CONC-02). Returns
      * true when this call performed the flip.
      */
+    /**
+     * Set-level expiry for one business, so list and dashboard
+     * reads see post-transition states (spec Section 7.2: expiry
+     * is applied by the state machine at every read).
+     */
+    public static function applyExpiryForBusiness(Business $business): void
+    {
+        static::query()
+            ->where('business_id', $business->id)
+            ->where('state', self::STATE_PENDING)
+            ->where('expires_at', '<=', now())
+            ->chunkById(200, function ($referrals) {
+                foreach ($referrals as $referral) {
+                    $referral->applyExpiry();
+                }
+            });
+    }
+
     public function applyExpiry(): bool
     {
         if ($this->state !== self::STATE_PENDING || $this->expires_at->isFuture()) {

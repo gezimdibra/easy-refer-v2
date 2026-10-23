@@ -40,7 +40,11 @@ class StepUpService
             return false;
         }
 
-        return now()->timestamp - (int) $verifiedAt <= (int) config('security.step_up.window_seconds');
+        // The window is two-sided: a future-dated marker is not
+        // fresh either (security verifier note N-01).
+        $age = now()->timestamp - (int) $verifiedAt;
+
+        return $age >= 0 && $age <= (int) config('security.step_up.window_seconds');
     }
 
     /**

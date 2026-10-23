@@ -29,6 +29,7 @@ class Membership extends Model
         'consent_wording_version',
         'consent_updated_at',
         'referral_count',
+        'removed_at',
     ];
 
     /**
@@ -40,6 +41,7 @@ class Membership extends Model
             'sms_consent' => 'boolean',
             'consent_updated_at' => 'datetime',
             'referral_count' => 'integer',
+            'removed_at' => 'datetime',
             // Sealed copy for re-presentation (migration 000018): the
             // lookup hash stays the only indexed form.
             'share_token_encrypted' => 'encrypted',

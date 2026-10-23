@@ -78,6 +78,58 @@ class Reward extends Model
     }
 
     /**
+     * Apply the closure wind-down end on read (spec Section 5.5,
+     * RDM-29): an unclaimed reward of a business whose 30-day
+     * closure window has run out expires. State-guarded like the
+     * other on-read transitions.
+     */
+    public function applyClosureExpiry(): bool
+    {
+        if (! in_array($this->state, [self::STATE_AVAILABLE, self::STATE_PENDING_VESTING], true)) {
+            return false;
+        }
+
+        $business = $this->business;
+
+        if ($business === null || ! $business->closureWindowEnded()) {
+            return false;
+        }
+
+        $flipped = static::query()
+            ->where('id', $this->id)
+            ->whereIn('state', [self::STATE_AVAILABLE, self::STATE_PENDING_VESTING])
+            ->update(['state' => self::STATE_EXPIRED]);
+
+        if ($flipped === 1) {
+            $this->state = self::STATE_EXPIRED;
+
+            return true;
+        }
+
+        $this->refresh();
+
+        return false;
+    }
+
+    /**
+     * Set-level vesting for one business, so list and dashboard
+     * reads see post-transition states (spec Section 7.2: expiry
+     * and vesting are applied at every read).
+     */
+    public static function applyVestingForBusiness(Business $business): void
+    {
+        static::query()
+            ->where('business_id', $business->id)
+            ->where('state', self::STATE_PENDING_VESTING)
+            ->where('available_at', '<=', now())
+            ->chunkById(200, function ($rewards) {
+                foreach ($rewards as $reward) {
+                    $reward->applyVesting();
+                }
+            });
+    }
+
+    /**
      * Apply the vesting transition on read: a pending_vesting reward
      * whose hold has elapsed is available. State-guarded, so the flip
      * happens exactly once however many readers race it.

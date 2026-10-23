@@ -18,8 +18,17 @@ return [
     'vesting_days_max' => 14,
 
     // Per-business referral velocity caps (spec Section 3 Step 8).
+    // The spec names the caps as business-configurable "within
+    // platform bounds" without numbering the bounds; the bounds
+    // below are the platform contract the settings page validates
+    // against (generous enough never to block a legitimate local
+    // program, tight enough to bound abuse).
     'velocity_daily_default' => 5,
     'velocity_monthly_default' => 50,
+    'velocity_daily_min' => 1,
+    'velocity_daily_platform_max' => 100,
+    'velocity_monthly_min' => 1,
+    'velocity_monthly_platform_max' => 1000,
 
     // Risk scoring (spec Section 3.1). A combined-signal score at or
     // above the hold threshold withholds minting or claimability

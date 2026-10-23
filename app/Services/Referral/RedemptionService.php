@@ -228,6 +228,15 @@ class RedemptionService
                 return ['outcome' => 'held', 'reward' => $reward];
             }
 
+            // The closure wind-down end is enforced state-side,
+            // not only on the pages (spec Section 5.5): a claim
+            // attempted after day 30 expires the reward instead.
+            $reward->applyClosureExpiry();
+
+            if ($reward->state === Reward::STATE_EXPIRED) {
+                return ['outcome' => 'expired', 'reward' => $reward];
+            }
+
             $reward->applyVesting();
 
             if ($reward->state === Reward::STATE_PENDING_VESTING) {

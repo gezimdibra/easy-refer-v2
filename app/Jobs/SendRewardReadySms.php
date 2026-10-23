@@ -50,7 +50,7 @@ class SendRewardReadySms implements ShouldQueue
             'business_id' => $business->id,
             'customer_id' => $customer->id,
             'phone_e164' => $customer->phone_e164,
-            'rendered_body' => $body,
+            'rendered_body' => \App\Support\OpaqueToken::redact($body, (string) $reward->claim_token_encrypted),
             'purpose' => 'reward_ready',
             'template_key' => 'reward_ready',
             'delivery_state' => 'queued',

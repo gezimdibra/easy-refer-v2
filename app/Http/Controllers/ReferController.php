@@ -582,6 +582,15 @@ class ReferController extends Controller
         $reward->applyVesting();
         $business = $reward->business;
 
+        // The closure wind-down end (spec Section 5.5): once the
+        // 30 days have run out the reward expires and its claim
+        // link returns the same generic page as a bad link.
+        $reward->applyClosureExpiry();
+
+        if ($reward->state === Reward::STATE_EXPIRED) {
+            return $this->resolutionFailure($request, $business, 'bad_link', 'expired_token');
+        }
+
         // The availability date appears on this page only inside
         // the referrer's own live flow session (G-17): a bare link
         // opened anywhere else shows the waiting state without it.

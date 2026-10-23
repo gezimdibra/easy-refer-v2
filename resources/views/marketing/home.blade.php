@@ -5,8 +5,9 @@
 @section('content')
     {{-- Hero (design-system.md Section 3.1): the promise, one
          supporting sentence, and the two actions, inside the first
-         viewport (AP-04). No visual asset ships until a real product
-         screenshot exists (Section 6.3 asset rule). --}}
+         viewport (AP-04). The visual is the real owner dashboard
+         (Section 6.3 asset rule, AP-07), photographed from a seeded
+         demo business in Sprint 3. --}}
     <section class="mx-auto max-w-[1120px] px-5 py-12 md:py-16">
         <div class="max-w-[720px]">
             <h1 class="text-4xl font-bold leading-tight text-text-1 md:text-[40px] md:leading-[44px]">Turn Your Customers Into Your Best Marketers</h1>
@@ -16,6 +17,7 @@
                 <a class="font-semibold text-brand-700 hover:underline" href="#how-it-works">See how it works</a>
             </div>
         </div>
+        <img src="{{ asset('images/dashboard-overview.png') }}" alt="The Easy Refer owner dashboard, showing today's scans, completed referrals, rewards waiting to be claimed, and a chart of referred customers" class="mt-10 w-full rounded-lg border border-line shadow-e2" loading="lazy">
     </section>
 
     <section id="how-it-works" class="mx-auto max-w-[1120px] px-5 py-12">
