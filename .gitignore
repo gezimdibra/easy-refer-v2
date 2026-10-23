@@ -2,9 +2,11 @@
 .env
 .env.*
 !.env.example
+!.env.testing
 *.key
 *.pem
 config/secrets.php
+/auth.json
 
 # Dependencies
 /vendor/
@@ -15,15 +17,31 @@ config/secrets.php
 /build/
 .cache/
 *.log
+/public/build
+/public/hot
+/public/storage
+Homestead.json
+Homestead.yaml
+
+# Laravel runtime
+/.phpunit.cache
+.phpunit.result.cache
+/storage/*.key
+/storage/pail
 
 # Local data, dumps, backups
 *.sql
 *.sqlite
+*.sqlite*
 /backups/
 /uploads/
 
 # OS and editor
 .DS_Store
 Thumbs.db
-.vscode/
-.idea/
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+.phpactor.json
