@@ -39,7 +39,7 @@ return new class extends Migration
             $table->unsignedInteger('risk_score')->default(0);
             $table->json('risk_rules')->nullable();
             $table->timestamp('redeemed_at')->nullable();
-            $table->timestamp('expires_at');
+            $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
 

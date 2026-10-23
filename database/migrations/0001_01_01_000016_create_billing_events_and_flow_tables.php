@@ -37,7 +37,7 @@ return new class extends Migration
         Schema::create('flow_sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->json('data')->nullable();
-            $table->timestamp('expires_at')->index();
+            $table->timestamp('expires_at')->nullable()->index();
             $table->timestamps();
         });
 
@@ -46,7 +46,7 @@ return new class extends Migration
             $table->string('subject_type');
             $table->unsignedBigInteger('subject_id');
             $table->string('nonce_hash')->unique();
-            $table->timestamp('expires_at');
+            $table->timestamp('expires_at')->nullable();
             $table->timestamp('consumed_at')->nullable();
             $table->timestamp('created_at')->nullable();
 
@@ -57,7 +57,7 @@ return new class extends Migration
             $table->id();
             $table->string('key')->unique();
             $table->unsignedInteger('count')->default(0);
-            $table->timestamp('window_started_at');
+            $table->timestamp('window_started_at')->nullable();
             $table->timestamps();
         });
     }

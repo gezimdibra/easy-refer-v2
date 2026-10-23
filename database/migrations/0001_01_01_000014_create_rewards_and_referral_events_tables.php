@@ -33,7 +33,7 @@ return new class extends Migration
             // ready SMS and its retries must re-present the claim
             // link after the minting request has ended.
             $table->text('claim_token_encrypted')->nullable();
-            $table->timestamp('available_at');
+            $table->timestamp('available_at')->nullable();
             $table->timestamp('claimed_at')->nullable();
             $table->string('notification_state')->default('queued');
             $table->timestamps();

@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('email')->nullable();
             $table->string('canonical_email')->nullable()->index();
-            $table->timestamp('first_seen_at');
+            $table->timestamp('first_seen_at')->nullable();
             $table->timestamp('number_linked_at')->nullable();
             $table->timestamps();
         });
@@ -32,7 +32,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->string('phone_e164');
-            $table->timestamp('linked_at');
+            $table->timestamp('linked_at')->nullable();
             $table->string('link_reason');
             $table->timestamps();
         });

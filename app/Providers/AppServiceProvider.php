@@ -6,6 +6,7 @@ use App\Contracts\PhoneLookupGateway;
 use App\Contracts\PhoneVerificationGateway;
 use App\Contracts\SmsGateway;
 use App\Contracts\SquareCustomerGateway;
+use App\Routing\Router as AppRouter;
 use App\Services\Square\NullSquareCustomerGateway;
 use App\Services\Square\SdkSquareCustomerGateway;
 use App\Services\Twilio\NullPhoneLookupGateway;
@@ -14,6 +15,8 @@ use App\Services\Twilio\NullSmsGateway;
 use App\Services\Twilio\TwilioPhoneLookupGateway;
 use App\Services\Twilio\TwilioPhoneVerificationGateway;
 use App\Services\Twilio\TwilioSmsGateway;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +27,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Deploy-defect fix (release 02, Defect 2): install the
+        // application router so a compiled route cache loads the
+        // application compiled-route collection, whose matcher
+        // keeps the subdirectory mount root intact. The 'router'
+        // binding is a singleton built once from the events
+        // dispatcher and the container; swapping the class here
+        // preserves that contract. The class binding is swapped as
+        // well for type-hinted resolutions.
+        $makeRouter = static fn ($resolved, $app) => new AppRouter($app->make(Dispatcher::class), $app);
+        $this->app->extend('router', $makeRouter);
+        $this->app->extend(Router::class, $makeRouter);
+
         // Spec Sections 4.1 and 9: with a Square access token
         // configured, signup provisions through the real SDK gateway;
         // without one it uses the null gateway, which is the same

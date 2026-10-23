@@ -48,7 +48,7 @@ return new class extends Migration
         Schema::create('sms_opt_outs', function (Blueprint $table) {
             $table->id();
             $table->string('phone_e164')->unique();
-            $table->timestamp('opted_out_at');
+            $table->timestamp('opted_out_at')->nullable();
             $table->string('source');
             $table->timestamps();
         });
