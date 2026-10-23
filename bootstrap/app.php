@@ -8,12 +8,14 @@ use App\Http\Middleware\EnsureBusinessNotClosed;
 use App\Http\Middleware\EnsureStepUpIsFresh;
 use App\Http\Middleware\EnsureTwoFactorChallengePassed;
 use App\Http\Middleware\VerifyRequestOrigin;
+use App\Routing\Router as AppRouter;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -65,3 +67,27 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
+
+// Deploy-defect fix (release 02, Defect 2, production entry
+// correction): install the application router before anything
+// can resolve a router. The production entry constructs the
+// HTTP kernel before service providers register, and the kernel
+// captures the router instance it is constructed with; a swap
+// registered later, in a provider, therefore reaches the
+// container binding but never the already-built kernel, which
+// keeps a plain framework router with no routes and answers
+// every routed page with a 404. Registering the extender here,
+// immediately after the application is created and before it is
+// returned, puts it ahead of the first router resolution in
+// every entry order. The framework aliases the base router
+// class and the routing contracts to the 'router' binding, so
+// extending that one binding covers type-hinted resolutions as
+// well: the kernel, the 'router' binding, and every type hint
+// share the single application router instance, whose
+// setCompiledRoutes() installs the application compiled route
+// collection when a compiled route cache loads.
+$app->extend('router', static fn ($resolved, $app) => $resolved instanceof AppRouter
+    ? $resolved
+    : new AppRouter($app->make(Dispatcher::class), $app));
+
+return $app;

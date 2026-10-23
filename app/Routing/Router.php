@@ -10,7 +10,9 @@ use Illuminate\Routing\Router as BaseRouter;
  * calling setCompiledRoutes() on the router, and the stock method
  * hardcodes the framework collection class. This override installs
  * the application collection instead; matching behavior is
- * otherwise identical. Wired in AppServiceProvider.
+ * otherwise identical. Wired in bootstrap/app.php, ahead of
+ * the first router resolution, so the HTTP kernel the
+ * production entry builds captures this same instance.
  */
 class Router extends BaseRouter
 {
