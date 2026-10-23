@@ -5,7 +5,7 @@
 @section('notices_summary_only', '1')
 
 @section('content')
-    <h1 class="text-[28px] font-bold">Business profile</h1>
+    <h1 class="text-2xl font-bold">Business profile</h1>
 
     @include('owner.settings.nav')
 

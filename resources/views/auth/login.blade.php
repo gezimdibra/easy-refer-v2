@@ -8,7 +8,7 @@
     <p class="text-text-2">Easy Refer: your one-stop platform for managing referrals.</p>
 
     {{-- AUTH-IN-01: heading and subheading. --}}
-    <h1 class="mt-3">Welcome back</h1>
+    <h1 class="mt-3 text-[32px] leading-[38px] font-bold text-text-1">Welcome back</h1>
     <p class="mt-1 text-text-2">Sign in to your account.</p>
 
     <form method="POST" action="{{ route('login.store') }}" class="mt-4">

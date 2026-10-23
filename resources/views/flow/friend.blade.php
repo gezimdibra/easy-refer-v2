@@ -10,7 +10,7 @@
          nowhere on this page, in markup or script (REF-16).
          Errors follow the same pattern as R1: one summary line,
          each problem once at its field. --}}
-    <h1 class="text-[28px] font-bold leading-tight">Invited by {{ $referrer->first_name }}</h1>
+    <h1 class="text-[32px] font-bold leading-[38px]">Invited by {{ $referrer->first_name }}</h1>
 
     @if ($business->friend_reward_text)
         <p class="mt-2 text-text-2">Claim {{ $business->friend_reward_text }} at {{ $business->name }}.</p>

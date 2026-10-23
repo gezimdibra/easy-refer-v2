@@ -54,19 +54,97 @@ class MarketingTest extends TestCase
         $this->assertSame(1, substr_count($response->getContent(), 'Pay Per Visit'));
     }
 
-    public function test_home_carries_no_fake_proof_while_od6_is_open(): void
+    public function test_home_renders_the_approved_proof_set_and_nothing_beyond_it(): void
     {
         $response = $this->get('/');
 
-        // AP-07: zero statistic elements, zero testimonials, zero
-        // business counts, and the pending CTA body line is absent.
-        $response->assertDontSee('400+');
-        $response->assertDontSee('New Customers Annually');
-        $response->assertDontSee('Ralston');
-        $response->assertDontSee('Hollis');
-        $response->assertDontSee('Success Stories');
+        // AP-07 as amended (OD-6 closed 2026-10-23): the approved
+        // set renders, from the claims values and the plan table.
+        $response->assertSee('400+');
+        $response->assertSee('new customers per year on average');
+        $response->assertSee('30%');
+        $response->assertSee('2x');
+        $response->assertSee('Running in real stores');
+        $response->assertSee('Ungaro Coal Fired Pizza Cafe, with its referral code at the register.');
+        $response->assertSee('Success Stories');
+        $response->assertSee('We used to spend a lot of money on Google Ads. Now our customers do the marketing for us.');
+        $response->assertSee('Nolan and Megan Ralston, Owners, Pizzeria');
+        $response->assertSee('150+ New Customers In 3 Months');
+        $response->assertSee('Talia Hollis, Hairstylist');
+        $response->assertSee('110+ New Customers In 4 months');
+
+        // And nothing outside the set: no invented or alternate
+        // figures, no v1 alternate wordings, no About-only numbers.
         $response->assertDontSee('thousands of businesses');
         $response->assertDontSee('Join thousands');
+        $response->assertDontSee('New Customers Annually');
+        $response->assertDontSee('$1 Per Referral');
+        $response->assertDontSee('80+');
+        $response->assertDontSee('93%');
+    }
+
+    public function test_home_pricing_faq_row_carries_the_four_pricing_questions(): void
+    {
+        $response = $this->get('/');
+
+        foreach (['What is Easy Refer?', 'How does the QR code referral system work?', 'How much does it cost?', 'Is there a setup fee?'] as $question) {
+            $response->assertSee($question);
+        }
+        $response->assertDontSee('How do I track referrals?');
+        $response->assertDontSee('Is my data secure?');
+    }
+
+    public function test_marketing_pages_carry_metadata_and_structured_data(): void
+    {
+        $home = $this->get('/');
+        $home->assertOk();
+        $home->assertSee('<link rel="canonical" href="'.url('/').'">', false);
+        $home->assertSee('property="og:image" content="'.asset('images/photos/og-stores.jpg').'"', false);
+        $home->assertSee('name="twitter:card" content="summary_large_image"', false);
+        $home->assertSee('"@type": "Organization"', false);
+        $home->assertSee('"@type": "WebSite"', false);
+        $home->assertSee('name="description" content="Easy Refer turns your customers into referrers with QR codes, verified visits, and rewards you only pay for when they work."', false);
+
+        $about = $this->get('/about');
+        $about->assertSee('name="description" content="About Easy Refer: who we are, what we believe, and how our referral platform helps small businesses grow through word of mouth."', false);
+
+        $vertical = $this->get('/for-cafes');
+        $vertical->assertSee('name="description" content="Easy Refer for cafes: your regulars bring your next clients. Free to start, and you pay only when a brand-new customer walks in and redeems."', false);
+    }
+
+    public function test_sitemap_lists_the_public_marketing_routes_only(): void
+    {
+        $response = $this->get('/sitemap.xml');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/xml');
+        foreach (['/', '/about', '/faq', '/legal', '/refund', '/blog', '/for-barbers', '/for-salons', '/for-cafes', '/for-boutiques'] as $path) {
+            $response->assertSee('<loc>'.url($path).'</loc>', false);
+        }
+        $response->assertDontSee('/auth');
+        $response->assertDontSee('/refer');
+    }
+
+    public function test_robots_txt_points_at_the_sitemap(): void
+    {
+        $response = $this->get('/robots.txt');
+
+        $response->assertOk();
+        $response->assertSee('User-agent: *');
+        $response->assertSee('Sitemap: '.route('sitemap'));
+    }
+
+    public function test_claims_render_from_the_single_source_config(): void
+    {
+        config(['claims.new_customers_per_year' => '555+', 'claims.businesses' => '777+']);
+
+        $this->get('/')->assertSee('555+')->assertDontSee('400+');
+        $this->get('/about')->assertSee('777+');
+    }
+
+    public function test_pricing_card_start_free_button_is_the_primary(): void
+    {
+        $this->get('/')->assertSee('btn btn-primary mt-6 w-full', false);
     }
 
     public function test_home_pricing_renders_from_the_plan_table(): void
@@ -119,7 +197,7 @@ class MarketingTest extends TestCase
         $this->get('/for-dentists')->assertNotFound();
     }
 
-    public function test_about_renders_without_the_pending_claims(): void
+    public function test_about_renders_the_approved_claims(): void
     {
         $response = $this->get('/about');
 
@@ -131,10 +209,19 @@ class MarketingTest extends TestCase
         $response->assertSee('info@easy-refer.com');
         $response->assertSee('+1 (833) 803-2400');
         $response->assertSee('104 West 27th Street, New York, NY 10001');
-        $response->assertDontSee('Founded in 2023');
-        $response->assertDontSee('Trusted by 400+');
-        $response->assertDontSee('Businesses Empowered');
-        $response->assertDontSee('Customer Satisfaction');
+
+        // The OD-6 approved set (closed 2026-10-23): the founding
+        // clause and the Our Impact counters, from the claims
+        // values. The "Trusted by" chip form never renders.
+        $response->assertSee('Founded in 2023');
+        $response->assertSee('Our Impact');
+        $response->assertSee('400+');
+        $response->assertSee('Businesses Empowered');
+        $response->assertSee('80+');
+        $response->assertSee('Successful Referrals');
+        $response->assertSee('93%');
+        $response->assertSee('Customer Satisfaction');
+        $response->assertDontSee('Trusted by');
     }
 
     public function test_faq_renders_all_six_questions_with_plan_amounts(): void

@@ -5,7 +5,7 @@
 @section('notices_summary_only', '1')
 
 @section('content')
-    <h1 class="text-[28px] font-bold">Add a customer</h1>
+    <h1 class="text-2xl font-bold">Add a customer</h1>
     <p class="mt-1 text-text-2">Add a regular who agreed to get their referral link by text. We send one text so they can confirm.</p>
 
     <form method="POST" action="{{ route('customers.store') }}" class="card mt-4">

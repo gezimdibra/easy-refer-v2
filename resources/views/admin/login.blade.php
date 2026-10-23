@@ -6,7 +6,7 @@
 
 @section('content')
     <div class="card mx-auto max-w-[480px]">
-        <h1 class="text-[28px] font-bold">Platform sign in</h1>
+        <h1 class="text-2xl font-bold">Platform sign in</h1>
         <p class="mt-1 text-text-2">This area is for the Easy Refer team.</p>
 
         <form method="POST" action="{{ route('admin.login.store') }}" class="mt-4">

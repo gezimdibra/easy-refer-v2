@@ -3,7 +3,7 @@
 @section('title', 'Two-factor verification')
 
 @section('content')
-    <h1>Two-factor verification</h1>
+    <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Two-factor verification</h1>
     <p>Enter the six-digit code from your authenticator app. You can also use one of your recovery codes instead.</p>
 
     <form method="POST" action="{{ route('two-factor.challenge.store') }}">

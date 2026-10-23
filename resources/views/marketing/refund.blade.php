@@ -2,13 +2,15 @@
 
 @section('title', 'Refund Policy: Easy Refer')
 
+@section('meta_description', 'The Easy Refer refund policy: how per-visit charges, reward fees, and disputes are handled.')
+
 @section('content')
     {{-- The refund page (spec Section 2.4): v1's structure with the
          corrected processor names (Square and Twilio only) and the
          per-visit amount rendered from the plan table (REFUND-02). --}}
-    <section class="mx-auto max-w-[1120px] px-5 py-12">
-        <div class="max-w-[720px]">
-            <h1 class="text-4xl font-bold text-text-1">Refund Policy</h1>
+    <section class="mx-auto max-w-[1120px] px-5 py-8 md:py-12 lg:py-16 xl:py-20">
+        <div class="max-w-[640px]">
+            <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Refund Policy</h1>
 
             <h2 class="mt-10 text-2xl font-bold text-text-1">Subscription and service fees</h2>
             <p class="mt-3 text-base text-text-2">Subscription fees are refundable only for billing errors or duplicate charges, or when a failure of core services caused by a system error is reported within 14 days.</p>

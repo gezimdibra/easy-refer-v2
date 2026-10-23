@@ -4,8 +4,64 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="description" content="@yield('meta_description', 'Easy Refer turns your customers into referrers with QR codes, verified visits, and rewards you only pay for when they work.')">
-    <title>@yield('title', config('app.name'))</title>
+    {{-- SEO and social metadata (landing-page-spec.md Section 7):
+         one implementation here, per-page description overrides via
+         the meta_description section. Every URL is built from the
+         app URL config, so the set is correct at both mounts. --}}
+    @php
+        $metaTitle = trim($__env->yieldContent('title', config('app.name')));
+        $metaDescription = trim($__env->yieldContent('meta_description', 'Easy Refer turns your customers into referrers with QR codes, verified visits, and rewards you only pay for when they work.'));
+        $metaUrl = url()->current();
+        $metaImage = asset('images/photos/og-stores.jpg');
+    @endphp
+    <meta name="description" content="{{ $metaDescription }}">
+    <title>{{ $metaTitle }}</title>
+    <link rel="canonical" href="{{ $metaUrl }}">
+    <meta name="theme-color" content="#ffffff">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Easy Refer">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:url" content="{{ $metaUrl }}">
+    <meta property="og:image" content="{{ $metaImage }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="A printed Easy Refer referral sign with a QR code on the counter at Ungaro Coal Fired Pizza Cafe.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $metaTitle }}">
+    <meta name="twitter:description" content="{{ $metaDescription }}">
+    <meta name="twitter:image" content="{{ $metaImage }}">
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@graph": [
+            {
+                "@@type": "Organization",
+                "name": "Easy Refer",
+                "url": "{{ route('home') }}",
+                "email": "support@easy-refer.com",
+                "telephone": "+1 (833) 803-2400",
+                "sameAs": [
+                    "https://www.facebook.com/people/EasyRefer/61571833155688",
+                    "https://www.instagram.com/easy.refer",
+                    "https://www.linkedin.com/company/easyrefer",
+                    "https://x.com/easy_refer"
+                ],
+                "contactPoint": {
+                    "@@type": "ContactPoint",
+                    "email": "support@easy-refer.com",
+                    "telephone": "+1-833-803-2400",
+                    "contactType": "customer support"
+                }
+            },
+            {
+                "@@type": "WebSite",
+                "name": "Easy Refer",
+                "url": "{{ route('home') }}"
+            }
+        ]
+    }
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('partials.analytics')
 </head>

@@ -3,7 +3,7 @@
 @section('title', 'Set a new password')
 
 @section('content')
-    <h1>Set a new password</h1>
+    <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Set a new password</h1>
 
     <form method="POST" action="{{ route('password.store') }}">
         @csrf

@@ -5,7 +5,7 @@
 @section('notices_banner_keys', 'account')
 
 @section('content')
-    <h1 class="text-2xl font-bold text-text-1">Create your business account</h1>
+    <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Create your business account</h1>
     <p class="mt-2 text-base text-text-2">Four short steps. Your account is created when you submit the last step.</p>
 
     {{-- Step-list wizard presentation (design-system.md Sections 3.3

@@ -16,7 +16,7 @@
     @if ($state === 'show')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
         <p class="text-sm text-text-2">{{ $business->street }}, {{ $business->city }}</p>
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">Show this at {{ $business->name }}</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Show this at {{ $business->name }}</h1>
 
         <p class="mt-2 text-text-2">Show this code to a staff member. They scan it with their own phone.</p>
 
@@ -42,7 +42,7 @@
         @endif
     @elseif ($state === 'expired')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">This reward expired on {{ $referral->expires_at->format('F j, Y') }}</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">This reward expired on {{ $referral->expires_at->format('F j, Y') }}</h1>
         <p class="mt-2 text-text-2">Rewards are good for {{ $business->redemption_window_days }} days.</p>
 
         @if ($backUrl ?? null)
@@ -50,10 +50,10 @@
         @endif
     @elseif ($state === 'held')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">Held for review</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Held for review</h1>
         <p class="mt-2 text-text-2">Your reward is being confirmed by {{ $business->name }}. This can take a day.</p>
     @else
-        <h1 class="text-[28px] font-bold leading-tight">This code is not active</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">This code is not active</h1>
         <p class="mt-2 text-text-2">Please ask the business for help, or check that you scanned the whole code.</p>
     @endif
 @endsection

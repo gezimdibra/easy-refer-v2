@@ -3,7 +3,7 @@
 @section('title', 'Confirm it is you')
 
 @section('content')
-    <h1>Confirm it is you</h1>
+    <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Confirm it is you</h1>
     <p>This change needs a fresh check before it can go ahead. Re-enter your password@if ($user->hasTwoFactorEnabled()), or enter a code from your authenticator app@endif.</p>
 
     <form method="POST" action="{{ route('security.step-up.store') }}">

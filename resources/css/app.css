@@ -254,6 +254,26 @@
         @apply bg-info-fill text-info-text;
     }
 
+    /* Status tone variants (CF-12): the .status base carries the
+       box chrome and the success fill; a variant class retunes the
+       tone so an informational or error notice never renders in
+       the success fill. */
+    .status-success {
+        @apply bg-success-fill text-success-text;
+    }
+
+    .status-info {
+        @apply bg-info-fill text-info-text;
+    }
+
+    .status-warning {
+        @apply bg-warning-fill text-warning-text;
+    }
+
+    .status-error {
+        @apply bg-error-fill text-error-text;
+    }
+
     .status,
     .gate {
         @apply mb-4 rounded-md px-4 py-3 text-base;
@@ -276,6 +296,17 @@
         @apply text-[28px] leading-8 font-semibold text-text-1 tabular-nums;
     }
 
+    /* The tile's context line under the value (CF-20). */
+    .tile-delta {
+        @apply mt-1 text-sm text-text-2;
+    }
+
+    /* Danger-zone card (CF-13): card chrome in the error tone for
+       destructive sections such as replacing a live QR code. */
+    .card-danger {
+        @apply rounded-lg border border-error-strong bg-error-fill p-5 md:p-6;
+    }
+
     .pill {
         @apply inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium whitespace-nowrap;
     }
@@ -292,7 +323,8 @@
         @apply bg-warning-fill text-warning-text;
     }
 
-    .pill-error {
+    .pill-error,
+    .pill-danger {
         @apply bg-error-fill text-error-text;
     }
 

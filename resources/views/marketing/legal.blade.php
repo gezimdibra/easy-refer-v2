@@ -2,6 +2,8 @@
 
 @section('title', 'Legal: Easy Refer')
 
+@section('meta_description', 'Easy Refer legal documents: privacy policy, terms of service, EULA, and compliance information.')
+
 @section('content')
     {{-- The legal page keeps v1's anchored structure (LEGAL-03)
          with the pre-approved corrections (LEGAL-01, LEGAL-02): the
@@ -9,9 +11,9 @@
          inventory matches the v2 schema and the shipped form
          configuration exactly. The full prose is pending the owner's
          legal review (inventory Section 5). --}}
-    <section class="mx-auto max-w-[1120px] px-5 py-12">
-        <div class="max-w-[720px]">
-            <h1 class="text-4xl font-bold text-text-1">Legal</h1>
+    <section class="mx-auto max-w-[1120px] px-5 py-8 md:py-12 lg:py-16 xl:py-20">
+        <div class="max-w-[640px]">
+            <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Legal</h1>
 
             <h2 id="privacy-policy" class="mt-10 text-2xl font-bold text-text-1">Privacy Policy</h2>
             <p class="mt-3 text-base text-text-2">We collect the information the product needs to run a referral program, and nothing more. For customers of a business, that is: {{ $customerDataInventory }}. For business owners, it also includes the email address on the account. We never sell personal information.</p>

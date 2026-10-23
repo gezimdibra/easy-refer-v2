@@ -16,7 +16,7 @@
     @if ($state === 'ready')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
         <p class="text-sm text-text-2">{{ $business->street }}, {{ $business->city }}</p>
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">Your reward is ready</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Your reward is ready</h1>
         <p class="mt-2 text-text-2">Your reward: {{ $reward->reward_text_snapshot }}.</p>
         <p class="mt-2 text-text-2">Show this code to a staff member. They scan it with their own phone.</p>
 
@@ -36,7 +36,7 @@
         @endif
     @elseif ($state === 'waiting')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">Your reward is on its way</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Your reward is on its way</h1>
         <p class="mt-2 text-text-2">Your reward: {{ $reward->reward_text_snapshot }}.</p>
 
         @if ($showAvailableDate)
@@ -46,14 +46,14 @@
         @endif
     @elseif ($state === 'held')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">Held for review</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Held for review</h1>
         <p class="mt-2 text-text-2">Your reward is being confirmed by {{ $business->name }}. This can take a day.</p>
     @elseif ($state === 'denied')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">This reward was not approved by {{ $business->name }}.</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">This reward was not approved by {{ $business->name }}.</h1>
         <p class="mt-2 text-text-2">If you think this is a mistake, contact the store.</p>
     @else
-        <h1 class="text-[28px] font-bold leading-tight">This link is not available</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">This link is not available</h1>
         <p class="mt-2 text-text-2">This link could not be used. Check the message we sent you for your latest link.</p>
     @endif
 @endsection

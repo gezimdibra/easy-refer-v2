@@ -16,5 +16,9 @@
         <li>No setup fee</li>
         <li>Cancel anytime</li>
     </ul>
-    <a class="btn btn-secondary mt-6 w-full" href="{{ route('register') }}">Start free</a>
+    {{-- The decision point carries the Primary (design Section 3.1
+         item 7; AP-08 as amended 2026-10-23 scopes one Primary per
+         viewport region, and the pricing card never shares a
+         viewport with the hero). --}}
+    <a class="btn btn-primary mt-6 w-full" href="{{ route('register') }}">Start free</a>
 </div>

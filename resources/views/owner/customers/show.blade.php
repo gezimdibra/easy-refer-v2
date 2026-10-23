@@ -9,7 +9,7 @@
     <p><a class="font-semibold text-brand-700 hover:underline" href="{{ route('customers.index') }}">Back to customers</a></p>
 
     <div class="card mt-3">
-        <h1 class="text-[28px] font-bold">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</h1>
+        <h1 class="text-2xl font-bold">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</h1>
         {{-- The single-customer detail is the one owner surface
              where the full number renders (spec Section 5.1
              masking exception); every list stays masked. --}}

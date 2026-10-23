@@ -67,6 +67,11 @@ Route::post('/redeem/{token}/confirm', [StaffRedemptionController::class, 'confi
 // Twilio callbacks (signature-verified in the controller).
 Route::post('/webhooks/twilio/status', TwilioWebhookController::class)->name('webhooks.twilio.status');
 
+// Crawler files (landing-page-spec.md Section 7): generated from
+// the route table and the app URL config, correct at both mounts.
+Route::get('sitemap.xml', [MarketingController::class, 'sitemap'])->name('sitemap');
+Route::get('robots.txt', [MarketingController::class, 'robots'])->name('robots');
+
 // Public marketing (spec Section 2). The attribution middleware
 // captures the first touch on these pages only (spec Section 16):
 // never on /refer, never on the dashboard.

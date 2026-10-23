@@ -12,7 +12,7 @@
     <p><a class="font-semibold text-brand-700 hover:underline" href="{{ route('referrals.index') }}">Back to referrals</a></p>
 
     <div class="card mt-3">
-        <h1 class="text-[28px] font-bold">Referral detail</h1>
+        <h1 class="text-2xl font-bold">Referral detail</h1>
         <p class="mt-1 text-text-2">{{ $referral->referredCustomer->first_name }}, referred by {{ $referral->referrerMembership->customer->first_name }} · Started {{ $referral->created_at->format('M j, Y') }}</p>
         <p class="mt-2">
             <span class="pill {{ \App\Support\ReferralStatus::present($referral)['pill'] }}">{{ \App\Support\ReferralStatus::present($referral)['label'] }}</span>

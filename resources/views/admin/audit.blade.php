@@ -3,7 +3,7 @@
 @section('title', 'Audit log')
 
 @section('content')
-    <h1 class="text-[28px] font-bold">Audit log</h1>
+    <h1 class="text-2xl font-bold">Audit log</h1>
 
     <form method="GET" action="{{ route('admin.audit') }}" class="card mt-4">
         <label for="action">Filter by action</label>

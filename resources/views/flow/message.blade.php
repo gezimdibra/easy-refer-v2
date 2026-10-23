@@ -11,23 +11,23 @@
          The locked state (design R3) states the concrete wait and
          keeps its one designed exit (F-05): no dead ends. --}}
     @if ($state === 'inactive_qr')
-        <h1 class="text-[28px] font-bold leading-tight">This code is not active</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">This code is not active</h1>
         <p class="mt-2 text-text-2">Please ask the business for help, or check that you scanned the whole code.</p>
     @elseif ($state === 'not_active')
-        <h1 class="text-[28px] font-bold leading-tight">This code is not active</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">This code is not active</h1>
         <p class="mt-2 text-text-2">Please ask the business for help, or check that you scanned the whole code.</p>
     @elseif ($state === 'bad_link')
-        <h1 class="text-[28px] font-bold leading-tight">Something is not right with that link</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">Something is not right with that link</h1>
         <p class="mt-2 text-text-2">Ask the business or your friend for a new one.</p>
         <a class="btn btn-flow btn-primary w-full mt-5" href="{{ route('home') }}">Go to the homepage</a>
     @elseif ($state === 'rate_limited')
-        <h1 class="text-[28px] font-bold leading-tight">Too many tries</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">Too many tries</h1>
         <p class="mt-2 text-text-2">Too many codes have been requested. Please wait a while and try again.</p>
     @elseif ($state === 'too_many_codes')
-        <h1 class="text-[28px] font-bold leading-tight">Too many tries</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">Too many tries</h1>
         <p class="mt-2 text-text-2">Too many tries. Wait {{ $waitMinutes }} minutes and we will send a fresh code.</p>
     @elseif ($state === 'provider_error')
-        <h1 class="text-[28px] font-bold leading-tight">Something went wrong on our end</h1>
+        <h1 class="text-[32px] font-bold leading-[38px]">Something went wrong on our end</h1>
         <p class="mt-2 text-text-2">Something went wrong on our end. Please try again in a moment.</p>
     @endif
 @endsection

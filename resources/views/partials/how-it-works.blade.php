@@ -1,11 +1,13 @@
 {{--
     How It Works (inventory HOME-HIW-01 to HOME-HIW-04): four steps
-    in a row on desktop, stacked on mobile, no carousel.
+    in a row on desktop, stacked on mobile, no carousel. Home passes
+    $stepCols to run the steps two-up beside the poster artwork
+    (landing-page-spec.md Section 4.3); the verticals keep the row.
 --}}
-<ol class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+<ol class="grid gap-8 sm:grid-cols-2 {{ ($stepCols ?? null) === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-4' }}">
     @foreach ([
         ['Scan the QR Code', 'Customers scan your unique QR code at checkout.', ['Instant QR code generation', 'Multiple placement options']],
-        ['Share With Friends', 'They share the referral link with friends through their preferred platform.', ['Social media integration', 'Customizable messages']],
+        ['Share With Friends', 'They share the referral link with friends through their preferred platform.', ['Native share sheet and copy link', 'Customizable messages']],
         ['Claim Rewards', 'Friends visit your store and receive their welcome reward.', ['Instant validation', 'Flexible reward options']],
         ['Track and Engage', 'Access your dashboard to track referrals and send bulk SMS marketing.', ['Real-time analytics', 'Bulk SMS campaigns']],
     ] as $i => [$title, $text, $bullets])

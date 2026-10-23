@@ -7,7 +7,7 @@
          only. Phone renders masked, always (Section 7.3): the
          owner works with names and last fours. --}}
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-[28px] font-bold">Customers</h1>
+        <h1 class="text-2xl font-bold">Customers</h1>
         <a class="btn btn-primary" href="{{ route('customers.create') }}">Add a customer</a>
     </div>
 

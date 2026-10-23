@@ -3,7 +3,7 @@
 @section('title', 'Review holds')
 
 @section('content')
-    <h1 class="text-[28px] font-bold">Review holds (all businesses)</h1>
+    <h1 class="text-2xl font-bold">Review holds (all businesses)</h1>
     <p class="mt-1 text-text-2">Read only. Owners release or deny holds in their own review queue.</p>
 
     <div class="card mt-4">

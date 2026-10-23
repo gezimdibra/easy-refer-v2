@@ -9,7 +9,7 @@
          3: the same fields and endpoints the page has always had,
          presented in the design system like every other Settings
          page (cards, the closed button set, F-06 field wiring). --}}
-    <h1 class="text-[28px] font-bold">Security</h1>
+    <h1 class="text-2xl font-bold">Security</h1>
 
     @include('owner.settings.nav')
 

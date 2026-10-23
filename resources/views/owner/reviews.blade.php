@@ -10,7 +10,7 @@
          first name (design 3.4). Deny opens the consequence modal
          (design 2.5) before anything fires: it is the product's
          only destructive confirmation (F-04). --}}
-    <h1 class="text-[28px] font-bold">Review</h1>
+    <h1 class="text-2xl font-bold">Review</h1>
     <p class="mt-1 text-text-2">Items the automatic checks paused. Releasing resumes the normal flow. Denying is final: a denied referral never bills and no reward is paid.</p>
 
     <h2 class="mt-6 text-xl font-semibold">Needs review</h2>

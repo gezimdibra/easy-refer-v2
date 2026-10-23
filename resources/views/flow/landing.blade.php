@@ -19,9 +19,9 @@
     <p class="text-sm text-text-2">{{ $business->street }}, {{ $business->city }}</p>
 
     @if ($business->friend_reward_text)
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">Get {{ $business->friend_reward_text }} on your first visit</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Get {{ $business->friend_reward_text }} on your first visit</h1>
     @else
-        <h1 class="mt-1 text-[28px] font-bold leading-tight">Join {{ $business->name }}'s referral program</h1>
+        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Join {{ $business->name }}'s referral program</h1>
     @endif
     <p class="mt-2 text-text-2">Enter your phone, get your own link, share it with a friend</p>
 

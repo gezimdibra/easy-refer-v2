@@ -10,7 +10,7 @@
          mint-time snapshot, never the current settings text. The
          Text column is the notification state; a failed text can
          be sent again (REWL-03). --}}
-    <h1 class="text-[28px] font-bold">Rewards</h1>
+    <h1 class="text-2xl font-bold">Rewards</h1>
 
     {{-- The filters are tabs (design 6.6), same pattern as the
          Referrals list. --}}

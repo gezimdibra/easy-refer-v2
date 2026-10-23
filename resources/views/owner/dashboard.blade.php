@@ -11,7 +11,7 @@
          (Section 5.8). In the zero state the standing sections stay
          hidden until the first enrollment exists (Section 6.4.1)
          and the tiles read an honest zero. --}}
-    <h1 class="text-[28px] font-bold">Welcome to Easy Refer, {{ $business->name }}.</h1>
+    <h1 class="text-2xl font-bold">Welcome to Easy Refer, {{ $business->name }}.</h1>
     @unless ($hasEnrollments)
         <p class="mt-1 text-text-2">Your program is live. The first step is getting your code where customers can see it.</p>
     @endunless

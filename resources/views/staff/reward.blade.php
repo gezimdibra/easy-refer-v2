@@ -8,14 +8,14 @@
          3, design 3.5): the business eyebrow, the exact reward
          text as the headline, whose it is, the kind line naming
          the referrer whose visit earned it, and one action. --}}
-    <p class="text-sm font-semibold uppercase tracking-wide text-text-2">{{ $business->name }}</p>
-    <h1 class="mt-1 text-[28px] font-bold leading-tight">{{ $reward->reward_text_snapshot }}</h1>
+    <p class="text-sm font-semibold text-text-2">{{ $business->name }}</p>
+    <h1 class="mt-1 text-[32px] font-bold leading-[38px]">{{ $reward->reward_text_snapshot }}</h1>
 
     <p class="mt-2 text-lg">For {{ $customer->first_name }}</p>
     <p class="mt-1 text-text-2">{{ $reward->referral?->referrerMembership?->customer?->first_name ?? 'Referrer' }}'s reward</p>
 
     @if (session('staff_error'))
-        <p class="status status-warning mt-3" role="status">{{ session('staff_error') }}</p>
+        <p class="status status-error mt-3" role="status">{{ session('staff_error') }}</p>
     @endif
 @endsection
 

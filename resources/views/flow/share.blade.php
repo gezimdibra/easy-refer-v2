@@ -15,7 +15,7 @@
          the clipboard everywhere else), the copyable link, the
          in-person QR, and the honest referral count. No channel
          grid: the share sheet owns destinations. --}}
-    <h1 class="text-[28px] font-bold leading-tight">
+    <h1 class="text-[32px] font-bold leading-[38px]">
         @if ($returning)
             Welcome back, {{ $customer->first_name }}
         @else

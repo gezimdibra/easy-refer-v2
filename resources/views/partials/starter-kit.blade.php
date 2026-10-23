@@ -3,7 +3,7 @@
     a section on Home and the closing block of each vertical page.
     There is no standalone starter-kit route.
 --}}
-<section id="starter-kit" class="mx-auto max-w-[720px] px-5 py-12">
+<section id="starter-kit" class="mx-auto max-w-[720px] px-5 py-8 md:py-12 lg:py-16 xl:py-20">
     <div class="card">
         <h2 class="text-2xl font-bold text-text-1">Get the free Referral Program Starter Kit</h2>
 

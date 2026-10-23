@@ -3,7 +3,7 @@
 @section('title', 'Businesses')
 
 @section('content')
-    <h1 class="text-[28px] font-bold">Businesses</h1>
+    <h1 class="text-2xl font-bold">Businesses</h1>
 
     <form method="GET" action="{{ route('admin.businesses') }}" class="card mt-4">
         <label for="q">Search by business name, owner email, or phone</label>

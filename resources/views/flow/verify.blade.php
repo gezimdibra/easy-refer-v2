@@ -13,7 +13,7 @@
          own cadence, and the wrong-number escape. The wrong-code
          message is wired to the boxes with aria-describedby and
          announced (Section 6.6). --}}
-    <h1 class="text-[28px] font-bold leading-tight">Enter the verification code we sent to {{ $maskedPhone }}.</h1>
+    <h1 class="text-[32px] font-bold leading-[38px]">Enter the verification code we sent to {{ $maskedPhone }}.</h1>
 
     @if ($channel === 'call')
         <p class="status status-info mt-3">That number cannot receive text messages, so we are calling it with your code instead.</p>
@@ -32,7 +32,7 @@
             {{-- Six boxes, auto-advancing and paste-friendly
                  (REF-VER-01). JS composes them into the code field;
                  without JS the server assembles the boxes itself. --}}
-            <div class="flex gap-2" role="group" aria-labelledby="code_label" @if ($error) aria-describedby="verify-error" @endif data-otp>
+            <div class="flex gap-2 {{ $error ? 'otp-group-error' : '' }}" role="group" aria-labelledby="code_label" @if ($error) aria-describedby="verify-error" @endif data-otp>
                 @for ($i = 1; $i <= 6; $i++)
                     <input class="otp-box flex-1 text-center" name="code_{{ $i }}" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-otp-box @if ($i === 1) autocomplete="one-time-code" autofocus @endif aria-label="Digit {{ $i }}" aria-invalid="{{ $error ? 'true' : 'false' }}">
                 @endfor

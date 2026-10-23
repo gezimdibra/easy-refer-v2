@@ -3,7 +3,7 @@
 @section('title', 'Verify your email')
 
 @section('content')
-    <h1>Verify your email address</h1>
+    <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Verify your email address</h1>
     <p>We sent a verification link to your email address. Open it to verify your account. Until your email is verified, your public QR code and billing stay off.</p>
 
     @if (session('status') === 'verification-link-sent')

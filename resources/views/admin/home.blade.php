@@ -3,7 +3,7 @@
 @section('title', 'Platform console')
 
 @section('content')
-    <h1 class="text-[28px] font-bold">Platform console</h1>
+    <h1 class="text-2xl font-bold">Platform console</h1>
 
     @if (session('two_factor_recovery_codes'))
         <div class="gate mt-4">

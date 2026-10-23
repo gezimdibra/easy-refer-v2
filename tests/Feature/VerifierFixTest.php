@@ -189,12 +189,20 @@ class VerifierFixTest extends TestCase
             ->assertSee('Reg linked a new number');
     }
 
-    public function test_home_and_vertical_have_one_primary_in_the_main_region(): void
+    public function test_home_and_vertical_primaries_follow_the_amended_ap08(): void
     {
+        // AP-08 as amended 2026-10-23 (coordinator ruling on CF-04):
+        // exactly one Primary per VIEWPORT region, not per page.
+        // The hero Primary and the pricing card's Start free are
+        // both Primary by design and never share a viewport on
+        // these long pages; the browser-measured half of the rule
+        // is verified in the Phase 2 AP run. What this test pins:
+        // exactly those two Primaries exist in main, no third one
+        // sneaks in (header and starter-kit buttons stay Secondary).
         foreach ([route('home'), route('vertical', ['vertical' => 'barbers'])] as $url) {
             $html = $this->get($url)->assertOk()->getContent();
             $main = substr($html, strpos($html, '<main'), strpos($html, '</main>') - strpos($html, '<main'));
-            $this->assertSame(1, substr_count($main, 'btn btn-primary'), $url);
+            $this->assertSame(2, substr_count($main, 'btn btn-primary'), $url);
         }
     }
 

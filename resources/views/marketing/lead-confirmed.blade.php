@@ -2,10 +2,12 @@
 
 @section('title', 'You are on the list | Easy Refer')
 
+@section('meta_description', 'You are on the list for the free Easy Refer Referral Program Starter Kit.')
+
 @section('content')
-    <section class="mx-auto max-w-[1120px] px-5 py-12">
+    <section class="mx-auto max-w-[1120px] px-5 py-8 md:py-12 lg:py-16 xl:py-20">
         <div class="max-w-[720px]">
-            <h1 class="text-4xl font-bold text-text-1">You are on the list</h1>
+            <h1 class="text-[32px] leading-[38px] font-bold text-text-1">You are on the list</h1>
             <p class="mt-4 text-lg text-text-2">Your subscription is confirmed.</p>
             <p class="mt-6"><a class="font-semibold text-brand-700 underline" href="{{ route('home') }}">Back to the home page</a></p>
         </div>

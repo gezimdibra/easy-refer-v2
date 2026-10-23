@@ -9,7 +9,7 @@
     <p><a class="font-semibold text-brand-700 hover:underline" href="{{ route('admin.businesses') }}">Back to businesses</a></p>
 
     <div class="card mt-3">
-        <h1 class="text-[28px] font-bold">{{ $business->name }}</h1>
+        <h1 class="text-2xl font-bold">{{ $business->name }}</h1>
         <p class="mt-1 text-text-2">
             @if ($business->status === 'active') <span class="pill pill-success">Active</span>
             @elseif ($business->status === 'disabled') <span class="pill pill-warning">Paused</span>

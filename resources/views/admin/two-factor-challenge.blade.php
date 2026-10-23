@@ -6,7 +6,7 @@
 
 @section('content')
     <div class="card mx-auto max-w-[480px]">
-        <h1 class="text-[28px] font-bold">Two-factor check</h1>
+        <h1 class="text-2xl font-bold">Two-factor check</h1>
         <p class="mt-1 text-text-2">Enter the code from your authenticator app, or one of your recovery codes.</p>
 
         <form method="POST" action="{{ route('admin.two-factor.challenge.store') }}" class="mt-4">

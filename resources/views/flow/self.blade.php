@@ -7,7 +7,7 @@
     {{-- The self-referral stop (spec Section 3 Step 8, inventory
          REF-SELF): the claim earns nothing, stated honestly, with
          the one useful action offered. --}}
-    <h1 class="text-[28px] font-bold leading-tight">
+    <h1 class="text-[32px] font-bold leading-[38px]">
         @if ($variant === 'owner_phone')
             That is the business's own number
         @else

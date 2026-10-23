@@ -6,7 +6,7 @@
     {{-- Referrals (spec Section 5.3): state filters with counts;
          held rows carry the human reason inline and link to the
          review queue. --}}
-    <h1 class="text-[28px] font-bold">Referrals</h1>
+    <h1 class="text-2xl font-bold">Referrals</h1>
 
     {{-- The filters are tabs (design 6.6): arrow-key movement,
          Enter or Space activation, aria-selected state. --}}

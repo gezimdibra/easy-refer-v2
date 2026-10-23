@@ -15,7 +15,7 @@
         <div class="flood-check mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white" aria-hidden="true">
             <svg class="h-9 w-9 text-success-strong" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </div>
-        <p class="mt-4 text-[28px] font-bold leading-tight">{{ $rewardText }}</p>
+        <p class="mt-4 text-[32px] font-bold leading-[38px]">{{ $rewardText }}</p>
         <p class="mt-1 text-lg">{{ $businessName }}</p>
         <p class="mt-2 text-base">Confirmed {{ $confirmed->format('F j, Y') }}, {{ $confirmed->format('g:i A') }}</p>
     </div>

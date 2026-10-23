@@ -3,7 +3,7 @@
 @section('title', 'Risk feed')
 
 @section('content')
-    <h1 class="text-[28px] font-bold">Risk feed</h1>
+    <h1 class="text-2xl font-bold">Risk feed</h1>
 
     <form method="GET" action="{{ route('admin.risk-feed') }}" class="card mt-4">
         <label for="q">Search by phone, business, or rule</label>

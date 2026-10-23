@@ -3,7 +3,7 @@
 @section('title', 'Set up two-factor authentication')
 
 @section('content')
-    <h1>Set up two-factor authentication</h1>
+    <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Set up two-factor authentication</h1>
 
     <p>Add this account to your authenticator app using the setup link below, or type the secret in by hand. Then enter the six-digit code the app shows to finish.</p>
 

@@ -6,7 +6,7 @@
 
 @section('content')
     <div class="card mx-auto max-w-[560px]">
-        <h1 class="text-[28px] font-bold">Set up two-factor authentication</h1>
+        <h1 class="text-2xl font-bold">Set up two-factor authentication</h1>
         <p class="mt-1 text-text-2">Platform accounts must use two-factor authentication. Finish setup to reach the console.</p>
 
         @if (session('two_factor_recovery_codes'))

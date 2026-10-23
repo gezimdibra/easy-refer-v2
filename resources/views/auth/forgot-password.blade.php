@@ -3,7 +3,7 @@
 @section('title', 'Reset your password')
 
 @section('content')
-    <h1>Reset your password</h1>
+    <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Reset your password</h1>
     <p>Enter the email on your account and we will send you a link to set a new password. The link works for 60 minutes and can be used once.</p>
 
     <form method="POST" action="{{ route('password.email') }}">

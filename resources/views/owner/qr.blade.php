@@ -7,7 +7,7 @@
          code, the designed poster set with its use labels, the
          facts panel, how redemption works in one sentence, and
          the danger zone with its consequence modal. --}}
-    <h1 class="text-[28px] font-bold">Your QR code</h1>
+    <h1 class="text-2xl font-bold">Your QR code</h1>
     <p class="mt-1 text-text-2">Customers scan this code to join and start referring.</p>
 
     <div class="card mt-5 text-center">

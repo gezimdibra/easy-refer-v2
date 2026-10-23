@@ -15,7 +15,7 @@
          480px column at every width, the wordmark and the step
          indicator on a slim top row, one card, no navigation. The
          screen's one task is the whole hierarchy. --}}
-    <div class="mx-auto w-full max-w-[480px] px-3 py-4 sm:px-0">
+    <div class="mx-auto w-full max-w-[480px] px-3 py-4 text-lg sm:px-0">
         <div class="flex items-center justify-between px-1">
             <span class="text-lg font-bold">Easy Refer</span>
             @yield('step')
