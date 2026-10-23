@@ -1,0 +1,29 @@
+# Secrets and environment (NEVER commit)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+config/secrets.php
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build and cache
+/dist/
+/build/
+.cache/
+*.log
+
+# Local data, dumps, backups
+*.sql
+*.sqlite
+/backups/
+/uploads/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
