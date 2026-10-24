@@ -175,29 +175,61 @@ class DashboardController extends Controller
 
         // Weekly top referrers (spec Section 5.1): this business's
         // memberships ranked by referrals completed in the last 7
-        // days. The ranking is an aggregate join over the week's
-        // redeemed referrals, not a per-membership count: the
-        // earlier withCount shape evaluated a correlated subquery
-        // for every membership the business has ever had, which at
-        // 10,000-referral volume cost ~11.6 s on the dashboard
-        // (Sprint 6, protocol Section 2.5). Only memberships with
-        // at least one completion this week can rank, which is
-        // also what the old query's zero filter reduced to.
-        $topReferrers = Membership::query()
-            ->where('memberships.business_id', $business->id)
-            ->whereNull('memberships.removed_at')
-            ->join('referrals', 'referrals.referrer_membership_id', '=', 'memberships.id')
-            ->where('referrals.state', Referral::STATE_REDEEMED)
-            ->where('referrals.redeemed_at', '>=', now()->subDays(7))
-            ->groupBy('memberships.id')
-            ->select('memberships.*')
-            ->selectRaw('count(referrals.id) as weekly_referrals')
-            ->orderByDesc('weekly_referrals')
-            ->orderBy('memberships.created_at')
-            ->limit(5)
-            ->with('customer')
+        // days. Only memberships with at least one completion this
+        // week can rank.
+        //
+        // The ranking runs in two steps (F6). Step one aggregates
+        // the week's redeemed referrals grouped by the referrer
+        // alone; step two hydrates those memberships, attaches the
+        // counts, and finishes the ordering in PHP. The Sprint 6
+        // shape was a single aggregate join selecting memberships.*
+        // under a GROUP BY over the join; MariaDB's
+        // ONLY_FULL_GROUP_BY rejects that with error 1055 even
+        // though SQLite accepts it, so on the production engine
+        // every authenticated dashboard load returned 500 while
+        // the suite stayed green (hidden_files/redesign/
+        // gate3-log-forensics.md). Grouping by the single selected
+        // key is legal on every engine. The two-step shape keeps
+        // the Sprint 6 performance property that motivated the
+        // join: a constant number of indexed queries and no
+        // per-membership correlated subquery, the shape that cost
+        // ~11.6 s at 10,000-referral volume (Sprint 6, protocol
+        // Section 2.5). Ordering finishes in PHP over the week's
+        // referrers, a set bounded by the membership count and
+        // never the referral count, so the created_at tie-break
+        // applies before the limit exactly as the old ORDER BY
+        // did (a blind LIMIT 5 on the counts alone would pick an
+        // arbitrary member of a boundary tie).
+        $weeklyCounts = Referral::query()
+            ->whereIn('referrer_membership_id', Membership::query()
+                ->where('business_id', $business->id)
+                ->whereNull('removed_at')
+                ->select('id'))
+            ->where('state', Referral::STATE_REDEEMED)
+            ->where('redeemed_at', '>=', now()->subDays(7))
+            ->groupBy('referrer_membership_id')
+            ->select('referrer_membership_id')
+            ->selectRaw('count(id) as weekly_referrals')
             ->get()
-            ->values();
+            ->mapWithKeys(fn ($row) => [(int) $row->referrer_membership_id => (int) $row->weekly_referrals]);
+
+        $topReferrers = $weeklyCounts->isEmpty()
+            ? collect()
+            : Membership::query()
+                ->whereIn('id', $weeklyCounts->keys())
+                ->with('customer')
+                ->get()
+                ->each(fn (Membership $membership) => $membership->setAttribute(
+                    'weekly_referrals',
+                    $weeklyCounts[$membership->id],
+                ))
+                // PHP sorts are stable, so sorting by the
+                // tie-break first and the count second yields
+                // (weekly_referrals desc, created_at asc).
+                ->sortBy(fn (Membership $membership) => $membership->created_at->getTimestamp())
+                ->sortByDesc('weekly_referrals')
+                ->take(5)
+                ->values();
 
         $packs = StarterPacks::forType($business->business_type);
 
