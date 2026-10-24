@@ -38,7 +38,15 @@
     show() {
         this.invoker = document.activeElement;
         this.open = true;
-        this.$nextTick(() => this.$refs.cancel.focus());
+        // DG-6 (release 08b): the focus call waits one animation
+        // frame past the tick. The tick alone raced the x-show
+        // display flip in the WebKit capture rig (the trigger
+        // still held focus 1.6s after the dialog opened, twice),
+        // so initial focus never landed inside the dialog; by
+        // the first frame the dialog is displayed and the focus
+        // call sticks. Escape, the focus boundary, and the
+        // restore on close are unchanged.
+        this.$nextTick(() => requestAnimationFrame(() => this.$refs.cancel.focus()));
     },
     cancel() {
         this.open = false;

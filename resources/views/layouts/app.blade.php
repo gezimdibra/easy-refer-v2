@@ -29,14 +29,22 @@
         <div x-show="navOpen" x-cloak class="fixed inset-0 z-40 lg:hidden">
             <div class="absolute inset-0 bg-ink-900/60" @click="navOpen = false"></div>
             <nav aria-label="Primary" class="absolute inset-y-0 left-0 flex w-[280px] flex-col overflow-y-auto bg-surface-0 px-4 py-6 shadow-e3">
-                <button type="button" class="absolute top-4 right-4 inline-flex h-11 w-11 items-center justify-center rounded-md text-text-2 hover:bg-surface-1 hover:text-text-1" aria-label="Close menu" @click="navOpen = false"><x-icon name="x" :size="20" /></button>
+                <button type="button" class="absolute top-4 right-4 inline-flex h-12 w-12 items-center justify-center rounded-md text-text-2 hover:bg-surface-1 hover:text-text-1" aria-label="Close menu" @click="navOpen = false"><x-icon name="x" :size="20" /></button>
                 @include('partials.app-rail')
             </nav>
         </div>
 
         <div class="min-w-0 flex-1">
             <header class="sticky top-0 z-20 flex h-[60px] items-center gap-3 border-b border-line bg-surface-0 px-5 md:px-8">
-                <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-md text-text-1 hover:bg-surface-1 lg:hidden" aria-label="Open menu" aria-haspopup="true" :aria-expanded="navOpen.toString()" @click="navOpen = true"><x-icon name="menu" :size="24" /></button>
+                <button type="button" class="inline-flex h-12 w-12 items-center justify-center rounded-md text-text-1 hover:bg-surface-1 lg:hidden" aria-label="Open menu" aria-haspopup="true" :aria-expanded="navOpen.toString()" @click="navOpen = true"><x-icon name="menu" :size="24" /></button>
+
+                {{-- D-8 (release 08b): the app carries its brand
+                     on mobile too. The companion check (the logo
+                     pack's small-size mark) sits in the bar below
+                     lg, where the rail and its signature are
+                     hidden; the bar's 60px height and the avatar's
+                     place at the right are unchanged. --}}
+                <span class="lg:hidden"><x-logo :wordmark="false" :size="30" /></span>
 
                 {{-- The top-bar title yields to the page's own
                      H1 below lg, so a phone never states the

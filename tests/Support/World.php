@@ -24,6 +24,19 @@ final class World
 {
     private static int $sequence = 0;
 
+    /**
+     * Reset the fixture sequence. Called from TestCase::setUp() so
+     * every test numbers its businesses from 1: without the reset the
+     * process-global counter eventually generates an owner phone in
+     * the 212555xxxx range that feature tests hard-code as customer
+     * phones (n=111, 212, 777, 999), and the fixture business silently
+     * takes the owner_phone branch in the refer flow.
+     */
+    public static function resetSequence(): void
+    {
+        self::$sequence = 0;
+    }
+
     public static function business(array $overrides = []): Business
     {
         self::$sequence++;

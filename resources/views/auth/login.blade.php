@@ -15,7 +15,7 @@
     <h1 class="type-display-xs mt-3 text-text-1">Welcome back</h1>
     <p class="type-body mt-2 text-text-2">Sign in to your account.</p>
 
-    <form method="POST" action="{{ route('login.store') }}" class="mt-8">
+    <form method="POST" action="{{ route('login.store') }}" class="mt-8" data-loading>
         @csrf
 
         <div class="field">
@@ -34,7 +34,7 @@
             <label class="flex min-h-[48px] items-center gap-2.5 text-[15px] text-text-1">
                 <input type="checkbox" name="remember" class="h-[18px] w-[18px] accent-brand-600" style="border-radius: 5px"> Remember me
             </label>
-            <a class="font-medium text-brand-700 underline decoration-brand-100 underline-offset-[3px] hover:decoration-brand-700" href="{{ route('password.request') }}">Forgot password?</a>
+            <a class="inline-flex min-h-11 items-center font-medium text-brand-700 underline decoration-brand-100 underline-offset-[3px] hover:decoration-brand-700" href="{{ route('password.request') }}">Forgot password?</a>
         </div>
 
         @if (config('services.turnstile.site_key'))

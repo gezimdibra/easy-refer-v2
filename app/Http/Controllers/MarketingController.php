@@ -27,23 +27,23 @@ class MarketingController extends Controller
     private const VERTICALS = [
         'barbers' => [
             'type' => 'barber',
-            'h1' => 'Your regulars bring your next clients',
+            'h1' => 'Your regulars bring your barbershop its next clients',
             'line' => 'Built for barbershops: the client in your chair is your best advertising.',
             'objection' => 'My chairs are already busy on Saturdays',
             'objection_answer' => 'Referrals fill weekdays. Your regulars send friends, and friends book the quiet days too.',
-            'visual' => ['kind' => 'poster', 'base' => 'images/poster-counter', 'width' => 480, 'height' => 480, 'alt' => 'The printed counter poster for a barbershop: a large QR code and the words Customers scan this code to join and start referring.'],
+            'visual' => ['kind' => 'poster', 'base' => 'images/poster-counter', 'width' => 480, 'height' => 480, 'alt' => 'The printed counter poster for a barbershop: a large QR code and the words Scan this code to join and start referring.'],
         ],
         'salons' => [
             'type' => 'salon',
-            'h1' => 'Your regulars bring your next clients',
+            'h1' => 'Your regulars bring your salon its next clients',
             'line' => 'Built for salons: every compliment on your work is a referral waiting to happen.',
             'objection' => 'My clients already rebook',
-            'objection_answer' => 'Rebooking keeps your clients. Referrals bring their friends.',
-            'visual' => ['kind' => 'poster', 'base' => 'images/poster-qr', 'width' => 480, 'height' => 398, 'alt' => 'A printed Easy Refer counter poster: a large QR code customers scan to join and start referring.'],
+            'objection_answer' => 'Rebooking keeps your clients. Referrals add new ones: your clients share their link, and their friends book with you.',
+            'visual' => ['kind' => 'poster', 'base' => 'images/poster-qr', 'width' => 480, 'height' => 398, 'alt' => 'The QR code page in the owner dashboard, showing the large QR code customers scan and the poster downloads.'],
         ],
         'cafes' => [
             'type' => 'cafe',
-            'h1' => 'Your regulars bring your next clients',
+            'h1' => 'Your regulars bring your cafe its next customers',
             'line' => 'Built for cafes: your morning regulars know everyone on the block.',
             'objection' => 'Margins are too thin for discounts',
             'objection_answer' => 'You choose the reward, and you pay our {per_visit} only when a new customer actually visits and redeems.',
@@ -51,7 +51,7 @@ class MarketingController extends Controller
         ],
         'boutiques' => [
             'type' => 'boutique',
-            'h1' => 'Your regulars bring your next clients',
+            'h1' => 'Your regulars bring your boutique its next customers',
             'line' => 'Built for boutiques: every "where did you get that?" is a referral waiting to happen.',
             'objection' => 'I am not a discount brand',
             'objection_answer' => 'The reward can be early access or a gift. It never has to be a price cut.',
@@ -182,9 +182,11 @@ class MarketingController extends Controller
     }
 
     /**
-     * The six approved FAQ entries (inventory FAQ-01 to FAQ-06),
-     * with the pricing answers' amounts interpolated from the plan
-     * table so the page can never drift from the plan row.
+     * The seven approved FAQ entries (inventory FAQ-01 to FAQ-07,
+     * in the release 08b S-06 order: money questions together at
+     * positions 3 and 4, FAQ-07 last and FAQ page only), with the
+     * pricing answers' amounts interpolated from the plan table
+     * and config so the page can never drift from the plan row.
      *
      * @return list<array{q: string, a: string}>
      */
@@ -198,34 +200,40 @@ class MarketingController extends Controller
         return [
             [
                 'q' => 'What is Easy Refer?',
-                'a' => 'Easy Refer is a referral platform for small businesses. Your customers scan a QR code at checkout, share a personal referral link with friends, and everyone earns rewards when those friends visit your store. You can also send bulk text messages to your customers from the owner dashboard.',
+                'a' => 'Easy Refer is a referral platform for local businesses. Customers scan a QR code, share their referral link, and earn rewards when friends visit. You pay only for verified visits, and you can send bulk texts from your dashboard.',
             ],
             [
                 'q' => 'How does the QR code referral system work?',
-                'a' => 'Each business gets a unique QR code for the checkout counter or promotional materials. Customers scan it, verify their phone number, and get a personal referral link to share. When friends visit using the referral, both parties can claim rewards.',
+                'a' => 'Your business gets its own QR code for the counter. A customer scans it, verifies their phone number, and gets a personal link to share. When a friend visits through that link, both of them can claim a reward.',
             ],
             [
                 'q' => 'How much does it cost?',
-                'a' => "You pay {$perVisit} only when a referred friend actually visits your store and redeems. There is no monthly fee, your first {$free} verified visits are free, and you never pay more than {$cap} in a month.",
+                'a' => "You pay {$perVisit} only when a referred friend actually visits your store and redeems. There is no monthly fee. Your first {$free} verified visits are free, and you never pay more than {$cap} in a month.",
+            ],
+            [
+                'q' => 'Is there a setup fee?',
+                'a' => "No. There is no setup fee and no monthly fee. You pay only per verified referral visit, and your first {$free} verified visits are free.",
             ],
             [
                 'q' => 'How do I track referrals?',
                 'a' => 'The owner dashboard shows your referrals, rewards, customers, and campaign results in real time.',
             ],
             [
-                'q' => 'Is there a setup fee?',
-                'a' => "No. There is no setup fee and no monthly fee. You only pay per verified referral visit, and your first {$free} are free.",
+                'q' => 'Is my data secure?',
+                'a' => 'Yes. Passwords are stored with strong one-way hashing, sessions expire on their own, and card details never touch our servers: Square handles payments and Twilio handles text messages. You can ask for a copy or deletion of your data any time at support@easy-refer.com.',
             ],
             [
-                'q' => 'Is my data secure?',
-                'a' => 'Passwords are stored with strong one-way hashing, sessions expire automatically, and card details never touch our servers: payments are handled by Square and text messages by Twilio. You can request a copy or deletion of your data any time at support@easy-refer.com.',
+                'q' => 'Do I need a card to start?',
+                'a' => "Yes, we ask for a card when you sign up so billing can start automatically later. Nothing is charged until after your first {$free} free verified visits, and you can cancel any time before then.",
             ],
         ];
     }
 
     /**
-     * The vertical pages' FAQ subset (spec Section 2.6):
-     * FAQ-01, FAQ-02, FAQ-03, FAQ-05.
+     * The home and vertical pages' FAQ subset (spec Section 2.6):
+     * FAQ-01, FAQ-02, FAQ-03, FAQ-05, which sit at indices 0 to 3
+     * after the release 08b S-06 reorder (01, 02, 03, 05, 04, 06,
+     * then FAQ-07, FAQ page only).
      *
      * @return list<array{q: string, a: string}>
      */
@@ -233,6 +241,6 @@ class MarketingController extends Controller
     {
         $faqs = $this->faqs();
 
-        return [$faqs[0], $faqs[1], $faqs[2], $faqs[4]];
+        return [$faqs[0], $faqs[1], $faqs[2], $faqs[3]];
     }
 }

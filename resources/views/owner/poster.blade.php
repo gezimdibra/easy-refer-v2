@@ -70,7 +70,7 @@
             @else
                 <h1 class="mt-10 text-text-1" style="{{ $sizes['headline'] }}; font-weight: 650; letter-spacing: -0.02em">Join {{ $business->name }}'s referral program</h1>
             @endif
-            <p class="type-body-lg mt-4 text-text-2">Customers scan this code to join and start referring.</p>
+            <p class="type-body-lg mt-4 text-text-2">Scan this code to join and start referring.</p>
 
             <div class="mt-10 text-center">
                 <div class="inline-block rounded-xl border border-line bg-surface-0" style="padding: 20px">
@@ -82,7 +82,7 @@
 
         <div class="on-dark mt-10 flex items-center justify-between gap-4 bg-ink-950" style="padding: 20px 32px">
             <x-logo variant="reversed" :size="32" />
-            <p class="type-caption text-right"><span class="text-white">Free for the business to run.</span> <span class="text-dark-muted">Powered by Easy Refer.</span></p>
+            <p class="type-caption text-right"><span class="text-white">Free to join. Rewards for sharing.</span> <span class="text-dark-muted">Powered by Easy Refer.</span></p>
         </div>
     </main>
     @if ($autoPrint)

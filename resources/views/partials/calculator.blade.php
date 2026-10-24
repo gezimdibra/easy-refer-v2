@@ -15,6 +15,17 @@
     set in the stat-sm step.
 --}}
 @php($plan = $plan ?? \App\Models\Plan::launch())
+{{-- R10 (release 08b): the calculator gets its heading and intro
+     (LAND-CALC-01 gains both) so the block no longer opens cold
+     with a counter question. The amounts render from the plan
+     table like every other price. On the home page the partial
+     sits inside its own section (08b item 2.2); the heading is
+     the section's H2 there and reads as the block heading inside
+     the verticals' pricing section. --}}
+<div class="mx-auto mt-16 max-w-[720px] text-center">
+    <h2 class="type-title-1 text-text-1">See what referrals could bring in</h2>
+    <p class="type-body mt-3 text-text-2">Put in your own numbers. The calculator uses your counter traffic and your average ticket. It applies the same {{ \App\Support\Money::usd($plan->per_referral_cents) }} per verified visit and the same {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} monthly cap.</p>
+</div>
 <div class="mx-auto mt-10 max-w-[720px] rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px"
     x-data="{
         weekly: 100,
@@ -40,7 +51,10 @@
         </div>
         <div>
             <label class="form-label" for="calc-share">Share of customers who bring a friend who visits</label>
-            <p class="form-input flex items-center gap-2">1 in <input class="w-16 border-0 bg-transparent p-0 focus:outline-none" id="calc-share" type="number" min="1" max="1000" x-model.number="oneIn" aria-label="Share of customers who bring a friend who visits, as one in a number"></p>
+            {{-- F5 (release 08b): the inline share input takes the
+                 48px target height (h-12); the font stays 16px and
+                 the "1 in [ ]" sentence layout is unchanged. --}}
+            <p class="form-input flex items-center gap-2">1 in <input class="h-12 w-16 border-0 bg-transparent p-0 focus:outline-none" id="calc-share" type="number" min="1" max="1000" x-model.number="oneIn" aria-label="Share of customers who bring a friend who visits, as one in a number"></p>
         </div>
     </div>
 

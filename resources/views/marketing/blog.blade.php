@@ -8,7 +8,9 @@
     <section class="shell section-pad">
         <div class="max-w-[640px]">
             <h1 class="type-title-1 text-text-1">Blog</h1>
-            <p class="mt-4 text-lg text-text-2">Welcome to the Easy Refer blog. Here you will find helpful tips, success stories, and insights into how referral programs can boost small business growth.</p>
+            {{-- S-13 (release 08b): the intro states the content
+                 instead of announcing the page. --}}
+            <p class="mt-4 text-lg text-text-2">You will find helpful tips, success stories, and insights into how referral programs can boost small business growth.</p>
 
             @if ($posts->isEmpty())
                 <p class="mt-10 text-base text-text-2">Posts are on the way. Check back soon.</p>
@@ -27,4 +29,10 @@
             @endif
         </div>
     </section>
+
+    {{-- DG-10 (release 08b): with zero posts the page no longer
+         dead-ends on the empty-state line; the starter kit closes
+         the page with an action, the same closing block the other
+         marketing pages carry. --}}
+    @include('partials.starter-kit', ['source' => 'blog'])
 @endsection

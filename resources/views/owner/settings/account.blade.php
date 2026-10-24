@@ -29,7 +29,7 @@
                  (design 6.4 matrix, modals row): the checkbox is
                  the gate, and the disabled state is visible in
                  the markup, not only in native validation. --}}
-            <form method="POST" action="{{ route('settings.account.close') }}" class="mt-4" x-data="{ confirmed: false }">
+            <form method="POST" action="{{ route('settings.account.close') }}" class="mt-4" x-data="{ confirmed: false }" data-loading>
                 @csrf
 
                 <label class="flex items-start gap-3">

@@ -5,7 +5,7 @@
 @section('content')
     <h1 class="type-display-xs text-text-1">Set a new password</h1>
 
-    <form method="POST" action="{{ route('password.store') }}" class="mt-8">
+    <form method="POST" action="{{ route('password.store') }}" class="mt-8" data-loading>
         @csrf
 
         <input type="hidden" name="token" value="{{ $request->route('token') }}">

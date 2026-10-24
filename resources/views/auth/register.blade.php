@@ -31,7 +31,7 @@
             }
         }
     @endphp
-    <form method="POST" action="{{ route('register.store') }}" x-data="{ step: {{ $errorStep }}, maxReached: {{ $errors->any() ? 4 : 1 }}, pw: '' }" class="mt-6">
+    <form method="POST" action="{{ route('register.store') }}" x-data="{ step: {{ $errorStep }}, maxReached: {{ $errors->any() ? 4 : 1 }}, pw: '' }" class="mt-6" data-loading>
         @csrf
 
         {{-- Segmented progress (redesign-spec.md Section 10.2):
@@ -167,5 +167,5 @@
         </div>
     </form>
 
-    <p class="mt-6 text-base">Already have an account? <a class="font-semibold text-brand-700 underline" href="{{ route('login') }}">Sign in</a></p>
+    <p class="mt-6 text-base">Already have an account? {{-- TX-D4 (release 08d): 24px link box; bare inline it measured 20px. --}}<a class="inline-flex min-h-6 items-center font-semibold text-brand-700 underline" href="{{ route('login') }}">Sign in</a></p>
 @endsection

@@ -5,10 +5,14 @@
 @section('content')
     {{-- The Overview (spec Section 5.1, design amendment Section
          6.4): greeting, the one action card, the starter pack while
-         rewards hold defaults, the action tiles, then the standing
-         counters, the chart and top referrers, the Value panel
-         (VAL-01 to VAL-03 verbatim), and the setup checklist
-         (Section 5.8). In the zero state the standing sections stay
+         rewards hold defaults, the setup checklist (Section 5.8)
+         while the poster step is open, the action tiles, then the
+         standing counters, the chart and top referrers, and the
+         Value panel (VAL-01 to VAL-03 verbatim). DG-2 (release
+         08b) gates the setup furniture on the checklist's own
+         state: once the poster is printed the QR card collapses
+         to a slim link row and the checklist moves below the
+         tiles. In the zero state the standing sections stay
          hidden until the first enrollment exists (Section 6.4.1)
          and the tiles read an honest zero. --}}
     <h1 class="type-title-2 text-text-1">Welcome to Easy Refer, {{ $business->name }}.</h1>
@@ -33,6 +37,30 @@
         </div>
     @endif
 
+    {{-- DG-2 (release 08b): the checklist's done count and the
+         poster step's state are computed once, ahead of the QR
+         card, because both the card's collapsed form and the
+         checklist's position key on them. --}}
+    @php
+        $checklistDone = collect($checklist)->filter()->count();
+        $printDone = (bool) ($checklist['poster_downloaded'] ?? false);
+    @endphp
+    @if ($printDone && ! $firstCustomer)
+        {{-- DG-2 (release 08b): once the poster is printed the
+             card's standing work is done, so it collapses to a
+             slim link row (thumbnail, the QR page link, the
+             poster rows) instead of repeating the full action
+             card on every visit. The first-customer moment is
+             exempt: that card is a value moment, not setup
+             furniture, and keeps its full form. --}}
+        <div class="card mt-5">
+            <div class="flex items-center gap-3">
+                <img src="{{ route('owner.qr.image') }}" alt="" width="44" height="44" class="shrink-0 rounded-lg border border-line">
+                <a class="inline-flex min-h-12 items-center font-semibold text-brand-700 hover:underline" href="{{ route('owner.qr') }}">Print your QR code</a>
+            </div>
+            @include('partials.dashboard-qr-rows')
+        </div>
+    @else
     <div class="card mt-5">
         <div class="flex items-start gap-4">
             <img src="{{ route('owner.qr.image') }}" alt="" width="88" height="88" class="shrink-0 rounded-lg border border-line">
@@ -50,13 +78,11 @@
                     <p class="type-body-sm mt-1 text-text-2">Posters at the register get scanned. Posters in a drawer do not.</p>
                     <a class="btn btn-primary mt-3" href="{{ route('owner.qr') }}">Print your QR code</a>
                 @endif
-                <p class="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-                    <a class="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline" href="{{ route('owner.qr') }}#posters">Download the on-screen poster <x-icon name="arrow-up-right" :size="16" /></a>
-                    <a class="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline" href="{{ route('owner.qr') }}#how-redemption-works">See how redemption works <x-icon name="arrow-up-right" :size="16" /></a>
-                </p>
             </div>
         </div>
+        @include('partials.dashboard-qr-rows')
     </div>
+    @endif
 
     @if ($showStarterPack)
         {{-- PACK-00, the starter pack card (spec Section 5.5,
@@ -90,66 +116,24 @@
         </div>
     @endif
 
-    {{-- The setup checklist sits directly under the action
-         cards (design 6.4.1 item 4): it is the map, never
-         outranking the action card, and never buried below the
-         panels it points at. --}}
-    {{-- Block form for this computation, never the inline
-         one-line form: the template also carries the chart's
-         PHP block below, and Blade pairs PHP block markers in
-         order, so an inline marker above a block marker
-         swallows everything between them (found in the Sprint
-         3 fix wave, when the checklist moved above the chart).
-         Keep literal directive names out of this comment for
-         the same reason. --}}
-    @php
-        $checklistDone = collect($checklist)->filter()->count();
-    @endphp
-    @if ($checklistDone < 4 && ! $checklistDismissed)
-        <div class="card mt-4">
-            <div class="flex items-center justify-between">
-                <h2 class="type-title-3 text-text-1">Setup checklist</h2>
-                <form method="POST" action="{{ route('dashboard.checklist.dismiss') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-ghost btn-sm">Dismiss</button>
-                </form>
-            </div>
-            <p class="type-body-sm mt-1 text-text-2">{{ $checklistDone }} of 4 done</p>
-            <div class="progress-track mt-3" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="{{ $checklistDone }}" aria-label="Setup progress">
-                <div class="progress-fill" style="width: {{ $checklistDone * 25 }}%"></div>
-            </div>
-            <ul class="mt-4 space-y-2">
-                <li class="flex items-center gap-2.5">
-                    @if ($checklist['email_verified'])
-                        <span class="flex items-center gap-2.5"><span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success-fill text-success-strong"><x-icon name="check" :size="16" /></span> Verify your email</span>
-                    @else
-                        <span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-surface-2 text-text-3" aria-hidden="true"><span style="font-size: 11px; font-weight: 600">!</span></span> <a class="font-semibold text-brand-700 hover:underline" href="{{ route('verification.notice') }}">Verify your email</a>
-                    @endif
-                </li>
-                <li class="flex items-center gap-2.5">
-                    @if ($checklist['reward_text'])
-                        <span class="flex items-center gap-2.5"><span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success-fill text-success-strong"><x-icon name="check" :size="16" /></span> Set your rewards</span>
-                    @else
-                        <span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-surface-2 text-text-3" aria-hidden="true"><span style="font-size: 11px; font-weight: 600">!</span></span> <a class="font-semibold text-brand-700 hover:underline" href="{{ route('settings.rewards') }}">Set your rewards</a>
-                    @endif
-                </li>
-                <li class="flex items-center gap-2.5">
-                    @if ($checklist['poster_downloaded'])
-                        <span class="flex items-center gap-2.5"><span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success-fill text-success-strong"><x-icon name="check" :size="16" /></span> Print your QR code</span>
-                    @else
-                        <span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-surface-2 text-text-3" aria-hidden="true"><span style="font-size: 11px; font-weight: 600">!</span></span> <a class="font-semibold text-brand-700 hover:underline" href="{{ route('owner.qr') }}">Print your QR code</a>
-                    @endif
-                </li>
-                <li class="flex items-center gap-2.5">
-                    @if ($checklist['card_on_file'])
-                        <span aria-hidden="true">✓</span> Add a card (required to activate your QR code)
-                    @else
-                        <span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-surface-2 text-text-3" aria-hidden="true"><span style="font-size: 11px; font-weight: 600">!</span></span> Add a card (required to activate your QR code)
-                    @endif
-                </li>
-            </ul>
-        </div>
-    @endif
+    {{-- The setup checklist's first position (design 6.4.1
+         item 4): directly under the action cards while the
+         poster step is open, so mid-setup it still leads.
+         Once the poster is printed, DG-2 (release 08b) moves
+         it below the tiles instead (the second include, after
+         the tiles grid): finished setup furniture stops
+         outranking the day's numbers. The done-count
+         computation lives above the QR card in block form,
+         never the inline one-line form: the template also
+         carries the chart's PHP block below, and Blade pairs
+         PHP block markers in order, so an inline marker above
+         a block marker swallows everything between them
+         (found in the Sprint 3 fix wave, when the checklist
+         moved above the chart). Keep literal directive names
+         out of this comment for the same reason. --}}
+    @unless ($printDone)
+        @include('partials.dashboard-checklist')
+    @endunless
 
     {{-- Today's tiles (design 6.4.1 item 5, 6.5): two columns
          below sm, and they render honest zeros from the first
@@ -179,6 +163,12 @@
             </a>
         @endif
     </div>
+
+    {{-- The checklist's second position (DG-2): below the
+         tiles, reached once the poster step is done. --}}
+    @if ($printDone)
+        @include('partials.dashboard-checklist')
+    @endif
 
     @if ($hasEnrollments)
         {{-- Standing counters (spec Section 5.1): all time, with
@@ -247,7 +237,7 @@
                     <span>{{ $chart[count($chart) - 1]['label'] }}</span>
                 </p>
                 <details class="mt-2">
-                    <summary class="cursor-pointer font-semibold text-brand-700">View as table</summary>
+                    <summary class="flex min-h-12 cursor-pointer items-center font-semibold text-brand-700">View as table</summary>
                     <div class="mt-3 overflow-x-auto"><table class="tbl">
                         <thead>
                             <tr class="border-b border-line">

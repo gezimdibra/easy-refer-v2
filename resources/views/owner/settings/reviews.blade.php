@@ -19,7 +19,7 @@
         </div>
         <div class="mt-6 min-w-0 flex-1 lg:mt-0">
 
-    <form method="POST" action="{{ route('settings.reviews.update') }}" class="panel [&_input]:max-w-[560px] [&_select]:max-w-[560px] [&_textarea]:max-w-[560px]">
+    <form method="POST" action="{{ route('settings.reviews.update') }}" class="panel [&_input]:max-w-[560px] [&_select]:max-w-[560px] [&_textarea]:max-w-[560px]" data-loading>
         @csrf
 
         <label for="google_review_url">Google review link</label>

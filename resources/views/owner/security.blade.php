@@ -25,7 +25,7 @@
 
     <div class="panel mt-4 [&_input]:max-w-[560px] [&_select]:max-w-[560px]">
         <h2 class="type-title-3 text-text-1">Change password</h2>
-        <form method="POST" action="{{ route('security.password') }}" class="mt-3">
+        <form method="POST" action="{{ route('security.password') }}" class="mt-3" data-loading>
             @csrf
             @method('PUT')
 
@@ -67,12 +67,12 @@
         @endif
 
         <div class="mt-4 flex flex-wrap gap-2">
-            <form method="POST" action="{{ route('security.sign-out-others') }}">
+            <form method="POST" action="{{ route('security.sign-out-others') }}" data-loading>
                 @csrf
                 <button type="submit" class="btn btn-secondary">Sign out all other devices</button>
             </form>
 
-            <form method="POST" action="{{ route('security.sign-out-everywhere') }}">
+            <form method="POST" action="{{ route('security.sign-out-everywhere') }}" data-loading>
                 @csrf
                 <button type="submit" class="btn btn-secondary">Sign out everywhere</button>
             </form>
@@ -82,7 +82,7 @@
     <div class="panel mt-4 [&_input]:max-w-[560px] [&_select]:max-w-[560px]">
         <h2 class="type-title-3 text-text-1">Change email</h2>
         <p class="mt-1 text-text-2">Your current email address is {{ $user->email }}. Changing it sends a verification link to the new address, and your public QR code and billing stay off until that link is used. A notice also goes to the old address.</p>
-        <form method="POST" action="{{ route('security.email') }}" class="mt-3">
+        <form method="POST" action="{{ route('security.email') }}" class="mt-3" data-loading>
             @csrf
 
             <label for="new_email">New email address</label>
@@ -110,7 +110,7 @@
 
         @if ($user->hasTwoFactorEnabled())
             <p class="mt-1 text-text-2">Two-factor authentication is on for your account. Signing in asks for a code from your authenticator app.</p>
-            <form method="POST" action="{{ route('security.two-factor.disable') }}" class="mt-3">
+            <form method="POST" action="{{ route('security.two-factor.disable') }}" class="mt-3" data-loading>
                 @csrf
 
                 <x-password-input name="current_password" id="two_factor_current_password" label="Current password (required to turn this off)" required />
@@ -120,7 +120,7 @@
         @elseif ($user->hasPendingTwoFactorEnrollment())
             <p class="mt-1 text-text-2">You started setup but have not finished it. Two-factor authentication is not on yet.</p>
             <p class="mt-2"><a class="font-semibold text-brand-700 hover:underline" href="{{ route('security.two-factor.confirm') }}">Finish setting up two-factor authentication</a></p>
-            <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3">
+            <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3" data-loading>
                 @csrf
 
                 <x-password-input name="current_password" id="two_factor_restart_password" label="Current password (to start over with a fresh secret)" required />
@@ -129,7 +129,7 @@
             </form>
         @else
             <p class="mt-1 text-text-2">Two-factor authentication is not enabled on your account. Turn it on and signing in will also ask for a code from an authenticator app.</p>
-            <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3">
+            <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3" data-loading>
                 @csrf
 
                 <x-password-input name="current_password" id="two_factor_current_password" label="Current password (required to set this up)" required />

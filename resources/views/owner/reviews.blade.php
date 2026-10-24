@@ -22,7 +22,7 @@
                 <p class="banner banner-warning mt-3">{{ $sentence }}</p>
             @endforeach
             <div class="mt-3 flex gap-2">
-                <form method="POST" action="{{ route('reviews.referrals.release', ['referral' => $referral->id]) }}">
+                <form method="POST" action="{{ route('reviews.referrals.release', ['referral' => $referral->id]) }}" data-loading>
                     @csrf
                     <button type="submit" class="btn btn-primary">Release</button>
                 </form>
@@ -51,7 +51,7 @@
                 <p class="banner banner-warning mt-3">{{ $sentence }}</p>
             @endforeach
             <div class="mt-3 flex gap-2">
-                <form method="POST" action="{{ route('reviews.rewards.release', ['reward' => $reward->id]) }}">
+                <form method="POST" action="{{ route('reviews.rewards.release', ['reward' => $reward->id]) }}" data-loading>
                     @csrf
                     <button type="submit" class="btn btn-primary">Release</button>
                 </form>

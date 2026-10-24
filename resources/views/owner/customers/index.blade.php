@@ -11,7 +11,7 @@
         <a class="btn btn-primary" href="{{ route('customers.create') }}">Add a customer</a>
     </div>
 
-    <form method="GET" action="{{ route('customers.index') }}" class="mt-5">
+    <form method="GET" action="{{ route('customers.index') }}" class="mt-5" data-loading>
         <label class="form-label" for="q">Search by name or phone</label>
         <div class="flex gap-2">
             <span class="relative flex-1">
@@ -49,7 +49,7 @@
                     @foreach ($memberships as $membership)
                         <tr>
                             <td>
-                                <a class="font-semibold text-brand-700 hover:underline" href="{{ route('customers.show', $membership) }}">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</a>
+                                <a class="card-link font-semibold text-brand-700 hover:underline" href="{{ route('customers.show', $membership) }}">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</a>
                                 @if ($membership->consent_source === 'owner_asserted')
                                     <span class="block text-sm text-text-2">Added by you, waiting for their confirmation</span>
                                 @endif

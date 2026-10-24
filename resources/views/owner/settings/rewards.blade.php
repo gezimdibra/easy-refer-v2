@@ -38,7 +38,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('settings.rewards.update') }}" class="panel [&_input]:max-w-[560px] [&_select]:max-w-[560px] [&_textarea]:max-w-[560px]">
+    <form method="POST" action="{{ route('settings.rewards.update') }}" class="panel [&_input]:max-w-[560px] [&_select]:max-w-[560px] [&_textarea]:max-w-[560px]" data-loading>
         @csrf
 
         <label for="friend_reward_text">Friend welcome reward</label>

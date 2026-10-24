@@ -6,7 +6,7 @@
     {{-- Customer detail (design Section 3.4): this business's view
          of one membership. Nothing from any other business is
          reachable from here (Section 7.3). --}}
-    <nav aria-label="Breadcrumb" class="type-caption text-text-3">
+    <nav aria-label="Breadcrumb" class="type-caption flex min-h-12 items-center gap-1 text-text-3">
         <a class="text-text-2 hover:text-text-1" href="{{ route('customers.index') }}">Back to customers</a>
         <span aria-hidden="true"> / </span>
         <span aria-current="page" class="text-text-1">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</span>

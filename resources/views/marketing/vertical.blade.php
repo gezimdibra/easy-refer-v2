@@ -4,7 +4,7 @@
 
 @section('title', $vertical['h1'].' | Easy Refer')
 
-@section('meta_description', 'Easy Refer for '.\Illuminate\Support\Str::plural($vertical['type']).': your regulars bring your next clients. Free to start, and you pay only when a brand-new customer walks in and redeems.')
+@section('meta_description', 'Easy Refer for '.\Illuminate\Support\Str::plural($vertical['type']).': '.lcfirst($vertical['h1']).'. Free to start, and you pay only when a brand-new customer walks in and redeems.')
 
 @section('content')
     {{-- Vertical landing (spec Section 2.6): minimal chrome, the
@@ -17,12 +17,21 @@
     <section class="shell section-pad">
         <div class="max-w-[720px]">
             <h1 class="type-title-1 text-text-1">{{ $vertical['h1'] }}</h1>
-            <p class="type-lede mt-4 text-text-2">{{ $vertical['line'] }}</p>
-            <p class="type-lede mt-4 font-semibold text-text-1">Free to start. You pay {{ \App\Support\Money::usd($plan->per_referral_cents) }} only when a brand-new customer walks in and redeems. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
-            <p class="mt-2 text-base text-text-2">Your first {{ (int) config('billing.free_visits_at_signup') }} verified visits are free.</p>
-            <div class="mt-6 flex flex-wrap items-center gap-4">
+            {{-- P-06 (release 08b): two mechanisms together. The
+                 stack's margins tighten (about 20px across it), the
+                 two lede blocks take the compact mobile step (the
+                 .v-line/.v-offer rule in app.css), and the
+                 first-free line folds into the actions cluster as
+                 its caption row, so the combined prose under the
+                 headline falls from 204-234px to about 156px on
+                 every vertical (budget: 186px, 22% of the first
+                 viewport). No wording changes. --}}
+            <p class="v-line type-lede mt-3 text-text-2">{{ $vertical['line'] }}</p>
+            <p class="v-offer type-lede mt-2 font-semibold text-text-1">Free to start. You pay {{ \App\Support\Money::usd($plan->per_referral_cents) }} only when a brand-new customer walks in and redeems. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
+            <div class="mt-5 flex flex-wrap items-center gap-4">
                 <a class="btn btn-primary" href="{{ route('register', ['type' => $vertical['type']]) }}">Start free</a>
                 <a class="btn btn-secondary" href="#how-it-works">See how it works</a>
+                <p class="w-full text-base text-text-2">Your first {{ (int) config('billing.free_visits_at_signup') }} verified visits are free.</p>
             </div>
         </div>
         @php($visual = $vertical['visual'])
@@ -39,9 +48,18 @@
             </picture>
         @endif
     </section>
+    {{-- S-04 (release 08b): the objection section answers the
+         named worry while it is live, second on the page,
+         not fourth after pricing. --}}
+    <section class="shell section-pad">
+        <div class="max-w-[640px]">
+            <h2 class="type-title-1 text-text-1">{{ $vertical['objection'] }}</h2>
+            <p class="mt-3 text-lg text-text-2">{{ $vertical['objection_answer'] }}</p>
+        </div>
+    </section>
 
     <section id="how-it-works" class="bg-surface-1"><div class="shell section-pad">
-        <h2 class="type-title-1 text-text-1">How It Works</h2>
+        <h2 class="type-title-1 text-text-1">How it works</h2>
         <div class="mt-8">
             @include('partials.how-it-works')
         </div>
@@ -49,19 +67,12 @@
     </section>
 
     <section class="shell section-pad">
-        <h2 class="type-title-1 text-center text-text-1">Simple, Transparent Pricing</h2>
+        <h2 class="type-title-1 text-center text-text-1">Simple, transparent pricing</h2>
         <div class="mt-8">
             @include('partials.pricing-plan')
         </div>
-        <p class="mt-4 text-center text-sm text-text-2">Payments are handled by Square. Text messages are handled by Twilio.</p>
+        <p class="mt-4 text-center text-sm text-text-2">Square handles payments. Twilio handles text messages.</p>
         @include('partials.calculator', ['registerUrl' => route('register', ['type' => $vertical['type']])])
-    </section>
-
-    <section class="shell section-pad">
-        <div class="max-w-[640px]">
-            <h2 class="type-title-1 text-text-1">{{ $vertical['objection'] }}</h2>
-            <p class="mt-3 text-lg text-text-2">{{ $vertical['objection_answer'] }}</p>
-        </div>
     </section>
 
     <section class="shell section-pad">
@@ -71,16 +82,19 @@
         </div>
     </section>
 
-    {{-- Closing band (inventory LAND-C2): the offer restated once,
-         the accent button via the component (CF-07). --}}
+    @include('partials.starter-kit', ['source' => 'vertical_'.$vertical['type']])
+
+    {{-- Closing band (inventory LAND-C2). R12 (release 08b): the
+         band's first line repeated the hero's offer paragraph
+         verbatim, the same page's sixth statement of the offer;
+         it is deleted. The band is the accent Start free alone,
+         the page's single accent action. --}}
     <section class="on-dark bg-ink-950">
         <div class="shell section-pad">
             <div class="mx-auto max-w-[720px] text-center">
-            <p class="type-title-3 text-white">Free to start. You pay {{ \App\Support\Money::usd($plan->per_referral_cents) }} only when a brand-new customer walks in and redeems. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
-            <p class="mt-8"><a class="btn btn-accent btn-lg" href="{{ route('register', ['type' => $vertical['type']]) }}">Start free</a></p>
+            <p><a class="btn btn-accent btn-lg" href="{{ route('register', ['type' => $vertical['type']]) }}">Start free</a></p>
             </div>
         </div>
     </section>
 
-    @include('partials.starter-kit', ['source' => 'vertical_'.$vertical['type']])
 @endsection

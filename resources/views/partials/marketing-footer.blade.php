@@ -12,13 +12,13 @@
         <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
             <div class="lg:col-span-2">
                 <x-logo :size="32" />
-                <p class="type-body-sm mt-4 max-w-[36ch] text-text-2">Turn your customers into your best marketers with our easy-to-use referral platform.</p>
+                <p class="type-body-sm mt-4 max-w-[36ch] text-text-2">The referral platform for local businesses.</p>
 
                 <p class="type-title-4 mt-8 text-text-1">Stay Updated</p>
                 @if (session('newsletter_status'))
                     <p class="banner banner-success mt-3" role="status">{{ session('newsletter_status') }}</p>
                 @else
-                    <form method="POST" action="{{ route('newsletter') }}" class="mt-3">
+                    <form method="POST" action="{{ route('newsletter') }}" class="mt-3" data-loading>
                         @csrf
                         <label class="form-label" for="newsletter-email">Email address</label>
                         <div class="joined max-w-md">
@@ -39,14 +39,14 @@
             <nav aria-label="Company">
                 <p class="type-title-4 text-text-1">Company</p>
                 <ul class="mt-3">
-                    <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('about') }}">About Us</a></li>
+                    <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('about') }}">About us</a></li>
                 </ul>
             </nav>
 
             <nav aria-label="Business Portal">
                 <p class="type-title-4 text-text-1">Business Portal</p>
                 <ul class="mt-3">
-                    <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('login') }}">Business Portal</a></li>
+                    <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('login') }}">Business Portal</a></li>
                 </ul>
             </nav>
 
@@ -54,19 +54,19 @@
                 <nav aria-label="Support">
                     <p class="type-title-4 text-text-1">Support</p>
                     <ul class="mt-3">
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('faq') }}">FAQ</a></li>
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('about') }}#contact">Contact</a></li>
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('faq') }}">Help Center</a></li>
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('blog') }}">Blog</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('faq') }}">FAQ</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('about') }}#contact">Contact</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('faq') }}">Help Center</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('blog') }}">Blog</a></li>
                     </ul>
                 </nav>
                 <nav aria-label="Legal" class="mt-8">
                     <p class="type-title-4 text-text-1">Legal</p>
                     <ul class="mt-3">
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a></li>
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('legal') }}#terms-of-service">Terms &amp; Conditions</a></li>
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('refund') }}">Refund Policy</a></li>
-                        <li><a class="block py-1.5 text-[15px] text-text-2 hover:text-text-1" href="{{ route('legal') }}#compliance">Compliance</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('legal') }}#terms-of-service">Terms &amp; Conditions</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('refund') }}">Refund Policy</a></li>
+                        <li><a class="flex min-h-12 items-center text-[15px] text-text-2 hover:text-text-1" href="{{ route('legal') }}#compliance">Compliance</a></li>
                     </ul>
                 </nav>
             </div>
@@ -74,13 +74,16 @@
 
         <div class="mt-12 flex flex-col gap-4 border-t border-line pt-6 md:flex-row md:items-center md:justify-between">
             <ul class="flex gap-3">
-                <li><a class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://www.facebook.com/people/EasyRefer/61571833155688" aria-label="Facebook"><x-icon name="facebook" :size="20" /></a></li>
-                <li><a class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://www.instagram.com/easy.refer" aria-label="Instagram"><x-icon name="instagram" :size="20" /></a></li>
-                <li><a class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://www.linkedin.com/company/easyrefer" aria-label="LinkedIn"><x-icon name="linkedin" :size="20" /></a></li>
-                <li><a class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://x.com/easy_refer" aria-label="X"><x-icon name="twitter" :size="20" /></a></li>
+                <li><a class="flex h-12 w-12 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://www.facebook.com/people/EasyRefer/61571833155688" aria-label="Facebook"><x-icon name="facebook" :size="20" /></a></li>
+                <li><a class="flex h-12 w-12 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://www.instagram.com/easy.refer" aria-label="Instagram"><x-icon name="instagram" :size="20" /></a></li>
+                <li><a class="flex h-12 w-12 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://www.linkedin.com/company/easyrefer" aria-label="LinkedIn"><x-icon name="linkedin" :size="20" /></a></li>
+                <li><a class="flex h-12 w-12 items-center justify-center rounded-full border border-line text-text-2 hover:border-line-strong hover:text-text-1" href="https://x.com/easy_refer" aria-label="X"><x-icon name="twitter" :size="20" /></a></li>
             </ul>
             <p class="type-body-sm text-text-2">
-                <a class="text-text-2 hover:text-text-1" href="mailto:support@easy-refer.com">support@easy-refer.com</a>
+                {{-- TX-D4 (release 08d): the mailto link carries a
+                     24px box; as a bare inline link it measured 19px,
+                     under the text-link floor. --}}
+                <a class="inline-flex min-h-6 items-center text-text-2 hover:text-text-1" href="mailto:support@easy-refer.com">support@easy-refer.com</a>
             </p>
             <p class="type-caption text-text-2">&copy; {{ now()->year }} Easy Refer. All rights reserved.</p>
         </div>

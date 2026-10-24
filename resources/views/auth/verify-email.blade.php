@@ -10,7 +10,7 @@
         <p class="status">A new verification link is on its way to your email address.</p>
     @endif
 
-    <form method="POST" action="{{ route('verification.send') }}" class="mt-6">
+    <form method="POST" action="{{ route('verification.send') }}" class="mt-6" data-loading>
         @csrf
         <button type="submit" class="btn btn-secondary h-12 w-full">Resend the verification email</button>
     </form>

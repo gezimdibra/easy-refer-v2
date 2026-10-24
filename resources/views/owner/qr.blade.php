@@ -16,7 +16,7 @@
 
     <div class="mx-auto mt-6 max-w-[420px] rounded-xl border border-line bg-surface-0 shadow-e2" style="padding: 32px">
         <img src="{{ $imageUrl }}" alt="QR code for {{ $business->name }}" width="280" height="280" class="mx-auto">
-        <form method="POST" action="{{ route('owner.qr.download') }}" class="mt-6 text-center">
+        <form method="POST" action="{{ route('owner.qr.download') }}" class="mt-6 text-center" data-loading>
             @csrf
             <button type="submit" class="btn btn-primary"><x-icon name="download" :size="20" /> Download QR code</button>
         </form>

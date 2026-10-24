@@ -131,7 +131,7 @@ class Sprint2FixWaveTest extends TestCase
         $this->actingAs($owner)->get(route('owner.qr.poster', 'counter'))
             ->assertOk()
             ->assertSee($business->name)
-            ->assertSee('Customers scan this code to join and start referring.');
+            ->assertSee('Scan this code to join and start referring.');
         $this->assertSame(1, ReferralEvent::query()->where('event_type', 'poster_downloaded')->count());
 
         $this->actingAs($owner)->get(route('owner.qr.poster', 'bogus'))->assertNotFound();

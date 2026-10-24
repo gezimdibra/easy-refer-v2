@@ -17,7 +17,17 @@
 
             <h2 id="privacy-policy" class="mt-10 type-title-1 text-text-1">Privacy Policy</h2>
             <p class="mt-3 text-base text-text-2">We collect the information the product needs to run a referral program, and nothing more. For customers of a business, that is: {{ $customerDataInventory }}. For business owners, it also includes the email address on the account. We never sell personal information.</p>
-            <p class="mt-3 text-base text-text-2">When a business signs up, we record how it found us in the business's account: the campaign source, medium, campaign, term, and content values, any Google, Facebook, or TikTok click ID, the page first visited, the referring site's host, and the time. A first-party cookie named er_attrib holds those same values on the visitor's browser for 90 days so the signup can be attributed; it is a functional cookie, it records campaign parameters only (no names, emails, or phone numbers), and declining on the cookie banner deletes it and stops further capture.</p>
+            {{-- P-04 (release 08b): the attribution disclosure was
+                 one 92-word paragraph, the page's worst mobile
+                 block. It splits at its natural sentence seam into
+                 two, and subheadings break the privacy block so no
+                 run exceeds three paragraphs. No wording changes
+                 beyond the split; the subheads are structural
+                 labels only. --}}
+            <h3 class="mt-6 type-title-3 text-text-1">How we attribute signups</h3>
+            <p class="mt-3 text-base text-text-2">When a business signs up, we record how it found us in the business's account: the campaign source, medium, campaign, term, and content values, any Google, Facebook, or TikTok click ID, the page first visited, the referring site's host, and the time.</p>
+            <p class="mt-3 text-base text-text-2">A first-party cookie named er_attrib holds those same values on the visitor's browser for 90 days so the signup can be attributed; it is a functional cookie, it records campaign parameters only (no names, emails, or phone numbers), and declining on the cookie banner deletes it and stops further capture.</p>
+            <h3 class="mt-6 type-title-3 text-text-1">Payments, messages, and measurement</h3>
             <p class="mt-3 text-base text-text-2">Payments are processed by Square and text messages and phone verification by Twilio. Ad measurement, only with your consent, uses Google Analytics and the Meta Pixel. Card details never touch our servers: we do not store payment information ourselves.</p>
             <p class="mt-3 text-base text-text-2">Data requests: <a class="font-semibold text-brand-700 underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>. You can request a copy or deletion of your data any time.</p>
 

@@ -80,10 +80,14 @@ mkdir -p "$D"
 # Allowlist copy: exactly the paths the classic recipe ships. vendor/,
 # node_modules/, public/build/ and the binary assets are NOT in this list;
 # they are produced or carried below.
-for p in app bootstrap config database public resources routes artisan composer.json composer.lock .env.example; do
+for p in app bootstrap config database lang public resources routes artisan composer.json composer.lock .env.example; do
   cp -a "$CLONE/$p" "$D/"
   echo "copied $p"
 done
+# lang/ is load-bearing: without it the app serves framework-default
+# copy (release 08a shipped without it; Gate 3 finding G3-08a-1).
+if [ ! -f "$D/lang/en/auth.php" ]; then echo "ABORT: lang/en/auth.php missing from the assembled release"; exit 1; fi
+echo "LANG_PRESENT=YES"
 mark copy_done
 
 # Vendor, warm (protocol v2 (e)): a retained template keyed by the
@@ -136,6 +140,21 @@ echo "APPLE_TOUCH=$(test -f "$D/public/apple-touch-icon.png" && echo yes || echo
 # The release 06 nesting defect shape: assets extracted one level deep.
 if [ -e "$D/public/public" ]; then echo "ABORT: nesting defect ($D/public/public exists)"; exit 1; fi
 echo "NESTING=OK"
+
+# Mode/owner gate (release 08b defect class): the web server does not
+# run as the owner, so any directory it cannot traverse 404s the whole
+# tree at the web layer while PHP CLI stays green. Abort on any
+# directory that is not 755, on a foreign group, or on any
+# group/world-writable file under public/.
+BAD_DIRS=$(find "$D" -type d ! -perm 755 | wc -l)
+BAD_PUBLIC=$(find "$D/public" -type f \( -perm -020 -o -perm -002 \) | wc -l)
+TREE_GROUP=$(stat -c '%G' "$D")
+echo "MODE_STATS bad_dirs=$BAD_DIRS bad_public_files=$BAD_PUBLIC group=$TREE_GROUP"
+if [ "$BAD_DIRS" -ne 0 ] || [ "$BAD_PUBLIC" -ne 0 ] || [ "$TREE_GROUP" = "nogroup" ]; then
+  echo "ABORT: mode gate failed (dirs must be 755, no group/world-writable files under public/, group must not be nogroup)"
+  exit 1
+fi
+echo "MODE_GATE=PASS"
 
 # Shared links (the release's .env and storage live in shared/, per the
 # staging layout), then the cache sequence from the proven recipe.

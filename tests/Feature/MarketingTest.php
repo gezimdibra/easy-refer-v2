@@ -38,15 +38,28 @@ class MarketingTest extends TestCase
         $response = $this->get('/');
 
         $response->assertOk();
-        $response->assertSee('Turn Your Customers Into Your Best Marketers');
-        $response->assertSee('How It Works');
-        $response->assertSee('Why Use Easy Refer?');
-        $response->assertSee('Powerful Features');
-        $response->assertSee('Simple, Transparent Pricing');
+        $response->assertSee('Turn your customers into your best marketers');
+        // R-4 (release 08d): nav labels follow the CV-01 sentence
+        // case of the headings they name; the Title Case forms are
+        // gone from the page.
+        $response->assertSee('How it works');
+        $response->assertDontSee('How It Works');
+        $response->assertDontSee('About Us');
+        $response->assertSee('Why use Easy Refer?');
+        $response->assertSee('Powerful features');
+        $response->assertSee('Simple, transparent pricing');
+        // Release 08b (1.4, P-01): the hero lede is Option B
+        // verbatim and the trust row carries the plan-table price
+        // facts as fragments.
+        $response->assertSee('Easy Refer turns your customers into referrers with QR codes, verified visits, and rewards you only pay for when they work. Free to start, and your first 5 verified visits are free.');
+        $response->assertSee('$2 per verified referral visit');
+        $response->assertSee('Never more than $99 a month');
+        // F1: the mobile hero visual is the portrait capture.
+        $response->assertSee('dashboard-hero-portrait-1290', false);
         $response->assertSee('One plan: free to start, $2 per verified referral visit, never more than $99 a month.');
         $response->assertSee('Pay Per Visit');
         $response->assertSee('$0/month, $2 per verified referral visit');
-        $response->assertSee('Ready to Grow Your Business?');
+        $response->assertSee('Ready to grow your business?');
         $response->assertSee('Nothing charged until after your first 5 free visits');
         $response->assertSee('Get the free Referral Program Starter Kit');
 
@@ -89,10 +102,10 @@ class MarketingTest extends TestCase
 
         $response->assertSee('Running in real stores');
         $response->assertSee('Ungaro Coal Fired Pizza Cafe, with its referral code at the register.');
-        $response->assertSee('Success Stories');
+        $response->assertSee('Success stories');
         $response->assertSee('We used to spend a lot of money on Google Ads. Now our customers do the marketing for us.');
         $response->assertSee('Nolan and Megan Ralston, Owners, Pizzeria');
-        $response->assertSee('150+ New Customers In 3 Months');
+        $response->assertSee('150+ New Customers In 3 months');
         $response->assertSee('Talia Hollis, Hairstylist');
         $response->assertSee('110+ New Customers In 4 months');
 
@@ -115,6 +128,7 @@ class MarketingTest extends TestCase
         }
         $response->assertDontSee('How do I track referrals?');
         $response->assertDontSee('Is my data secure?');
+        $response->assertDontSee('Do I need a card to start?');
     }
 
     public function test_marketing_pages_carry_metadata_and_structured_data(): void
@@ -132,7 +146,7 @@ class MarketingTest extends TestCase
         $about->assertSee('name="description" content="About Easy Refer: who we are, what we believe, and how our referral platform helps small businesses grow through word of mouth."', false);
 
         $vertical = $this->get('/for-cafes');
-        $vertical->assertSee('name="description" content="Easy Refer for cafes: your regulars bring your next clients. Free to start, and you pay only when a brand-new customer walks in and redeems."', false);
+        $vertical->assertSee('name="description" content="Easy Refer for cafes: your regulars bring your cafe its next customers. Free to start, and you pay only when a brand-new customer walks in and redeems."', false);
     }
 
     public function test_sitemap_lists_the_public_marketing_routes_only(): void
@@ -184,6 +198,8 @@ class MarketingTest extends TestCase
     {
         $response = $this->get('/');
 
+        $response->assertSee('See what referrals could bring in');
+        $response->assertSee('It applies the same $2 per verified visit and the same $99 monthly cap.');
         $response->assertSee('How many people pay at your counter each week?');
         $response->assertSee('Your average ticket');
         $response->assertSee('Share of customers who bring a friend who visits');
@@ -193,15 +209,19 @@ class MarketingTest extends TestCase
     public function test_vertical_pages_render_their_content_map_and_minimal_chrome(): void
     {
         foreach ([
-            'barbers' => ['Built for barbershops: the client in your chair is your best advertising.', 'My chairs are already busy on Saturdays'],
-            'salons' => ['Built for salons: every compliment on your work is a referral waiting to happen.', 'My clients already rebook'],
-            'cafes' => ['Built for cafes: your morning regulars know everyone on the block.', 'Margins are too thin for discounts'],
-            'boutiques' => ['Built for boutiques: every "where did you get that?" is a referral waiting to happen.', 'I am not a discount brand'],
-        ] as $slug => [$line, $objection]) {
+            'barbers' => ['Your regulars bring your barbershop its next clients', 'Built for barbershops: the client in your chair is your best advertising.', 'My chairs are already busy on Saturdays'],
+            'salons' => ['Your regulars bring your salon its next clients', 'Built for salons: every compliment on your work is a referral waiting to happen.', 'My clients already rebook'],
+            'cafes' => ['Your regulars bring your cafe its next customers', 'Built for cafes: your morning regulars know everyone on the block.', 'Margins are too thin for discounts'],
+            'boutiques' => ['Your regulars bring your boutique its next customers', 'Built for boutiques: every "where did you get that?" is a referral waiting to happen.', 'I am not a discount brand'],
+        ] as $slug => [$h1, $line, $objection]) {
             $response = $this->get('/for-'.$slug);
 
             $response->assertOk();
-            $response->assertSee('Your regulars bring your next clients');
+            $response->assertSee($h1);
+            // S-04: the objection section answers second, before
+            // the mechanism section.
+            $html = $response->getContent();
+            $this->assertLessThan(strpos($html, 'id="how-it-works"'), strpos($html, $objection));
             $response->assertSee($line);
             $response->assertSee($objection);
             $response->assertSee('Free to start. You pay $2 only when a brand-new customer walks in and redeems. Never more than $99 a month.');
@@ -221,9 +241,9 @@ class MarketingTest extends TestCase
 
         $response->assertOk();
 
-        // MT-08: below lg the hero stack orders the primary action
-        // ahead of the lede so it lands inside the first 360x740
-        // viewport, clear of the floating consent card.
+        // The hero stack hooks (release 08b D-1: the reading
+        // order is the DOM order on mobile too; the release 07
+        // order overrides are gone from app.css).
         $response->assertSee('mkt-hero-actions', false);
         $response->assertSee('mkt-hero-lede', false);
 
@@ -260,10 +280,18 @@ class MarketingTest extends TestCase
         $response = $this->get('/about');
 
         $response->assertOk();
-        $response->assertSee('Empowering Growth Through Referrals');
-        $response->assertSee('Our Mission');
-        $response->assertSee('Our Vision');
-        $response->assertSee('Core Values');
+        $response->assertSee('We help small businesses grow through referrals');
+        $response->assertSee('Word of mouth, made simple: customers share, friends visit, and you pay only for results.');
+        $response->assertDontSee('Join Our Network');
+        $response->assertSee('Our mission');
+        $response->assertSee('Our vision');
+        $response->assertSee('Core values');
+        // R17/S-15: the honest About body; the banned inflation
+        // phrasing never renders.
+        $response->assertSee('Easy Refer makes word-of-mouth marketing simple for small businesses.');
+        $response->assertSee('you only pay when a referral works');
+        $response->assertDontSee('we revolutionize');
+        $response->assertDontSee('global standard');
         $response->assertSee('info@easy-refer.com');
         $response->assertSee('+1 (833) 803-2400');
         $response->assertSee('104 West 27th Street, New York, NY 10001');
@@ -272,7 +300,9 @@ class MarketingTest extends TestCase
         // clause and the Our Impact counters, from the claims
         // values. The "Trusted by" chip form never renders.
         $response->assertSee('Founded in 2023');
-        $response->assertSee('Our Impact');
+        $response->assertSee('Our impact');
+        // S-07: the closing band renders on About too.
+        $response->assertSee('Ready to grow your business?');
         $response->assertSee('400+');
         $response->assertSee('Businesses Empowered');
         $response->assertSee('80+');
@@ -282,15 +312,57 @@ class MarketingTest extends TestCase
         $response->assertDontSee('Trusted by');
     }
 
-    public function test_faq_renders_all_six_questions_with_plan_amounts(): void
+    public function test_faq_renders_all_seven_questions_with_plan_amounts(): void
     {
         $response = $this->get('/faq');
 
         $response->assertOk();
-        foreach (['What is Easy Refer?', 'How does the QR code referral system work?', 'How much does it cost?', 'How do I track referrals?', 'Is there a setup fee?', 'Is my data secure?'] as $question) {
+        foreach (['What is Easy Refer?', 'How does the QR code referral system work?', 'How much does it cost?', 'How do I track referrals?', 'Is there a setup fee?', 'Is my data secure?', 'Do I need a card to start?'] as $question) {
             $response->assertSee($question);
         }
-        $response->assertSee('You pay $2 only when a referred friend actually visits your store and redeems. There is no monthly fee, your first 5 verified visits are free, and you never pay more than $99 in a month.', false);
+        // S-06 order: the money questions sit together (cost,
+        // then setup fee), the tracker question after them.
+        $html = $response->getContent();
+        $this->assertLessThan(strpos($html, 'How do I track referrals?'), strpos($html, 'Is there a setup fee?'));
+        $response->assertSee('You pay $2 only when a referred friend actually visits your store and redeems. There is no monthly fee. Your first 5 verified visits are free, and you never pay more than $99 in a month.', false);
+        $response->assertSee('Nothing is charged until after your first 5 free verified visits, and you can cancel any time before then.');
+        // S-05: the page closes with the support fallback.
+        $response->assertSee('Still have a question?');
+        $response->assertSee('support@easy-refer.com');
+    }
+
+    public function test_faq_page_renders_flat_with_every_answer_in_the_open(): void
+    {
+        // Ruling 5 (release 08d conformance): the /faq page is a
+        // reference surface and renders the shared list flat:
+        // every answer in the served HTML with no accordion scope,
+        // no disclosure buttons, nothing waiting on a tap or on
+        // Alpine. The 08b single-open accordion leaked onto this
+        // page through the shared partial; this pin holds the
+        // page to its mode.
+        $response = $this->get('/faq');
+
+        $response->assertOk();
+        $response->assertSee('You pay $2 only when a referred friend actually visits your store and redeems. There is no monthly fee. Your first 5 verified visits are free, and you never pay more than $99 in a month.', false);
+        $response->assertSee('Nothing is charged until after your first 5 free verified visits, and you can cancel any time before then.');
+        // The accordion's scope variable is the discriminator:
+        // the layout's own menu uses x-show, but only the FAQ
+        // accordion emits openItem.
+        $response->assertDontSee('openItem');
+    }
+
+    public function test_home_faq_keeps_the_single_open_accordion(): void
+    {
+        // The other half of ruling 5: the section-embedded list on
+        // home stays a single-open accordion (one shared Alpine
+        // scope, answers cloaked until opened). Only the /faq
+        // page renders flat.
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('x-data="{ openItem: null }"', false);
+        $response->assertSee('x-show="openItem === 0"', false);
+        $response->assertSee('x-cloak', false);
     }
 
     public function test_legal_page_keeps_its_anchors_and_names_only_the_real_processors(): void
@@ -328,8 +400,11 @@ class MarketingTest extends TestCase
         $response = $this->get('/blog');
 
         $response->assertOk();
-        $response->assertSee('Welcome to the Easy Refer blog.');
+        $response->assertSee('You will find helpful tips, success stories, and insights into how referral programs can boost small business growth.');
+        $response->assertDontSee('Welcome to the Easy Refer blog.');
         $response->assertSee('Posts are on the way. Check back soon.');
+        // DG-10: the page closes with the starter-kit block.
+        $response->assertSee('Get the free Referral Program Starter Kit');
     }
 
     public function test_newsletter_signup_creates_a_lead_and_queues_the_confirmation(): void
@@ -461,8 +536,8 @@ class MarketingTest extends TestCase
     public function test_consent_banner_is_present_on_marketing_and_absent_from_the_flow(): void
     {
         // AP-16.
-        $this->get('/')->assertSee('We use cookies to measure how visitors find us.');
-        $this->get(route('login'))->assertDontSee('We use cookies to measure how visitors find us.');
+        $this->get('/')->assertSee('We use cookies to see how visitors find us and whether our ads work.');
+        $this->get(route('login'))->assertDontSee('We use cookies to see how visitors find us');
     }
 
     public function test_ap01_ap02_no_gradients_or_glassmorphism_in_rendered_pages(): void

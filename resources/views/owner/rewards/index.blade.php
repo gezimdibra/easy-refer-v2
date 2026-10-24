@@ -75,7 +75,7 @@
                             <td data-label="Text">
                                 @if ($reward->notification_state === 'failed')
                                     <span class="text-error">{{ \App\Support\RewardStatus::notificationLabel($reward) }}</span>
-                                    <form method="POST" action="{{ route('rewards.resend', $reward) }}" class="mt-1">
+                                    <form method="POST" action="{{ route('rewards.resend', $reward) }}" class="mt-1" data-loading>
                                         @csrf
                                         <button type="submit" class="btn btn-secondary btn-sm">Text again</button>
                                     </form>

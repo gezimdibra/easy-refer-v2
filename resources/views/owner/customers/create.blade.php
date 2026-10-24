@@ -8,7 +8,7 @@
     <h1 class="type-title-2 text-text-1">Add a customer</h1>
     <p class="type-body mt-2 max-w-[68ch] text-text-2">Add a regular who agreed to get their referral link by text. We send one text so they can confirm.</p>
 
-    <form method="POST" action="{{ route('customers.store') }}" class="panel mt-5 [&_input]:max-w-[560px]">
+    <form method="POST" action="{{ route('customers.store') }}" class="panel mt-5 [&_input]:max-w-[560px]" data-loading>
         @csrf
 
         <label for="first_name">First name</label>

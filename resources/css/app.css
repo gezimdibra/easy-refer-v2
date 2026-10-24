@@ -61,7 +61,14 @@
     --color-text-disabled: #9c9389;
     --color-dark-muted: #b4a88f;
 
-    --color-success-strong: #177245;
+    /* TX-D5 (release 08b): darkened from #177245 (5.95:1 on
+       white, 5.52:1 on cream) so success text holds the 7:1
+       daylight floor even at caption size (the register page's
+       "Free to start" caption is the thinnest real text in the
+       product). It now matches success-text's value; the two
+       tokens keep their separate roles (strong for text and
+       icons on light grounds, text on the success fill). */
+    --color-success-strong: #0e5a36;
     --color-success-fill: #e9f7ee;
     --color-success-text: #0e5a36;
 
@@ -325,6 +332,21 @@
     @media (min-width: 1024px) {
         .section-pad {
             padding-block: 128px;
+        }
+    }
+
+    /* R-3 (release 08d): on the home page two same-surface
+       boundaries stacked two full section pads into 192px of
+       dead air on mobile (photos into Benefits and FAQ into the
+       starter kit, both surface-0 into surface-0, so no color
+       change marks the transition). The compact bottom step
+       halves the upper section's bottom pad below lg, landing
+       each boundary at 144px: the page's tightest existing
+       rhythm (the stat band's 56px step against a 96px pad is
+       152px). Desktop keeps the full pad everywhere. */
+    @media (max-width: 1023.98px) {
+        .section-pad-compact-b {
+            padding-bottom: 48px;
         }
     }
 
@@ -954,8 +976,22 @@
         }
 
         .tbl-stack tbody tr {
+            position: relative;
             padding: 10px 16px 12px;
             border-top: 1px solid var(--color-line);
+        }
+
+        /* DG-4 (release 08b): the stacked card is fully
+           tappable. The card's name link carries .card-link and
+           its overlay covers the whole card, so the 19px name
+           line is no longer the only way in; any other link in
+           the card stays above the overlay with relative + z-10
+           in the view. Desktop table rows are unaffected: the
+           rule lives inside the stacked media query. */
+        .tbl-stack .card-link::after {
+            content: "";
+            position: absolute;
+            inset: 0;
         }
 
         .tbl-stack tbody tr:first-child {
@@ -1200,14 +1236,32 @@
     max-width: min(380px, calc(100vw - 32px));
 }
 
-/* The home hero (MT-08, C-05, H-02, H-04, M-02): below lg the
-   column is a flex stack whose actions render directly under
-   the headline, ahead of the lede and the check row (the DOM
-   order, and the desktop layout, are unchanged); the friction
-   row sits directly under the actions; the display size wraps
-   the headline to three lines instead of four; the top
-   padding and the product window margin tighten so the
-   window's top edge enters the first viewport. */
+/* P-03 (release 08b): Alpine-cloaked nodes stay hidden until
+   Alpine initializes. Without this rule the FAQ answers and
+   the mobile menu flashed open in the shipped CSS. */
+[x-cloak] {
+    display: none !important;
+}
+
+/* TX-D1 (release 08b): FAQ questions carry the heading step
+   (title-4 metrics: 17px, 600, 24px) as their own class, so the
+   question/answer hierarchy never depends on which page or
+   breakpoint renders the list. */
+.faq-q {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 24px;
+}
+
+/* The home hero (MT-08, H-02, H-04, M-02; release 08b D-1):
+   the display size wraps the headline to three lines instead
+   of four; the top padding and the product visual margin
+   tighten so the visual's top edge enters the first viewport.
+   Release 08b D-1 removed the release 07 order overrides that
+   put the actions ahead of the lede on mobile: mobile now reads
+   in the desktop order (headline, lede, actions, trust row),
+   because the Option B lede carries the explanation the
+   actions ask on. The flex column stays; no order rules do. */
 .mkt-sticky-cta {
     display: none;
 }
@@ -1216,18 +1270,6 @@
     .mkt-hero {
         display: flex;
         flex-direction: column;
-    }
-
-    .mkt-hero-actions {
-        order: 3;
-    }
-
-    .mkt-hero-trust {
-        order: 4;
-    }
-
-    .mkt-hero-lede {
-        order: 5;
     }
 
     .mkt-hero-title {
@@ -1242,6 +1284,93 @@
 
     .mkt-hero-window {
         margin-top: 40px;
+    }
+
+    /* F1/F2 (release 08b): the phone-form hero visual sits
+       closer under the trust row than the desktop window did,
+       part of the shortened first-visit stack. */
+    .mkt-hero-phone {
+        margin-top: 32px;
+    }
+
+    /* P-06 (release 08b): the vertical heroes' two lede blocks
+       take a compact step on mobile, so the combined prose
+       under the headline fits its first-viewport budget on all
+       four verticals. Desktop keeps the lede step. */
+    .v-line,
+    .v-offer {
+        font-size: 17px;
+        line-height: 26px;
+    }
+
+    /* F2 (release 08b): the compact mobile consent form is a
+       full-width bottom bar, the form the brief's F2 mechanism
+       names; the A8-02 cap governs the card form, which returns
+       at lg. Inside the bar, padding and gaps tighten so it
+       stays low over the hero. */
+    .consent-card {
+        max-width: none;
+    }
+
+    .consent-card .consent-inner {
+        padding: 12px 16px;
+        gap: 10px;
+    }
+
+    /* F2 (release 08b), short viewports: on a 667px-tall phone
+       the stack compacts further (tighter stack margins, the
+       lede a step down) so the phone visual's top edge still
+       clears the consent bar. Taller phones keep the standard
+       scale (P-01's five-line lede budget is measured there). */
+    @media (max-height: 720px) {
+        .mkt-hero-shell {
+            padding-top: 0;
+        }
+
+        .mkt-hero .mkt-hero-title {
+            font-size: 28px;
+            line-height: 32px;
+        }
+
+        .mkt-hero .mkt-hero-lede {
+            margin-top: 8px;
+            font-size: 17px;
+            line-height: 26px;
+        }
+
+        .mkt-hero .mkt-hero-actions {
+            margin-top: 12px;
+        }
+
+        .mkt-hero .mkt-hero-trust {
+            margin-top: 8px;
+        }
+
+        .mkt-hero-phone {
+            margin-top: 8px;
+        }
+
+        /* R-1 (release 08d): three independent reads of release
+           08c put the 375x667 first-visit clearance at +6/+7px:
+           F2's letter passed, its purpose did not (the product
+           visual was a sliver above the consent bar). This second
+           compaction step works the stack margins only: no type
+           size, no copy, and no control changes (the lede keeps
+           its five lines; both consent buttons stay btn-sm at
+           their shipped size), and the consent bar's own padding
+           and gap take the same step down. Acceptance is the
+           named check R1-CLEARANCE (hidden_files/redesign/08d/
+           measure.mjs, local WebKit rig): at least 40px at
+           375x667, with the taller phones outside this media
+           query and unchanged. */
+        .mkt-hero .mkt-hero-title {
+            margin-top: 16px;
+        }
+
+        .consent-card .consent-inner {
+            padding: 8px 16px;
+            gap: 6px;
+        }
     }
 
     /* M-02 sticky action bar: visibility (not just the
@@ -1272,6 +1401,31 @@
         .mkt-sticky-cta {
             transition: none;
         }
+    }
+}
+
+/* D-5 (release 08b): one width rule for the section-repeat
+   primaries. The repeats are the Start free actions that close a
+   section, rendered as a lone button in a paragraph inside the
+   shell (the hero pair is exempt: it lives in the hero actions
+   row, not in a paragraph, and keeps its split; the pricing
+   card's button is the card's own full width and is a protected
+   design). Below lg every repeat takes the full content width;
+   at lg and up every repeat takes one fixed width, centered by
+   its paragraph. Release 07 measured four widths on one mobile
+   page (split, about 55%, full, about 65%). */
+@media (max-width: 1023.98px) {
+    .shell p > a.btn-primary.btn-lg,
+    .shell p > a.btn-accent.btn-lg {
+        width: 100%;
+    }
+}
+
+@media (min-width: 1024px) {
+    .shell p > a.btn-primary.btn-lg,
+    .shell p > a.btn-accent.btn-lg {
+        width: 280px;
+        max-width: 100%;
     }
 }
 

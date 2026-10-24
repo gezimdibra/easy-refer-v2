@@ -41,11 +41,19 @@
 
             <footer class="text-center lg:text-left">
                 <nav aria-label="Legal" class="flex flex-wrap justify-center gap-x-5 gap-y-2 lg:justify-start">
-                    <a class="type-caption text-text-2 hover:text-text-1" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a>
-                    <a class="type-caption text-text-2 hover:text-text-1" href="{{ route('legal') }}#terms-of-service">Terms &amp; Conditions</a>
-                    <a class="type-caption text-text-2 hover:text-text-1" href="{{ route('about') }}#contact">Contact</a>
+                    {{-- TX-D4 (release 08b): the legal links stand
+                         at least 24px tall via padding (they
+                         measured 18px, under the WCAG 2.5.8
+                         floor); the wording and size class are
+                         unchanged. TX-D5: the copyright caption
+                         moves from text-3 (6.79:1) to text-2 so
+                         no caption on the auth surfaces sits
+                         under the 7:1 daylight floor. --}}
+                    <a class="type-caption inline-flex min-h-6 items-center text-text-2 hover:text-text-1" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a>
+                    <a class="type-caption inline-flex min-h-6 items-center text-text-2 hover:text-text-1" href="{{ route('legal') }}#terms-of-service">Terms &amp; Conditions</a>
+                    <a class="type-caption inline-flex min-h-6 items-center text-text-2 hover:text-text-1" href="{{ route('about') }}#contact">Contact</a>
                 </nav>
-                <p class="type-caption mt-3 text-text-3">&copy; {{ now()->year }} Easy Refer</p>
+                <p class="type-caption mt-3 text-text-2">&copy; {{ now()->year }} Easy Refer</p>
             </footer>
         </div>
 

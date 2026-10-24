@@ -63,9 +63,9 @@
                         @php($status = \App\Support\ReferralStatus::present($referral))
                         <tr>
                             <td>
-                                <a class="font-semibold text-brand-700 hover:underline" href="{{ route('referrals.show', $referral) }}">{{ $referral->referredCustomer->first_name }}</a>
+                                <a class="card-link font-semibold text-brand-700 hover:underline" href="{{ route('referrals.show', $referral) }}">{{ $referral->referredCustomer->first_name }}</a>
                                 @if ($referral->hold)
-                                    <span class="block text-sm text-text-2">Held for review: {{ implode(' ', \App\Support\HoldReasons::sentences($referral->hold_rules ?? [], $business)) }} <a class="font-semibold text-brand-700 hover:underline" href="{{ route('reviews') }}">Open the review queue</a></span>
+                                    <span class="block text-sm text-text-2">Held for review: {{ implode(' ', \App\Support\HoldReasons::sentences($referral->hold_rules ?? [], $business)) }} <a class="relative z-10 inline-flex min-h-12 items-center font-semibold text-brand-700 hover:underline" href="{{ route('reviews') }}">Open the review queue</a></span>
                                 @endif
                             </td>
                             <td data-label="Referred by">{{ $referral->referrerMembership->customer->first_name }}</td>

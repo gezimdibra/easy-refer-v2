@@ -16,7 +16,7 @@
             @if (session('lead_status'))
                 <p class="banner banner-success" role="status">{{ session('lead_status') }}</p>
             @else
-                <form method="POST" action="{{ route('leads.starter-kit') }}">
+                <form method="POST" action="{{ route('leads.starter-kit') }}" data-loading>
                     @csrf
                     <input type="hidden" name="source" value="{{ $source ?? 'home' }}">
 

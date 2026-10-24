@@ -57,7 +57,7 @@
         <h2 class="type-title-3 text-text-1">Setup checklist</h2>
         @if ($business->checklist_dismissed_at !== null)
             <p class="mt-1 text-text-2">Checklist is hidden. Show it again any time.</p>
-            <form method="POST" action="{{ route('settings.checklist.reset') }}" class="mt-3">
+            <form method="POST" action="{{ route('settings.checklist.reset') }}" class="mt-3" data-loading>
                 @csrf
                 <button type="submit" class="btn btn-secondary">Show the setup checklist again</button>
             </form>

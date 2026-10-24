@@ -25,7 +25,7 @@
         </div>
     </div>
 
-    <form method="POST" action="{{ route('security.two-factor.confirm.store') }}" class="panel mt-4 max-w-[720px] [&_input]:max-w-[560px]">
+    <form method="POST" action="{{ route('security.two-factor.confirm.store') }}" class="panel mt-4 max-w-[720px] [&_input]:max-w-[560px]" data-loading>
         @csrf
 
         <x-password-input name="current_password" label="Current password" required autofocus />
@@ -36,5 +36,5 @@
         <p class="mt-5"><button type="submit" class="btn btn-primary">Confirm and turn on</button></p>
     </form>
 
-    <p class="mt-6"><a class="font-medium text-brand-700 underline decoration-brand-100 underline-offset-[3px] hover:decoration-brand-700" href="{{ route('security') }}">Back to account security</a></p>
+    <p class="mt-6"><a class="inline-flex min-h-11 items-center font-medium text-brand-700 underline decoration-brand-100 underline-offset-[3px] hover:decoration-brand-700" href="{{ route('security') }}">Back to account security</a></p>
 @endsection

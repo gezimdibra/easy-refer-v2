@@ -87,14 +87,14 @@
                 {{-- Vertical landings (spec Section 2.6): the lockup
                      and one Sign in link only; every other link is an
                      exit the advertiser paid to create. --}}
-                <a href="{{ route('login') }}" class="text-[15px] font-medium text-text-2 hover:text-text-1">Sign in</a>
+                <a href="{{ route('login') }}" class="inline-flex min-h-12 items-center text-[15px] font-medium text-text-2 hover:text-text-1">Sign in</a>
             @else
                 <nav aria-label="Site" class="hidden items-center gap-1 md:flex">
-                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#features">Features</a>
-                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#benefits">Benefits</a>
-                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#how-it-works">How It Works</a>
-                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#pricing">Pricing</a>
-                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('about') }}">About Us</a>
+                    <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#how-it-works">How it works</a>
+                    <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#benefits">Benefits</a>
+                    <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#features">Features</a>
+                    <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#pricing">Pricing</a>
+                    <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('about') }}">About us</a>
                     <span class="ml-3 flex items-center gap-2">
                         <a href="{{ route('login') }}" class="btn btn-ghost btn-sm">Sign in</a>
                         <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Start free</a>
@@ -104,11 +104,11 @@
                 <div class="relative md:hidden" x-data="{ open: false }">
                     <button type="button" class="menu-toggle inline-flex h-12 w-12 items-center justify-center rounded-md text-text-1 hover:bg-surface-1" aria-label="Open menu" aria-haspopup="true" :aria-expanded="open.toString()" @click="open = ! open"><x-icon name="menu" :size="24" /></button>
                     <nav aria-label="Site menu" x-show="open" x-cloak class="absolute right-0 z-40 mt-2 w-60 rounded-lg border border-line bg-surface-0 p-2 shadow-e2">
-                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#features">Features</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#how-it-works">How it works</a>
                         <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#benefits">Benefits</a>
-                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#how-it-works">How It Works</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#features">Features</a>
                         <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#pricing">Pricing</a>
-                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('about') }}">About Us</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('about') }}">About us</a>
                         {{-- C-04: the open mobile menu carries the primary
                              action, so a convinced visitor is never
                              stranded at the moment of intent. --}}

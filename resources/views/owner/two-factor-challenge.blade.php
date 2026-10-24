@@ -6,7 +6,7 @@
     <h1 class="type-display-xs text-text-1">Two-factor verification</h1>
     <p class="type-body mt-2 text-text-2">Enter the six-digit code from your authenticator app. You can also use one of your recovery codes instead.</p>
 
-    <form class="mt-8" method="POST" action="{{ route('two-factor.challenge.store') }}">
+    <form class="mt-8" method="POST" action="{{ route('two-factor.challenge.store') }}" data-loading>
         @csrf
 
         <label class="form-label" for="code">Code</label>

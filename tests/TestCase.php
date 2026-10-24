@@ -12,6 +12,10 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        // Fixture numbering must not depend on how many businesses
+        // earlier tests in the process created (see World).
+        \Tests\Support\World::resetSequence();
+
         // Views reference the Vite build through @vite; the suite runs
         // without a compiled asset manifest (assets are built at
         // deploy time), so the Vite integration is disabled here the
