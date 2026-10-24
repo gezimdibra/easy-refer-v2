@@ -12,8 +12,11 @@ use App\Models\SmsMessage;
 use App\Services\Billing\VisitValuation;
 use App\Support\StarterPacks;
 use Carbon\Carbon;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -126,8 +129,17 @@ class DashboardController extends Controller
             ? (string) $request->query('range')
             : '30';
 
+        // Day bucketing runs over raw stored timestamps with a
+        // single shared zone: hydrating a Carbon per redeemed
+        // referral and re-zoning the copy cost ~43us a row, which
+        // at 10,000-referral volume was ~300 ms of the dashboard
+        // (Sprint 6, protocol Section 2.5). Stored timestamps are
+        // UTC wall time; the bucket is the business-local date,
+        // identical to the Carbon computation it replaces.
         $perDay = [];
-        $redeemedDates = Referral::query()
+        $zone = new DateTimeZone($timezone);
+        $utc = new DateTimeZone('UTC');
+        $redeemedDates = DB::table('referrals')
             ->where('business_id', $business->id)
             ->where('state', Referral::STATE_REDEEMED)
             ->whereNotNull('redeemed_at')
@@ -135,7 +147,7 @@ class DashboardController extends Controller
             ->pluck('redeemed_at');
 
         foreach ($redeemedDates as $redeemedAt) {
-            $day = $redeemedAt->copy()->setTimezone($timezone)->toDateString();
+            $day = (new DateTimeImmutable((string) $redeemedAt, $utc))->setTimezone($zone)->format('Y-m-d');
             $perDay[$day] = ($perDay[$day] ?? 0) + 1;
         }
 
@@ -163,20 +175,28 @@ class DashboardController extends Controller
 
         // Weekly top referrers (spec Section 5.1): this business's
         // memberships ranked by referrals completed in the last 7
-        // days.
+        // days. The ranking is an aggregate join over the week's
+        // redeemed referrals, not a per-membership count: the
+        // earlier withCount shape evaluated a correlated subquery
+        // for every membership the business has ever had, which at
+        // 10,000-referral volume cost ~11.6 s on the dashboard
+        // (Sprint 6, protocol Section 2.5). Only memberships with
+        // at least one completion this week can rank, which is
+        // also what the old query's zero filter reduced to.
         $topReferrers = Membership::query()
-            ->where('business_id', $business->id)
-            ->whereNull('removed_at')
-            ->with('customer')
-            ->withCount(['referralsMade as weekly_referrals' => function ($query) {
-                $query->where('state', Referral::STATE_REDEEMED)
-                    ->where('redeemed_at', '>=', now()->subDays(7));
-            }])
+            ->where('memberships.business_id', $business->id)
+            ->whereNull('memberships.removed_at')
+            ->join('referrals', 'referrals.referrer_membership_id', '=', 'memberships.id')
+            ->where('referrals.state', Referral::STATE_REDEEMED)
+            ->where('referrals.redeemed_at', '>=', now()->subDays(7))
+            ->groupBy('memberships.id')
+            ->select('memberships.*')
+            ->selectRaw('count(referrals.id) as weekly_referrals')
             ->orderByDesc('weekly_referrals')
-            ->orderBy('created_at')
+            ->orderBy('memberships.created_at')
             ->limit(5)
+            ->with('customer')
             ->get()
-            ->filter(fn (Membership $membership) => $membership->weekly_referrals > 0)
             ->values();
 
         $packs = StarterPacks::forType($business->business_type);

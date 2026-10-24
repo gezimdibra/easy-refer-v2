@@ -215,4 +215,33 @@ class OverviewTest extends TestCase
         $this->assertSame(60, $valuation['verified_visits']);
         $this->assertSame(9800, $valuation['fees_cents']);
     }
+
+    public function test_settle_recomputes_after_forget_settlements_when_events_are_written_mid_resolution(): void
+    {
+        // The memo contract: one instance's settlement stays
+        // valid only while the caller writes nothing. A caller
+        // that records billing events after settling (the shape
+        // the Phase 4 nightly batch takes when it persists
+        // coverage) invalidates, and the same instance then
+        // settles the fresh rows instead of the stale ones.
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [$membership] = World::membership($business, $referrer);
+        $friend = World::customer('+12125550777', 'Fri', 'End');
+        [$referral] = World::referral($membership, $friend);
+
+        $service = app(\App\Services\Billing\VisitValuation::class);
+
+        $this->assertSame(0, $service->settle($business)['verified_visits']);
+
+        BillingEvent::create([
+            'business_id' => $business->id,
+            'referral_id' => $referral->id,
+            'amount_cents' => 200,
+        ]);
+
+        $service->forgetSettlements();
+
+        $this->assertSame(1, $service->settle($business)['verified_visits']);
+    }
 }

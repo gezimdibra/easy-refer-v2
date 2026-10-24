@@ -23,11 +23,55 @@ use Carbon\Carbon;
 class VisitValuation
 {
     /**
+     * Settlements computed by this instance, keyed by business
+     * id. The dashboard asks for the same settlement twice (the
+     * month panel and the all-time panel), so the walk runs once
+     * per business per resolution instead of once per panel.
+     *
+     * A memoized settlement stays valid only while the caller
+     * writes no billing rows for that business on this instance.
+     * A caller that settles and then records or changes billing
+     * events within the same resolution (the shape the Phase 4
+     * nightly batch takes when it persists coverage) MUST call
+     * forgetSettlements() after writing, or resolve a fresh
+     * instance; otherwise the next settle() returns the stale
+     * settlement.
+     *
+     * @var array<int, array{verified_visits: int, estimated_sales_cents: int, fees_cents: int, settled: array<int, array{coverage: string, fee_cents: int}>}>
+     */
+    private array $settledByBusiness = [];
+
+    /**
      * Settle a business's events into coverage and fees.
+     *
+     * The result is memoized on this instance; see the
+     * $settledByBusiness contract for when that stays valid and
+     * forgetSettlements() for the invalidation path.
      *
      * @return array{verified_visits: int, estimated_sales_cents: int, fees_cents: int, settled: array<int, array{coverage: string, fee_cents: int}>}
      */
     public function settle(Business $business): array
+    {
+        return $this->settledByBusiness[$business->id] ??= $this->computeSettlement($business);
+    }
+
+    /**
+     * Drop every settlement memoized on this instance, so the
+     * next settle() call walks the billing rows again. Callers
+     * that write billing events after settling on the same
+     * instance (the Phase 4 nightly batch persisting coverage
+     * is the expected one) must call this once those writes
+     * land.
+     */
+    public function forgetSettlements(): void
+    {
+        $this->settledByBusiness = [];
+    }
+
+    /**
+     * @return array{verified_visits: int, estimated_sales_cents: int, fees_cents: int, settled: array<int, array{coverage: string, fee_cents: int}>}
+     */
+    private function computeSettlement(Business $business): array
     {
         $events = BillingEvent::query()
             ->where('business_id', $business->id)
@@ -50,7 +94,11 @@ class VisitValuation
         $monthBilledCents = 0;
 
         foreach ($events as $event) {
-            $month = Carbon::parse($event->created_at)->format('Y-m');
+            // created_at is cast to a Carbon instance on the
+            // model; formatting it directly keeps this walk cheap
+            // at five-figure event counts (re-parsing the instance
+            // through Carbon::parse cost ~50us a row, Sprint 6).
+            $month = $event->created_at->format('Y-m');
 
             if ($month !== $currentMonth) {
                 $currentMonth = $month;
