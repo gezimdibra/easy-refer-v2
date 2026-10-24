@@ -26,6 +26,23 @@ class LoginTest extends TestCase
             ->assertSee('Email or phone number');
     }
 
+    public function test_login_page_uses_a_short_eyebrow_sentence_case_and_the_approved_stat_labels(): void
+    {
+        // Corrections wave (2026-10-24): TY-07 (the eyebrow is a
+        // short label, not the full sentence set in all caps),
+        // CV-01 (sentence case link label), NEW-7 (the brand panel
+        // carries the approved stat labels, matching the home band).
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Your one-stop referral platform')
+            ->assertDontSee('one-stop platform for managing referrals')
+            ->assertSee('Forgot password?')
+            ->assertDontSee('Forgot Password?')
+            ->assertSee('higher purchase amount')
+            ->assertSee('customer retention')
+            ->assertDontSee('retention rate');
+    }
+
     public function test_owner_can_login_with_email(): void
     {
         $response = $this->post(route('login'), [

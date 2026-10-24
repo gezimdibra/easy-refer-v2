@@ -3,58 +3,72 @@
 @section('title', 'Your QR code')
 
 @section('content')
-    {{-- The QR page (spec Section 5.1, design 3.4, DASH-08): the
-         code, the designed poster set with its use labels, the
-         facts panel, how redemption works in one sentence, and
-         the danger zone with its consequence modal. --}}
-    <h1 class="text-2xl font-bold">Your QR code</h1>
-    <p class="mt-1 text-text-2">Customers scan this code to join and start referring.</p>
+    {{-- The QR page (spec Section 5.1, design 3.4, DASH-08;
+         redesign-spec.md Section 10.5 item 4): the code in a
+         framed, centered composition, the designed poster set
+         with previews and its use labels, the facts panel, how
+         redemption works, and the danger zone with its
+         consequence modal. The public link renders as a designed
+         copy field under the code, not a naked debug string
+         (visual audit Q-1). --}}
+    <h1 class="type-title-2 text-text-1">Your QR code</h1>
+    <p class="type-body mt-2 text-text-2">Customers scan this code to join and start referring.</p>
 
-    <div class="card mt-5 text-center">
+    <div class="mx-auto mt-6 max-w-[420px] rounded-xl border border-line bg-surface-0 shadow-e2" style="padding: 32px">
         <img src="{{ $imageUrl }}" alt="QR code for {{ $business->name }}" width="280" height="280" class="mx-auto">
-        <p class="mt-3 break-all text-text-2">{{ $publicUrl }}</p>
-        <form method="POST" action="{{ route('owner.qr.download') }}" class="mt-4">
+        <form method="POST" action="{{ route('owner.qr.download') }}" class="mt-6 text-center">
             @csrf
-            <button type="submit" class="btn btn-primary">Download QR code</button>
+            <button type="submit" class="btn btn-primary"><x-icon name="download" :size="20" /> Download QR code</button>
         </form>
+        {{-- The public link as a designed copy field (the link
+             itself is product surface: owners paste it into
+             listings and messages; visual audit Q-1 objected to
+             the naked debug-style paragraph, not the link). --}}
+        <div class="joined mt-6" x-data="{ copied: false }">
+            <input type="text" readonly value="{{ $publicUrl }}" class="form-input form-input-app" aria-label="Your public referral link" x-ref="publicUrl">
+            <button type="button" class="btn btn-secondary"
+                @click="navigator.clipboard.writeText($refs.publicUrl.value); copied = true"
+                x-text="copied ? 'Copied' : 'Copy link'">Copy link</button>
+        </div>
     </div>
 
-    <div class="card mt-4" id="posters">
-        <h2 class="text-xl font-semibold">Posters</h2>
-        <ul class="mt-3 space-y-3">
-            <li class="flex flex-wrap items-center justify-between gap-2">
-                <span>For a screen or tablet</span>
-                <a class="btn btn-secondary" href="{{ route('owner.qr.poster', 'screen') }}">Download</a>
-            </li>
-            <li class="flex flex-wrap items-center justify-between gap-2">
-                <span>For the counter, A5</span>
-                <a class="btn btn-secondary" href="{{ route('owner.qr.poster', 'counter') }}">Download</a>
-            </li>
-            <li class="flex flex-wrap items-center justify-between gap-2">
-                <span>Full page, for the window</span>
-                <a class="btn btn-secondary" href="{{ route('owner.qr.poster', 'window') }}">Download</a>
-            </li>
+    <div class="panel mt-6" id="posters">
+        <h2 class="type-title-3 text-text-1">Posters</h2>
+        <ul class="mt-4 space-y-3">
+            @foreach ([
+                ['screen', 'For a screen or tablet'],
+                ['counter', 'For the counter, A5'],
+                ['window', 'Full page, for the window'],
+            ] as [$variant, $label])
+                <li class="flex flex-wrap items-center gap-4">
+                    <span class="flex h-14 w-14 flex-none items-center justify-center rounded-lg border border-line bg-surface-0 p-1.5">
+                        <img src="{{ $imageUrl }}" alt="" class="h-full w-full">
+                    </span>
+                    <span class="type-body flex-1 text-text-1">{{ $label }}</span>
+                    <a class="btn btn-secondary" href="{{ route('owner.qr.poster', $variant) }}"><x-icon name="download" :size="20" /> Download</a>
+                </li>
+            @endforeach
         </ul>
-        <p class="mt-3">
-            <a class="btn btn-secondary" href="{{ route('owner.qr.poster', ['variant' => 'counter', 'print' => 1]) }}">Print poster</a>
+        <p class="mt-4">
+            <a class="btn btn-secondary" href="{{ route('owner.qr.poster', ['variant' => 'counter', 'print' => 1]) }}"><x-icon name="printer" :size="20" /> Print counter poster</a>
         </p>
     </div>
 
-    <div class="card mt-4">
-        <h2 class="text-xl font-semibold">About this code</h2>
-        <ul class="mt-2 space-y-1 text-base">
-            <li>This is your store's only active code.</li>
-            <li>Created {{ $qr->created_at->format('F j, Y') }}.</li>
+    <div class="panel mt-4">
+        <h2 class="type-title-3 text-text-1">About this code</h2>
+        <ul class="mt-2 space-y-1">
+            <li class="type-body text-text-2">This is your store's only active code.</li>
+            <li class="type-body text-text-2">Created {{ $qr->created_at->format('F j, Y') }}.</li>
         </ul>
     </div>
 
-    <div class="card mt-4" id="how-redemption-works">
-        <h2 class="text-xl font-semibold">How redemption works</h2>
-        <p class="mt-1 text-base">A customer shows their reward code. Any staff member scans it with their own phone and taps Mark as Redeemed. No app, no login, nothing to type.</p>
+    <div class="panel mt-4" id="how-redemption-works">
+        <h2 class="type-title-3 text-text-1">How redemption works</h2>
+        <p class="type-body mt-2 text-text-2">A customer shows their reward code. Any staff member scans it with their own phone and taps Mark as Redeemed. No app, no login, nothing to type.</p>
     </div>
 
     <div class="card-danger mt-4">
-        <h2 class="text-xl font-semibold">Replace this code</h2>
+        <h2 class="type-title-3 text-text-1">Replace this code</h2>
         <div class="mt-3">
             <x-confirm-modal
                 :action="route('owner.qr.regenerate')"
@@ -62,7 +76,7 @@
                 title="Replace this code?"
                 confirm-label="Regenerate code"
                 confirm-class="btn-danger">
-                <x-slot:trigger>Replace this code</x-slot:trigger>
+                <x-slot:trigger><button type="button" class="btn btn-danger-ghost">Replace this code</button></x-slot:trigger>
                 <p>Regenerating creates a new QR code. Previously printed codes will stop working. Continue?</p>
                 <p class="mt-2 font-semibold">Printed copies of the current code will stop working right away.</p>
             </x-confirm-modal>

@@ -188,6 +188,51 @@ class Business extends Model
     }
 
     /**
+     * The R1 reward headline ("Get {reward} on your first visit"),
+     * composed so the first-visit idea can never appear twice.
+     * A reward text that already carries it ("$10 off your first
+     * cut", "10 percent off your first visit") stands alone after
+     * "Get": the suffix is appended only when the reward never
+     * mentions a first anything. One composer serves every
+     * surface that runs the headline (the flow landing today,
+     * the printed poster through friendRewardHeadlineSuffix()),
+     * so the wording cannot drift between them (F-2).
+     */
+    public function friendRewardHeadline(): ?string
+    {
+        $reward = trim((string) $this->friend_reward_text);
+
+        if ($reward === '') {
+            return null;
+        }
+
+        $suffix = $this->friendRewardHeadlineSuffix();
+
+        if ($suffix !== '') {
+            $reward = rtrim($reward, '.');
+        }
+
+        return 'Get '.$reward.$suffix;
+    }
+
+    /**
+     * The headline's suffix: " on your first visit" when the
+     * reward text does not already say it, empty when it does.
+     * A trailing period on the reward is headline punctuation
+     * the suffix replaces, so it is dropped before appending.
+     */
+    public function friendRewardHeadlineSuffix(): string
+    {
+        $reward = trim((string) $this->friend_reward_text);
+
+        if ($reward === '' || preg_match('/\bfirst\b/i', $reward) === 1) {
+            return '';
+        }
+
+        return ' on your first visit';
+    }
+
+    /**
      * Whether the public referral flow is live (spec Section 9.9):
      * the flow activates only once a card is on file, which flips
      * billing_status from setup_incomplete to active at onboarding

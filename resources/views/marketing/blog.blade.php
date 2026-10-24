@@ -5,9 +5,9 @@
 @section('meta_description', 'Notes from Easy Refer on referral marketing for small businesses.')
 
 @section('content')
-    <section class="mx-auto max-w-[1120px] px-5 py-8 md:py-12 lg:py-16 xl:py-20">
+    <section class="shell section-pad">
         <div class="max-w-[640px]">
-            <h1 class="text-[32px] leading-[38px] font-bold text-text-1">Blog</h1>
+            <h1 class="type-title-1 text-text-1">Blog</h1>
             <p class="mt-4 text-lg text-text-2">Welcome to the Easy Refer blog. Here you will find helpful tips, success stories, and insights into how referral programs can boost small business growth.</p>
 
             @if ($posts->isEmpty())
@@ -16,7 +16,7 @@
                 <ul class="mt-10 space-y-6">
                     @foreach ($posts as $post)
                         <li>
-                            <h2 class="text-xl font-semibold">
+                            <h2 class="type-title-3">
                                 <a class="text-brand-700 hover:underline" href="{{ route('blog.post', ['slug' => $post->slug]) }}">{{ $post->title }}</a>
                             </h2>
                             <p class="mt-1 text-sm text-text-3">{{ $post->published_at->format('M j, Y') }}</p>

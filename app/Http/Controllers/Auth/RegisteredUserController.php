@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Contracts\SquareCustomerGateway;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterBusinessRequest;
+use App\Mail\WelcomeMail;
 use App\Models\AuditLog;
 use App\Models\Business;
 use App\Models\QrCode;
@@ -15,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -121,6 +123,21 @@ class RegisteredUserController extends Controller
         }
 
         event(new Registered($user));
+
+        // The welcome email (saas-needs lifecycle item 1): queued
+        // here and nowhere else, so it fires exactly once per
+        // successful signup. Verification resends go through a
+        // different controller, duplicate attempts throw above,
+        // and seeded accounts never pass through this flow. A
+        // mail failure never fails the signup (the same discipline
+        // as the Square provisioning above).
+        try {
+            Mail::to($user->email)->queue(new WelcomeMail($user));
+        } catch (\Throwable) {
+            Log::error('Welcome email could not be queued during signup.', [
+                'business_id' => $user->business->id,
+            ]);
+        }
 
         // Section 16: the first touch is written onto the business
         // at signup, and E3 signup_complete fires server-side. The

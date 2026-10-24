@@ -6,6 +6,7 @@
     'confirmClass' => 'btn-danger',
     'cancelLabel' => 'Cancel',
     'method' => 'POST',
+    'triggerClass' => 'btn btn-secondary',
 ])
 
 {{--
@@ -19,6 +20,17 @@
     backdrop does not cancel (backdrop clicks cancel only
     non-destructive modals). Max width 480px; a bottom sheet on
     mobile.
+
+    The trigger contract (NEW-2): a trigger slot holding plain
+    text renders as a real button carrying the trigger-class
+    variant (default btn btn-secondary; pass btn btn-danger or
+    btn btn-danger-ghost in a danger zone), so a destructive
+    action always shows button affordance at the full .btn target
+    size and never appears as bare text. A trigger slot holding
+    markup (a full button of the caller's own) renders as given,
+    under the same click handling. The confirm form carries
+    data-loading, so its submit takes the shared CP-02 loading
+    state.
 --}}
 <div class="inline-block" x-data="{
     open: false,
@@ -41,19 +53,27 @@
         if (! event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     },
 }">
-    <span @click="show()">{{ $trigger }}</span>
+    @php
+        $triggerHtml = isset($trigger) ? $trigger->toHtml() : '';
+        $triggerIsText = $triggerHtml !== '' && strip_tags($triggerHtml) === $triggerHtml;
+    @endphp
+    @if ($triggerIsText)
+        <button type="button" class="{{ $triggerClass }}" @click="show()">{{ trim($triggerHtml) }}</button>
+    @elseif ($triggerHtml !== '')
+        <span @click="show()">{{ $trigger }}</span>
+    @endif
 
     <div x-show="open" x-cloak class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4"
         @keydown.escape.window="if (open) { cancel(); }"
         @keydown.tab="if (open) { trapTab($event); }">
         <div class="absolute inset-0 bg-ink-900/60" aria-hidden="true"></div>
-        <div class="relative max-h-full w-full max-w-[480px] overflow-y-auto rounded-t-lg bg-surface-0 p-5 shadow-e3 sm:rounded-lg"
+        <div class="relative max-h-full w-full max-w-[480px] overflow-y-auto rounded-t-lg border border-line bg-surface-0 shadow-e3 sm:rounded-lg" style="padding: 24px"
             role="dialog" aria-modal="true" aria-labelledby="{{ $id }}-title" x-ref="dialog">
-            <h2 class="text-xl font-semibold text-text-1" id="{{ $id }}-title">{{ $title }}</h2>
-            <div class="mt-2 space-y-2 text-base text-text-2">
+            <h2 class="type-title-3 text-text-1" id="{{ $id }}-title">{{ $title }}</h2>
+            <div class="type-body mt-2 space-y-2 text-text-2">
                 {{ $slot }}
             </div>
-            <form method="POST" action="{{ $action }}" class="mt-5 flex justify-end gap-2">
+            <form method="POST" action="{{ $action }}" class="mt-5 flex justify-end gap-2" data-loading>
                 @csrf
                 @if ($method !== 'POST')
                     @method($method)

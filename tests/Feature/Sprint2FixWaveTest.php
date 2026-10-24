@@ -119,7 +119,7 @@ class Sprint2FixWaveTest extends TestCase
             ->assertSee('For a screen or tablet')
             ->assertSee('For the counter, A5')
             ->assertSee('Full page, for the window')
-            ->assertSee('Print poster')
+            ->assertSee('Print counter poster')
             ->assertSee("This is your store's only active code", false)
             ->assertSee('Created '.$qr->created_at->format('F j, Y'))
             ->assertSee('A customer shows their reward code. Any staff member scans it with their own phone and taps Mark as Redeemed. No app, no login, nothing to type.')

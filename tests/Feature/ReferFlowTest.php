@@ -83,16 +83,42 @@ class ReferFlowTest extends TestCase
         $this->get(route('refer.landing', ['token' => $qrToken]))
             ->assertOk()
             ->assertSee($business->name)
-            // The designed R1 headline (F-14): the friend reward in
-            // the pattern "Get {reward} on your first visit", never
-            // a doubling of both reward texts.
-            ->assertSee('Get $10 off your first visit on your first visit')
+            // The designed R1 headline (F-14, F-2): the friend
+            // reward composed by Business::friendRewardHeadline().
+            // The fixture reward already says "your first visit",
+            // so the suffix is not appended and the phrase appears
+            // exactly once.
+            ->assertSee('Get $10 off your first visit')
+            ->assertDontSee('on your first visit on your first visit')
             ->assertSee('Enter your phone, get your own link, share it with a friend')
             ->assertSee('First name')
             ->assertSee('Mobile phone')
             ->assertDontSee('Use the name on your ID')
             ->assertSee('1 Test Street, New York')
             ->assertSee('I agree to receive text messages about my rewards');
+    }
+
+    public function test_qr_landing_headline_never_doubles_the_first_visit_phrase(): void
+    {
+        // A reward naming the first visit in its own words (the
+        // barber case the audit captured, F-2): the suffix stays
+        // off, so the headline is the reward alone after "Get".
+        $barber = World::business(['friend_reward_text' => '$10 off your first cut']);
+        [, $barberToken] = World::qr($barber);
+
+        $this->get(route('refer.landing', ['token' => $barberToken]))
+            ->assertOk()
+            ->assertSee('Get $10 off your first cut')
+            ->assertDontSee('first cut on your first visit');
+
+        // A reward with no first-visit wording gets the suffix,
+        // so the friend still learns the reward is for visit one.
+        $upgrade = World::business(['friend_reward_text' => 'A free upgrade']);
+        [, $upgradeToken] = World::qr($upgrade);
+
+        $this->get(route('refer.landing', ['token' => $upgradeToken]))
+            ->assertOk()
+            ->assertSee('Get A free upgrade on your first visit');
     }
 
     public function test_qr_landing_for_unknown_or_revoked_code_is_the_generic_page(): void

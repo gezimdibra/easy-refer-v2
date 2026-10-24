@@ -5,83 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name'))</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-surface-1 text-text-1">
     <a class="skip-link" href="#main">Skip to content</a>
 
-    {{-- Dashboard skeleton (design-system.md Sections 2.4, 6.6): skip
-         link, a labelled Primary nav (rail at lg, drawer below), a
-         top bar, and main labelled by the page title. Only surfaces
-         that exist are linked; unbuilt sections join this nav when
-         their sprint ships them. --}}
-    <div class="lg:flex">
-        <nav aria-label="Primary" class="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-surface-0 px-4 py-5 lg:flex">
-            <a href="{{ route('dashboard') }}" class="text-xl font-bold text-text-1">Easy Refer</a>
-
-            <ul class="mt-8 space-y-1 text-base">
-                <li>
-                    <a href="{{ route('dashboard') }}" @if (request()->routeIs('dashboard')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('dashboard') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Overview</a>
-                </li>
-                <li>
-                    <a href="{{ route('customers.index') }}" @if (request()->routeIs('customers.*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('customers.*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Customers</a>
-                </li>
-                <li>
-                    <a href="{{ route('referrals.index') }}" @if (request()->routeIs('referrals.*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('referrals.*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Referrals</a>
-                </li>
-                <li>
-                    <a href="{{ route('rewards.index') }}" @if (request()->routeIs('rewards.*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('rewards.*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Rewards</a>
-                </li>
-                <li>
-                    <a href="{{ route('reviews') }}" @if (request()->routeIs('reviews*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('reviews*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Review @if (($reviewQueueCount ?? 0) > 0) <span class="pill pill-danger">{{ $reviewQueueCount }}</span> @endif</a>
-                </li>
-                <li>
-                    <a href="{{ route('owner.qr') }}" @if (request()->routeIs('owner.qr')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('owner.qr') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">QR Code</a>
-                </li>
-                <li>
-                    <a href="{{ route('settings') }}" @if (request()->routeIs('settings*') || request()->routeIs('security*')) aria-current="page" @endif class="block rounded-md px-3 py-2 font-medium hover:bg-surface-1 {{ request()->routeIs('settings*') || request()->routeIs('security*') ? 'bg-surface-1 text-brand-700' : 'text-text-1' }}">Settings</a>
-                </li>
-            </ul>
-
-            @auth
-                <div class="mt-auto border-t border-line pt-4">
-                    <p class="px-3 text-sm text-text-2">{{ auth()->user()->business?->name }}</p>
-                    <p class="px-3 text-sm font-medium text-text-1">{{ auth()->user()->name }}</p>
-                    <p class="px-3 text-sm text-text-2">{{ auth()->user()->email }}</p>
-                    <form method="POST" action="{{ route('logout') }}" class="mt-2">
-                        @csrf
-                        <button type="submit" class="btn btn-ghost w-full justify-start">Sign out</button>
-                    </form>
-                </div>
-            @endauth
+    {{-- Dashboard skeleton (design-system.md Sections 2.4, 6.6;
+         redesign-spec.md Section 7.6): skip link, a labelled
+         Primary nav (rail at lg, the same rail as a slide-over
+         below lg), a 60px top bar, and main labelled by the page
+         title. Only surfaces that exist are linked; unbuilt
+         sections join this nav when their sprint ships them. --}}
+    <div class="lg:flex" x-data="{ navOpen: false }">
+        <nav aria-label="Primary" class="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-surface-0 px-4 py-6 lg:flex">
+            @include('partials.app-rail')
         </nav>
 
-        <div class="min-w-0 flex-1">
-            <header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-surface-0 px-5">
-                <div class="relative lg:hidden" x-data="{ open: false }">
-                    <button type="button" class="btn btn-secondary" aria-haspopup="true" :aria-expanded="open.toString()" @click="open = ! open">Menu</button>
-                    <nav aria-label="Primary" x-show="open" x-cloak class="absolute left-0 z-40 mt-2 w-56 rounded-lg border border-line bg-surface-0 p-3 shadow-e2">
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('dashboard')) aria-current="page" @endif href="{{ route('dashboard') }}">Overview</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('customers.*')) aria-current="page" @endif href="{{ route('customers.index') }}">Customers</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('referrals.*')) aria-current="page" @endif href="{{ route('referrals.index') }}">Referrals</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('rewards.*')) aria-current="page" @endif href="{{ route('rewards.index') }}">Rewards</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('reviews*')) aria-current="page" @endif href="{{ route('reviews') }}">Review @if (($reviewQueueCount ?? 0) > 0) <span class="pill pill-danger">{{ $reviewQueueCount }}</span> @endif</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('owner.qr')) aria-current="page" @endif href="{{ route('owner.qr') }}">QR Code</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" @if (request()->routeIs('settings*') || request()->routeIs('security*')) aria-current="page" @endif href="{{ route('settings') }}">Settings</a>
-                        <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t border-line pt-2">
-                            @csrf
-                            <button type="submit" class="btn btn-ghost w-full justify-start">Sign out</button>
-                        </form>
-                    </nav>
-                </div>
+        {{-- Mobile slide-over: the same rail, shadow-e3, over a
+             scrim. --}}
+        <div x-show="navOpen" x-cloak class="fixed inset-0 z-40 lg:hidden">
+            <div class="absolute inset-0 bg-ink-900/60" @click="navOpen = false"></div>
+            <nav aria-label="Primary" class="absolute inset-y-0 left-0 flex w-[280px] flex-col overflow-y-auto bg-surface-0 px-4 py-6 shadow-e3">
+                <button type="button" class="absolute top-4 right-4 inline-flex h-11 w-11 items-center justify-center rounded-md text-text-2 hover:bg-surface-1 hover:text-text-1" aria-label="Close menu" @click="navOpen = false"><x-icon name="x" :size="20" /></button>
+                @include('partials.app-rail')
+            </nav>
+        </div>
 
-                <p class="text-lg font-semibold text-text-1">@yield('title')</p>
+        <div class="min-w-0 flex-1">
+            <header class="sticky top-0 z-20 flex h-[60px] items-center gap-3 border-b border-line bg-surface-0 px-5 md:px-8">
+                <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-md text-text-1 hover:bg-surface-1 lg:hidden" aria-label="Open menu" aria-haspopup="true" :aria-expanded="navOpen.toString()" @click="navOpen = true"><x-icon name="menu" :size="24" /></button>
+
+                {{-- The top-bar title yields to the page's own
+                     H1 below lg, so a phone never states the
+                     page title twice (guardian observation,
+                     corrections wave); at lg the bar keeps it. --}}
+                <p class="type-title-3 hidden text-text-1 lg:block">@yield('title')</p>
                 @auth
-                    <p class="ml-auto hidden text-sm text-text-2 sm:block">{{ auth()->user()->business?->name }}</p>
+                    <span class="ml-auto flex items-center gap-3">
+                        <span class="hidden rounded-full bg-surface-1 px-3 py-1.5 text-[13px] font-medium text-text-1 sm:block">{{ auth()->user()->business?->name }}</span>
+                        <span class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-hidden="true"><span style="font-size: 13px; font-weight: 650">{{ collect(explode(' ', trim(auth()->user()->name)))->map(fn ($w) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($w, 0, 1)))->take(2)->implode('') }}</span></span>
+                    </span>
                 @endauth
             </header>
 
-            <main id="main" aria-label="@yield('title')" class="ui-scope mx-auto max-w-[1200px] px-5 py-6">
+            <main id="main" aria-label="@yield('title')" class="ui-scope mx-auto max-w-[1200px] px-5 py-8 md:px-8">
                 {{-- Same notices contract as the auth layout: a
                      page whose forms mark their fields declares
                      notices_summary_only so each problem is stated

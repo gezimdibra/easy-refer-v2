@@ -14,14 +14,19 @@
          claimed state is the Section 3.5 receipt flood, the same
          receipt the staff phone showed at the counter. --}}
     @if ($state === 'ready')
-        <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <p class="text-sm text-text-2">{{ $business->street }}, {{ $business->city }}</p>
-        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Your reward is ready</h1>
+        <div class="flex items-center gap-3">
+            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-hidden="true"><span style="font-size: 18px; font-weight: 650">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($business->name, 0, 1)) }}</span></span>
+            <span>
+                <span class="type-title-4 block text-text-1">{{ $business->name }}</span>
+                <span class="type-caption block text-text-2">{{ $business->street }}, {{ $business->city }}</span>
+            </span>
+        </div>
+        <h1 class="type-display-xs mt-5">Your reward is ready</h1>
         <p class="mt-2 text-text-2">Your reward: {{ $reward->reward_text_snapshot }}.</p>
         <p class="mt-2 text-text-2">Show this code to a staff member. They scan it with their own phone.</p>
 
-        <div class="mt-5 text-center">
-            <img src="{{ $qrUrl }}" alt="Your reward QR code" width="220" height="220" class="mx-auto">
+        <div class="well mt-5 text-center">
+            <img src="{{ $qrUrl }}" alt="Your reward QR code" width="220" height="220" class="mx-auto rounded-lg border border-line bg-surface-0 p-3">
         </div>
     @elseif ($state === 'claimed')
         @include('partials.success-flood', [
@@ -36,7 +41,7 @@
         @endif
     @elseif ($state === 'waiting')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Your reward is on its way</h1>
+        <h1 class="type-display-xs mt-5">Your reward is on its way</h1>
         <p class="mt-2 text-text-2">Your reward: {{ $reward->reward_text_snapshot }}.</p>
 
         @if ($showAvailableDate)
@@ -46,14 +51,14 @@
         @endif
     @elseif ($state === 'held')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">Held for review</h1>
+        <h1 class="type-display-xs mt-5">Held for review</h1>
         <p class="mt-2 text-text-2">Your reward is being confirmed by {{ $business->name }}. This can take a day.</p>
     @elseif ($state === 'denied')
         <p class="text-sm text-text-2">{{ $business->name }}</p>
-        <h1 class="mt-1 text-[32px] font-bold leading-[38px]">This reward was not approved by {{ $business->name }}.</h1>
+        <h1 class="type-display-xs mt-5">This reward was not approved by {{ $business->name }}.</h1>
         <p class="mt-2 text-text-2">If you think this is a mistake, contact the store.</p>
     @else
-        <h1 class="text-[32px] font-bold leading-[38px]">This link is not available</h1>
+        <h1 class="type-display-xs">This link is not available</h1>
         <p class="mt-2 text-text-2">This link could not be used. Check the message we sent you for your latest link.</p>
     @endif
 @endsection

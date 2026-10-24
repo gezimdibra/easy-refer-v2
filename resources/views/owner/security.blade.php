@@ -9,64 +9,61 @@
          3: the same fields and endpoints the page has always had,
          presented in the design system like every other Settings
          page (cards, the closed button set, F-06 field wiring). --}}
-    <h1 class="text-2xl font-bold">Security</h1>
+    <h1 class="type-title-2 text-text-1">Security</h1>
 
-    @include('owner.settings.nav')
+    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-3">
+        <a class="text-text-2 hover:text-text-1" href="{{ route('settings') }}">Settings</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-text-1">Security</span>
+    </nav>
 
-    <div class="card mt-4">
-        <h2 class="text-xl font-semibold">Change password</h2>
+    <div class="mt-6 lg:flex lg:items-start lg:gap-8">
+        <div class="lg:w-[220px] lg:flex-none">
+            @include('owner.settings.nav')
+        </div>
+        <div class="mt-6 min-w-0 flex-1 lg:mt-0">
+
+    <div class="panel mt-4 [&_input]:max-w-[560px] [&_select]:max-w-[560px]">
+        <h2 class="type-title-3 text-text-1">Change password</h2>
         <form method="POST" action="{{ route('security.password') }}" class="mt-3">
             @csrf
             @method('PUT')
 
-            <label for="current_password">Current password</label>
-            <input id="current_password" name="current_password" type="password" required autocomplete="current-password"
-                aria-invalid="{{ $errors->has('current_password') ? 'true' : 'false' }}"
-                @if ($errors->has('current_password')) aria-describedby="current_password-error" @endif>
-            @error('current_password') <p class="form-error" id="current_password-error">{{ $message }}</p> @enderror
+            <x-password-input name="current_password" label="Current password" autocomplete="current-password" required />
 
-            <label for="password">New password</label>
-            <input id="password" name="password" type="password" required autocomplete="new-password"
-                aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}"
-                @if ($errors->has('password')) aria-describedby="password-error" @endif>
-            @error('password') <p class="form-error" id="password-error">{{ $message }}</p> @enderror
-            <p class="form-help">At least 12 characters.</p>
+            <x-password-input name="password" label="New password" autocomplete="new-password" required help="At least 12 characters." />
 
-            <label for="password_confirmation">Confirm new password</label>
-            <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password"
-                aria-invalid="{{ $errors->has('password_confirmation') ? 'true' : 'false' }}"
-                @if ($errors->has('password_confirmation')) aria-describedby="password_confirmation-error" @endif>
-            @error('password_confirmation') <p class="form-error" id="password_confirmation-error">{{ $message }}</p> @enderror
+            <x-password-input name="password_confirmation" label="Confirm new password" autocomplete="new-password" required />
 
             <p class="mt-4"><button type="submit" class="btn btn-primary">Update password</button></p>
         </form>
     </div>
 
-    <div class="card mt-4">
-        <h2 class="text-xl font-semibold">Active sessions</h2>
+    <div class="panel mt-4 [&_input]:max-w-[560px] [&_select]:max-w-[560px]">
+        <h2 class="type-title-3 text-text-1">Active sessions</h2>
         @if ($sessions->isEmpty())
             <p class="mt-1 text-text-2">No other devices are signed in.</p>
         @else
-            <table class="mt-2 w-full text-left text-base">
+            <div class="mt-3 overflow-x-auto"><table class="tbl">
                 <thead>
-                    <tr class="border-b border-line">
-                        <th scope="col" class="py-2 pr-3 font-semibold">IP address</th>
-                        <th scope="col" class="py-2 pr-3 font-semibold">Device</th>
-                        <th scope="col" class="py-2 pr-3 font-semibold">Last active</th>
-                        <th scope="col" class="py-2 font-semibold"></th>
+                    <tr>
+                        <th scope="col">IP address</th>
+                        <th scope="col">Device</th>
+                        <th scope="col">Last active</th>
+                        <th scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($sessions as $session)
-                        <tr class="border-b border-line">
-                            <td class="py-2 pr-3">{{ $session['ip_address'] }}</td>
-                            <td class="py-2 pr-3">{{ $session['user_agent'] }}</td>
-                            <td class="py-2 pr-3">{{ $session['last_active'] }}</td>
-                            <td class="py-2">{{ $session['is_current'] ? 'This device' : '' }}</td>
+                        <tr>
+                            <td>{{ $session['ip_address'] }}</td>
+                            <td>{{ $session['user_agent'] }}</td>
+                            <td>{{ $session['last_active'] }}</td>
+                            <td>{{ $session['is_current'] ? 'This device' : '' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+            </table></div>
         @endif
 
         <div class="mt-4 flex flex-wrap gap-2">
@@ -82,8 +79,8 @@
         </div>
     </div>
 
-    <div class="card mt-4">
-        <h2 class="text-xl font-semibold">Change email</h2>
+    <div class="panel mt-4 [&_input]:max-w-[560px] [&_select]:max-w-[560px]">
+        <h2 class="type-title-3 text-text-1">Change email</h2>
         <p class="mt-1 text-text-2">Your current email address is {{ $user->email }}. Changing it sends a verification link to the new address, and your public QR code and billing stay off until that link is used. A notice also goes to the old address.</p>
         <form method="POST" action="{{ route('security.email') }}" class="mt-3">
             @csrf
@@ -98,14 +95,14 @@
         </form>
     </div>
 
-    <div class="card mt-4">
-        <h2 class="text-xl font-semibold">Two-factor authentication</h2>
+    <div class="panel mt-4 [&_input]:max-w-[560px] [&_select]:max-w-[560px]">
+        <h2 class="type-title-3 text-text-1">Two-factor authentication</h2>
         @if (session('two_factor_recovery_codes'))
             <div class="gate mt-3">
                 <p><strong>Your recovery codes.</strong> Save these somewhere safe. Each one works once, in place of an authenticator code, and they will not be shown again.</p>
-                <ul>
+                <ul class="well mt-3 grid grid-cols-2 gap-2">
                     @foreach (session('two_factor_recovery_codes') as $recoveryCode)
-                        <li><code>{{ $recoveryCode }}</code></li>
+                        <li><code class="font-mono tabular-nums">{{ $recoveryCode }}</code></li>
                     @endforeach
                 </ul>
             </div>
@@ -116,11 +113,7 @@
             <form method="POST" action="{{ route('security.two-factor.disable') }}" class="mt-3">
                 @csrf
 
-                <label for="two_factor_current_password">Current password (required to turn this off)</label>
-                <input id="two_factor_current_password" name="current_password" type="password" required autocomplete="current-password"
-                    aria-invalid="{{ $errors->has('current_password') ? 'true' : 'false' }}"
-                    @if ($errors->has('current_password')) aria-describedby="two_factor_current_password-error" @endif>
-                @error('current_password') <p class="form-error" id="two_factor_current_password-error">{{ $message }}</p> @enderror
+                <x-password-input name="current_password" id="two_factor_current_password" label="Current password (required to turn this off)" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-danger-ghost">Turn off two-factor authentication</button></p>
             </form>
@@ -130,11 +123,7 @@
             <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3">
                 @csrf
 
-                <label for="two_factor_restart_password">Current password (to start over with a fresh secret)</label>
-                <input id="two_factor_restart_password" name="current_password" type="password" required autocomplete="current-password"
-                    aria-invalid="{{ $errors->has('current_password') ? 'true' : 'false' }}"
-                    @if ($errors->has('current_password')) aria-describedby="two_factor_restart_password-error" @endif>
-                @error('current_password') <p class="form-error" id="two_factor_restart_password-error">{{ $message }}</p> @enderror
+                <x-password-input name="current_password" id="two_factor_restart_password" label="Current password (to start over with a fresh secret)" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-secondary">Start over</button></p>
             </form>
@@ -143,14 +132,12 @@
             <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3">
                 @csrf
 
-                <label for="two_factor_current_password">Current password (required to set this up)</label>
-                <input id="two_factor_current_password" name="current_password" type="password" required autocomplete="current-password"
-                    aria-invalid="{{ $errors->has('current_password') ? 'true' : 'false' }}"
-                    @if ($errors->has('current_password')) aria-describedby="two_factor_current_password-error" @endif>
-                @error('current_password') <p class="form-error" id="two_factor_current_password-error">{{ $message }}</p> @enderror
+                <x-password-input name="current_password" id="two_factor_current_password" label="Current password (required to set this up)" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-primary">Set up two-factor authentication</button></p>
             </form>
         @endif
+    </div>
+        </div>
     </div>
 @endsection

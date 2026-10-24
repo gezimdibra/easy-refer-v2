@@ -57,12 +57,13 @@ class ReferController extends Controller
             return $this->message('not_active');
         }
 
-        [, $newToken] = $this->beginFlow($request, $business);
+        [$flow, $newToken] = $this->beginFlow($request, $business);
 
         return $this->respond(response()->view('flow.landing', [
             'business' => $business,
             'token' => $token,
             'phoneHelp' => $this->phoneConfirmationLine($request),
+            'draft' => $this->draftFor($flow, $business),
         ]), $newToken);
     }
 
@@ -356,17 +357,17 @@ class ReferController extends Controller
         }
 
         if ((int) ($pending['starts'] ?? 1) >= (int) config('referrals.verify.starts_per_flow_session')) {
-            return $this->message('rate_limited', $business);
+            return $this->message('rate_limited', $business, null, route('refer.verify'));
         }
 
         $result = $this->verification->start($pending['phone_e164'], (string) $request->ip(), $business, $pending['channel'] ?? 'sms');
 
         if ($result['outcome'] === 'rate_limited') {
-            return $this->message('rate_limited', $business);
+            return $this->message('rate_limited', $business, null, route('refer.verify'));
         }
 
         if ($result['outcome'] !== 'started') {
-            return $this->message('provider_error', $business);
+            return $this->message('provider_error', $business, null, route('refer.verify'));
         }
 
         $pending['checks'] = 0;
@@ -463,13 +464,14 @@ class ReferController extends Controller
             return $this->message('not_active');
         }
 
-        [, $newToken] = $this->beginFlow($request, $business);
+        [$flow, $newToken] = $this->beginFlow($request, $business);
 
         return $this->respond(response()->view('flow.friend', [
             'business' => $business,
             'referrer' => $membership->customer,
             'token' => $token,
             'phoneHelp' => $this->phoneConfirmationLine($request),
+            'draft' => $this->draftFor($flow, $business),
         ]), $newToken);
     }
 
@@ -681,8 +683,25 @@ class ReferController extends Controller
      */
     private function startVerification(Request $request, FlowSession $flow, ?string $newToken, Business $business, array $pending): Response|RedirectResponse
     {
+        // The typed details ride the flow session from here, so a
+        // provider failure can send the customer back to a form
+        // that still holds what they typed (standards G7: forms
+        // never clear on error, and no error state is a dead end).
+        $this->flows->put($flow, ['draft' => [
+            'business_id' => $business->id,
+            'first_name' => $pending['first_name'] ?? '',
+            'last_name' => $pending['last_name'] ?? '',
+            'phone' => isset($pending['phone_e164']) ? PhoneNumber::formatForDisplay($pending['phone_e164']) : '',
+            'email' => $pending['email'] ?? '',
+            'consent' => (bool) ($pending['consent'] ?? false),
+        ]]);
+
+        $returnUrl = isset($pending['return']['route'])
+            ? route($pending['return']['route'], $pending['return']['params'] ?? [])
+            : null;
+
         if ((int) ($this->flows->get($flow, 'flow_starts') ?? 0) >= (int) config('referrals.verify.starts_per_flow_session')) {
-            return $this->message('rate_limited', $business);
+            return $this->message('rate_limited', $business, null, $returnUrl);
         }
 
         $result = $this->verification->start($pending['phone_e164'], (string) $request->ip(), $business);
@@ -700,13 +719,14 @@ class ReferController extends Controller
         }
 
         if ($result['outcome'] === 'rate_limited') {
-            return $this->message('rate_limited', $business);
+            return $this->message('rate_limited', $business, null, $returnUrl);
         }
 
         if ($result['outcome'] !== 'started') {
-            return $this->message('provider_error', $business);
+            return $this->message('provider_error', $business, null, $returnUrl);
         }
 
+        $this->flows->forget($flow, 'draft');
         $this->flows->put($flow, ['flow_starts' => (int) ($this->flows->get($flow, 'flow_starts') ?? 0) + 1]);
 
         $pending['channel'] = $channel;
@@ -776,6 +796,23 @@ class ReferController extends Controller
         $signal = $request->input('device_signal') ?? $request->header('X-Device-Signal');
 
         return is_string($signal) && $signal !== '' ? hash('sha256', $signal) : null;
+    }
+
+    /**
+     * The saved form draft for this business, if the flow session
+     * holds one (see startVerification).
+     *
+     * @return array<string, mixed>
+     */
+    private function draftFor(?FlowSession $flow, Business $business): array
+    {
+        $draft = $flow !== null ? $this->flows->get($flow, 'draft') : null;
+
+        if (! is_array($draft) || (int) ($draft['business_id'] ?? 0) !== $business->id) {
+            return [];
+        }
+
+        return $draft;
     }
 
     private function message(string $state, ?Business $business = null, ?int $status = null, ?string $returnUrl = null): Response

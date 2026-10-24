@@ -5,9 +5,9 @@
 @section('meta_description', $post->excerpt)
 
 @section('content')
-    <section class="mx-auto max-w-[1120px] px-5 py-8 md:py-12 lg:py-16 xl:py-20">
+    <section class="shell section-pad">
         <article class="max-w-[640px]">
-            <h1 class="text-[32px] leading-[38px] font-bold text-text-1">{{ $post->title }}</h1>
+            <h1 class="type-title-1 text-text-1">{{ $post->title }}</h1>
             <p class="mt-2 text-sm text-text-3">{{ $post->published_at->format('M j, Y') }}</p>
 
             @foreach (preg_split('/\n\s*\n/', trim($post->body)) as $paragraph)

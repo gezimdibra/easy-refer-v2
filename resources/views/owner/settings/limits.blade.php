@@ -5,11 +5,21 @@
 @section('notices_summary_only', '1')
 
 @section('content')
-    <h1 class="text-2xl font-bold">Referral limits</h1>
+    <h1 class="type-title-2 text-text-1">Referral limits</h1>
 
-    @include('owner.settings.nav')
+    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-3">
+        <a class="text-text-2 hover:text-text-1" href="{{ route('settings') }}">Settings</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-text-1">Referral limits</span>
+    </nav>
 
-    <form method="POST" action="{{ route('settings.limits.update') }}" class="card">
+    <div class="mt-6 lg:flex lg:items-start lg:gap-8">
+        <div class="lg:w-[220px] lg:flex-none">
+            @include('owner.settings.nav')
+        </div>
+        <div class="mt-6 min-w-0 flex-1 lg:mt-0">
+
+    <form method="POST" action="{{ route('settings.limits.update') }}" class="panel [&_input]:max-w-[560px] [&_select]:max-w-[560px] [&_textarea]:max-w-[560px]">
         @csrf
 
         <p class="form-help">Limits keep one person from earning more than this from your store. Extra referrals are saved and held for your review.</p>
@@ -30,4 +40,6 @@
 
         <p class="mt-4"><button type="submit" class="btn btn-primary">Save changes</button></p>
     </form>
+        </div>
+    </div>
 @endsection

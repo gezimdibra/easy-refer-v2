@@ -63,7 +63,30 @@ class MarketingTest extends TestCase
         $response->assertSee('400+');
         $response->assertSee('new customers per year on average');
         $response->assertSee('30%');
+        $response->assertSee('higher purchase amount');
         $response->assertSee('2x');
+        $response->assertSee('customer retention');
+        $response->assertSee('93%');
+        $response->assertSee('satisfaction');
+
+        // The proof band itself carries exactly the four approved
+        // stats with their approved labels. The price figure is
+        // not a stat and never renders in the band: it lives in
+        // its own pricing section. (The HOME-STAT-01 price tile
+        // was superseded by the OD-6 claims set; release 05 Gate 3
+        // and the visual audit both flagged the old band.)
+        $html = $response->getContent();
+        $bandStart = strpos($html, 'grid grid-cols-2 gap-y-10 lg:grid-cols-4');
+        $this->assertNotFalse($bandStart, 'the proof stat band renders');
+        $band = substr($html, $bandStart, strpos($html, 'Running in real stores') - $bandStart);
+        $this->assertSame(4, substr_count($band, 'type-stat'));
+        foreach (['400+', 'new customers per year on average', '30%', 'higher purchase amount', '2x', 'customer retention', '93%', 'satisfaction'] as $stat) {
+            $this->assertStringContainsString($stat, $band);
+        }
+        $this->assertStringNotContainsString('$2', $band);
+        $this->assertStringNotContainsString('per verified visit', $band);
+        $this->assertStringNotContainsString('never more than', $band);
+
         $response->assertSee('Running in real stores');
         $response->assertSee('Ungaro Coal Fired Pizza Cafe, with its referral code at the register.');
         $response->assertSee('Success Stories');
@@ -80,7 +103,7 @@ class MarketingTest extends TestCase
         $response->assertDontSee('New Customers Annually');
         $response->assertDontSee('$1 Per Referral');
         $response->assertDontSee('80+');
-        $response->assertDontSee('93%');
+        $response->assertDontSee('retention rate');
     }
 
     public function test_home_pricing_faq_row_carries_the_four_pricing_questions(): void
@@ -99,7 +122,7 @@ class MarketingTest extends TestCase
         $home = $this->get('/');
         $home->assertOk();
         $home->assertSee('<link rel="canonical" href="'.url('/').'">', false);
-        $home->assertSee('property="og:image" content="'.asset('images/photos/og-stores.jpg').'"', false);
+        $home->assertSee('property="og:image" content="'.asset('images/photos/og-image.png').'"', false);
         $home->assertSee('name="twitter:card" content="summary_large_image"', false);
         $home->assertSee('"@type": "Organization"', false);
         $home->assertSee('"@type": "WebSite"', false);
@@ -144,7 +167,7 @@ class MarketingTest extends TestCase
 
     public function test_pricing_card_start_free_button_is_the_primary(): void
     {
-        $this->get('/')->assertSee('btn btn-primary mt-6 w-full', false);
+        $this->get('/')->assertSee('btn btn-primary btn-lg mt-8 w-full', false);
     }
 
     public function test_home_pricing_renders_from_the_plan_table(): void
@@ -190,6 +213,41 @@ class MarketingTest extends TestCase
             // AP-07 on verticals too.
             $response->assertDontSee('400+');
         }
+    }
+
+    public function test_home_hero_and_header_carry_the_corrections_wave_hooks(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+
+        // MT-08: below lg the hero stack orders the primary action
+        // ahead of the lede so it lands inside the first 360x740
+        // viewport, clear of the floating consent card.
+        $response->assertSee('mkt-hero-actions', false);
+        $response->assertSee('mkt-hero-lede', false);
+
+        // MO-01 and MO-02: the hero-rise load-in animation is gone
+        // from the page (its app.css removal is Lane C's crosslane
+        // item; the class must not render here meanwhile).
+        $response->assertDontSee('hero-rise');
+
+        // SL-11: the marketing header carries the hide-on-scroll
+        // hook and its behavior script.
+        $response->assertSee('id="site-header"', false);
+        $response->assertSee('site-header-hidden', false);
+    }
+
+    public function test_about_shows_a_real_store_photo_with_its_own_business_caption(): void
+    {
+        // X-5: the About page carried no photo. The one added photo
+        // is owner-cleared and keeps its own business caption (the
+        // caption string is shared with the home proof strip, where
+        // the same figure renders; pairing is never crossed).
+        $this->get('/about')
+            ->assertOk()
+            ->assertSee('images/photos/ungaro-counter-768.jpg', false)
+            ->assertSee('Ungaro Coal Fired Pizza Cafe, with its referral code at the register.');
     }
 
     public function test_unknown_vertical_is_a_404(): void

@@ -1,7 +1,11 @@
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+/* Compiled views are deliberately NOT a content source: the cache
+   also holds the framework's styled exception pages, whose
+   off-palette utility classes would otherwise be minted into the
+   shipped CSS and make the build depend on which pages happened
+   to render last. Source blades are the content of record. */
 @source '../**/*.blade.php';
 @source '../**/*.js';
 /* Tests assert on class names as strings; automatic detection
@@ -9,62 +13,100 @@
 @source not "../../tests";
 
 /*
- | Design tokens (design-system.md Sections 2.1 to 2.3, amended by
- | Section 6.2). Every color used by any surface comes from this table;
- | AP-13 makes an off-palette hex a review finding. Input borders use
- | the text-3 tone per T-2 (4.76:1 on white, above the 3:1 control
- | boundary rule); the line token is decorative only.
+ | Design tokens (redesign-spec.md Sections 4.1, 7.1, 7.3; this file
+ | is the token table of record). Token names never change; values
+ | are chosen values, not framework swatches. Every color used by
+ | any surface comes from this table; AP-13 makes an off-palette
+ | hex a review finding. Input borders use the control token
+ | (5.08:1 on white, above the 3:1 control-boundary rule); the
+ | line token is decorative only.
  */
 @theme {
     --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
         'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-    --color-brand-500: #3b82f6;
-    --color-brand-600: #2563eb;
-    --color-brand-700: #1d4ed8;
-    --color-brand-800: #1e40af;
+    /* Ink and Amber (owner pick, 2026-10-23; landing-benchmark.md
+       Section 4.3 finalist C): the action color is the ink itself,
+       and the amber family (brand-500, accent) carries brand
+       moments only. brand-500 never carries small text on light
+       grounds (about 2.1:1 there); it fills on dark grounds and
+       in large brand moments. Pine is retired. */
+    --color-brand-50: #fff6e8;
+    --color-brand-100: #fdebc8;
+    --color-brand-500: #f5a300;
+    --color-brand-600: #16130e;
+    --color-brand-700: #0d0b08;
+    --color-brand-800: #050403;
 
-    --color-ink-900: #0f172a;
+    --color-ink-950: #0d0b08;
+    --color-ink-900: #16130e;
 
-    --color-accent-400: #fbbf24;
-    --color-accent-500: #f59e0b;
-    --color-accent-600: #d97706;
+    --color-accent-400: #ffb224;
+    --color-accent-500: #f5a300;
 
     --color-surface-0: #ffffff;
-    --color-surface-1: #f8fafc;
-    --color-surface-2: #f1f5f9;
+    --color-surface-1: #faf6ef;
+    --color-surface-2: #f3ecdf;
+    --color-surface-3: #e7dcc8;
 
-    --color-line: #e2e8f0;
+    --color-line: #e7dfce;
+    --color-line-strong: #c4b698;
+    --color-control: #6e6252;
 
-    --color-text-1: #0f172a;
-    --color-text-2: #475569;
-    --color-text-3: #64748b;
-    --color-text-disabled: #94a3b8;
+    --color-text-1: #16130e;
+    --color-text-2: #453d31;
+    --color-text-3: #66594a;
+    /* Derived: text-3 lifted toward surface-0, the same relation
+       the retired palettes' disabled tone held to their text-3. */
+    --color-text-disabled: #9c9389;
+    --color-dark-muted: #b4a88f;
 
-    --color-success-strong: #047857;
-    --color-success-fill: #ecfdf5;
-    --color-success-text: #065f46;
+    --color-success-strong: #177245;
+    --color-success-fill: #e9f7ee;
+    --color-success-text: #0e5a36;
 
-    --color-warning-strong: #b45309;
-    --color-warning-fill: #fffbeb;
-    --color-warning-text: #92400e;
+    --color-warning-strong: #b54708;
+    --color-warning-fill: #fffaeb;
+    --color-warning-text: #93370d;
 
-    --color-error-strong: #b91c1c;
-    --color-error-fill: #fef2f2;
-    --color-error-text: #991b1b;
-    --color-danger: #dc2626;
+    --color-error-strong: #b42318;
+    --color-error-strong-hover: #9a1b12;
+    --color-error-strong-pressed: #7a271a;
+    --color-error-fill: #fef3f2;
+    --color-error-text: #912018;
+    --color-error: #b42318;
+    --color-danger: #b42318;
 
-    --color-info-strong: #0369a1;
-    --color-info-fill: #f0f9ff;
-    --color-info-text: #075985;
+    /* Info is a muted blue gray, deliberately outside the green
+       family so it can never merge with brand or success (NEW-4):
+       the "Waiting" and "On its way" pills read as informational
+       from their labels, with this tone as support. Computed
+       ratios (2026-10-23): text on fill 8.4:1, strong on white
+       7.1:1, text on white 9.7:1. */
+    --color-info-strong: #2f5d75;
+    --color-info-fill: #e8f0f3;
+    --color-info-text: #23485e;
 
-    --shadow-e1: 0 1px 2px rgb(15 23 42 / 0.06);
-    --shadow-e2: 0 4px 16px rgb(15 23 42 / 0.1);
-    --shadow-e3: 0 16px 40px rgb(15 23 42 / 0.18);
+    /* The email dark-mode well (PE-06): the one color that exists
+       only for client dark modes in the custom mail templates.
+       Derived, not in Section 4.3: ink-900 lifted one step (the
+       retired Pine well stood in the same relation to its
+       ink-900), a warm dark panel that sits above ink-950 grounds
+       in mail dark modes. The mail templates carry the value as
+       a literal because mail clients read no CSS variables, and
+       CC-01 covers it through this registration. */
+    --color-mail-well-dark: #29231a;
 
-    --radius-sm: 6px;
+    --shadow-e1: 0 1px 2px rgb(22 19 14 / 0.05), 0 1px 3px rgb(22 19 14 / 0.04);
+    --shadow-e2: 0 8px 24px -6px rgb(22 19 14 / 0.12), 0 2px 6px rgb(22 19 14 / 0.06);
+    --shadow-e3: 0 32px 64px -24px rgb(22 19 14 / 0.28), 0 12px 24px -12px rgb(22 19 14 / 0.14);
+
+    --radius-xs: 6px;
+    --radius-sm: 8px;
     --radius-md: 10px;
     --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 24px;
 }
 
 @layer base {
@@ -75,18 +117,25 @@
 
     body {
         @apply bg-surface-1 font-sans text-text-1 antialiased;
+        font-feature-settings: 'cv11', 'ss01';
+        font-optical-sizing: auto;
+    }
+
+    ::selection {
+        background: var(--color-brand-100);
+        color: var(--color-text-1);
     }
 
     /*
-     | Focus ring (design-system.md Section 6.6, normative): a 3px
-     | outline at 2px offset in brand-600 on light surfaces, rendered
-     | for :focus-visible on every interactive element without
-     | exception. On ink-900 surfaces the ring is accent-400 (T-3);
-     | on the brand-600 primary button itself it is brand-800 so it
-     | stays visible against the fill.
+     | Focus ring (redesign-spec.md Section 7.7): a 2px outline at
+     | 2px offset in brand-600 on light surfaces, rendered for
+     | :focus-visible on every interactive element without
+     | exception. On ink surfaces the ring is accent-400; on the
+     | brand-600 primary button itself it is brand-800 so it stays
+     | visible against the fill.
      */
     :focus-visible {
-        outline: 3px solid var(--color-brand-600);
+        outline: 2px solid var(--color-brand-600);
         outline-offset: 2px;
     }
 
@@ -95,8 +144,8 @@
     }
 
     /*
-     | Reduced motion (Section 6.6): every transition becomes instant;
-     | content, order, and meaning are unchanged.
+     | Reduced motion (Section 11): every transition becomes
+     | instant; content, order, and meaning are unchanged.
      */
     @media (prefers-reduced-motion: reduce) {
         *,
@@ -113,15 +162,212 @@
 
 @layer components {
     /*
-     | Buttons (Section 2.5). Heights: 52px in the customer flow,
-     | 44px in the dashboard and marketing, never below 44px.
+     | Type scale (redesign-spec.md Section 3.1, normative). Views
+     | use these classes for every heading and text role; raw
+     | arbitrary sizes are banned in restyled views. Weights are
+     | Inter Variable intermediate weights served by the one
+     | loaded font file.
+     */
+    .type-display {
+        font-size: 40px;
+        line-height: 42px;
+        font-weight: 650;
+        letter-spacing: -0.03em;
+    }
+
+    @media (min-width: 1024px) {
+        .type-display {
+            font-size: 64px;
+            line-height: 64px;
+            letter-spacing: -0.035em;
+        }
+    }
+
+    .type-display-sm {
+        font-size: 34px;
+        line-height: 38px;
+        font-weight: 650;
+        letter-spacing: -0.025em;
+    }
+
+    @media (min-width: 768px) {
+        .type-display-sm {
+            font-size: 48px;
+            line-height: 50px;
+            letter-spacing: -0.03em;
+        }
+    }
+
+    /* The auth and flow headline size (Sections 10.2, 10.3, 10.6):
+       the display-sm step held at its small size, for narrow
+       form columns where the full display-sm is oversized. */
+    .type-display-xs {
+        font-size: 32px;
+        line-height: 38px;
+        font-weight: 650;
+        letter-spacing: -0.025em;
+    }
+
+    .type-title-1 {
+        font-size: 32px;
+        line-height: 36px;
+        font-weight: 640;
+        letter-spacing: -0.025em;
+    }
+
+    @media (min-width: 768px) {
+        .type-title-1 {
+            font-size: 40px;
+            line-height: 44px;
+            letter-spacing: -0.028em;
+        }
+    }
+
+    .type-title-2 {
+        font-size: 28px;
+        line-height: 34px;
+        font-weight: 640;
+        letter-spacing: -0.022em;
+    }
+
+    .type-title-3 {
+        font-size: 20px;
+        line-height: 26px;
+        font-weight: 620;
+        letter-spacing: -0.015em;
+    }
+
+    .type-title-4 {
+        font-size: 17px;
+        line-height: 24px;
+        font-weight: 600;
+        letter-spacing: -0.011em;
+    }
+
+    .type-lede {
+        font-size: 19px;
+        line-height: 30px;
+        font-weight: 400;
+        letter-spacing: -0.011em;
+    }
+
+    .type-body-lg {
+        font-size: 17px;
+        line-height: 27px;
+        font-weight: 400;
+        letter-spacing: -0.008em;
+    }
+
+    .type-body {
+        font-size: 16px;
+        line-height: 26px;
+        font-weight: 400;
+        letter-spacing: -0.006em;
+    }
+
+    .type-body-sm {
+        font-size: 15px;
+        line-height: 22px;
+        font-weight: 400;
+        letter-spacing: -0.004em;
+    }
+
+    .type-caption {
+        font-size: 13px;
+        line-height: 18px;
+        font-weight: 500;
+        letter-spacing: 0;
+    }
+
+    .type-eyebrow {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+    }
+
+    .type-stat {
+        font-size: 44px;
+        line-height: 44px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .type-stat-sm {
+        font-size: 30px;
+        line-height: 34px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .type-quote {
+        font-size: 22px;
+        line-height: 32px;
+        font-weight: 550;
+        letter-spacing: -0.008em;
+    }
+
+    /*
+     | Layout shell (Section 5): one container for marketing, app,
+     | and auth. Marketing section rhythm is one padding step.
+     */
+    .shell {
+        @apply mx-auto w-full max-w-[1200px] px-5 md:px-8 xl:px-10;
+    }
+
+    .section-pad {
+        padding-block: 96px;
+    }
+
+    @media (min-width: 1024px) {
+        .section-pad {
+            padding-block: 128px;
+        }
+    }
+
+    /*
+     | Buttons (Section 7.2). One primary per viewport region
+     | (AP-08). Heights: 36px sm in app toolbars, 44px default,
+     | 52px lg, 48px on auth submits (h-12 in the view), 56px in
+     | the flow, 64px at the counter.
      */
     .btn {
-        @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-5 text-base font-semibold transition-colors duration-150 disabled:cursor-not-allowed;
+        @apply inline-flex items-center justify-center gap-2 rounded-md px-5 disabled:cursor-not-allowed;
+        min-height: 48px;
+        font-size: 15px;
+        line-height: 20px;
+        font-weight: 550;
+        letter-spacing: -0.006em;
+        transition:
+            color 120ms ease-out,
+            background-color 120ms ease-out,
+            border-color 120ms ease-out,
+            box-shadow 150ms ease-out,
+            transform 150ms ease-out;
+    }
+
+    .btn-sm {
+        min-height: 48px;
+        padding-inline: 16px;
+    }
+
+    .btn-lg {
+        min-height: 52px;
+        padding-inline: 24px;
+        font-size: 16px;
+        line-height: 22px;
     }
 
     .btn-primary {
         @apply bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:bg-surface-2 disabled:text-text-disabled;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+    }
+
+    .btn-primary:disabled {
+        box-shadow: none;
     }
 
     .btn-primary:focus-visible {
@@ -129,186 +375,480 @@
     }
 
     .btn-secondary {
-        @apply border border-line bg-surface-0 text-text-1 hover:bg-surface-1 active:bg-surface-2 disabled:bg-surface-2 disabled:text-text-disabled;
+        @apply border border-line-strong bg-surface-0 text-text-1 hover:bg-surface-1 active:bg-surface-2 disabled:bg-surface-2 disabled:text-text-disabled;
     }
 
     .btn-ghost {
-        @apply bg-transparent text-brand-700 hover:bg-surface-1 active:bg-surface-2 disabled:bg-transparent disabled:text-text-disabled;
+        @apply bg-transparent text-brand-700 hover:bg-brand-50 active:bg-brand-100 disabled:bg-transparent disabled:text-text-disabled;
     }
 
     .btn-danger {
-        @apply bg-danger text-white hover:bg-error-strong active:bg-error-text disabled:bg-surface-2 disabled:text-text-disabled;
+        @apply bg-error-strong text-white hover:bg-error-strong-hover active:bg-error-strong-pressed disabled:bg-surface-2 disabled:text-text-disabled;
     }
 
     .btn-danger-ghost {
         @apply border border-error-strong bg-surface-0 text-error-strong hover:bg-error-fill active:bg-error-fill disabled:bg-surface-2 disabled:text-text-disabled;
     }
 
+    .btn-accent {
+        @apply bg-accent-400 text-ink-900 hover:bg-accent-500 active:bg-accent-500 disabled:bg-surface-3 disabled:text-text-3;
+    }
+
+    .btn-accent:active {
+        box-shadow: inset 0 2px 6px rgb(22 19 14 / 0.18);
+    }
+
     .btn-flow {
-        @apply min-h-[52px] w-full text-lg;
+        @apply w-full;
+        min-height: 56px;
+        font-size: 17px;
+        line-height: 24px;
+        font-weight: 600;
     }
 
     .btn-counter {
-        @apply h-16 min-h-16 w-full text-lg;
+        @apply w-full rounded-lg;
+        height: 64px;
+        min-height: 64px;
+        font-size: 18px;
+        line-height: 24px;
+        font-weight: 600;
     }
 
-    .btn-accent {
-        @apply bg-accent-400 text-ink-900 hover:bg-accent-500 active:bg-accent-600 disabled:bg-surface-2 disabled:text-text-disabled;
-    }
-
-    /* Form controls (Sections 2.5, 6.2 T-2). Input text is never
-       below 16px: smaller input text triggers automatic zoom on
-       iOS Safari and breaks the in-store flow. */
-    .form-label {
-        @apply mb-1 block text-base font-semibold text-text-1;
-    }
-
-    .form-input {
-        @apply min-h-[44px] w-full rounded-md border border-text-3 bg-surface-0 px-3 text-base text-text-1 placeholder:text-text-3;
-    }
-
-    .form-input[aria-invalid='true'] {
-        @apply border-error-strong;
-    }
-
-    /* The flow input variant (design Section 2.5): 18px text in
-       the customer flow, where the person holding the phone is
-       often reading at arm's length. */
-    .form-input-flow {
-        @apply text-lg;
-    }
-
-    .form-help {
-        @apply mt-1 text-sm text-text-2;
-    }
-
-    .form-error {
-        @apply mt-1 text-sm font-medium text-error-strong;
+    /* The loading spinner (Section 7.2): sits beside the button
+       label in flight, never instead of it (CP-02). The ring is
+       the current color at low strength so the one spinner works
+       on every button variant without a per-variant color. */
+    .spinner {
+        @apply inline-block h-[18px] w-[18px] flex-none animate-spin rounded-full;
+        border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+        border-top-color: currentColor;
     }
 
     /*
-     | Legacy form scope: the Phase 1 auth and owner views carry no
-     | utility classes; inside .ui-scope their semantic elements take
-     | the design system's form styling so the foundation commit
-     | restyles them without touching their fields, order, or copy
-     | (FND-1, FND-5, FND-6).
+     | The submit loading state (CP-02), the one mechanism for
+     | every surface: a form opts in with a data-loading
+     | attribute, and resources/js/submit-loading.js then locks
+     | its submit buttons on submit: spinner in, real disabled
+     | attribute, aria-busy set, width locked by the script
+     | before the spinner lands so layout never jumps. These
+     | rules keep a loading button in its variant colors instead
+     | of the disabled palette, so the wait reads as "working",
+     | not "broken"; the disabled attribute keeps its job of
+     | blocking a second submit.
      */
-    .ui-scope label {
-        @apply mb-1 block text-base font-semibold text-text-1;
+    .btn.is-loading {
+        cursor: progress;
     }
 
-    .ui-scope input:not([type='checkbox']):not([type='radio']),
-    .ui-scope select,
-    .ui-scope textarea {
-        @apply min-h-[44px] w-full rounded-md border border-text-3 bg-surface-0 px-3 text-base text-text-1;
+    .btn-primary.is-loading:disabled {
+        @apply bg-brand-600 text-white;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
     }
 
-    .ui-scope input[type='checkbox'],
-    .ui-scope input[type='radio'] {
-        @apply h-5 w-5 accent-brand-600;
+    .btn-secondary.is-loading:disabled {
+        @apply bg-surface-0 text-text-1;
     }
 
-    .ui-scope button[type='submit'] {
-        @apply inline-flex min-h-[44px] items-center justify-center rounded-md bg-brand-600 px-5 text-base font-semibold text-white transition-colors duration-150 hover:bg-brand-700 active:bg-brand-800;
+    .btn-ghost.is-loading:disabled {
+        @apply bg-transparent text-brand-700;
+    }
+
+    .btn-danger.is-loading:disabled {
+        @apply bg-error-strong text-white;
+    }
+
+    .btn-danger-ghost.is-loading:disabled {
+        @apply bg-surface-0 text-error-strong;
+    }
+
+    .btn-accent.is-loading:disabled {
+        @apply bg-accent-400 text-ink-900;
+    }
+
+    /*
+     | Forms (Section 7.5). Input text is never below 16px:
+     | smaller input text triggers automatic zoom on iOS Safari
+     | and breaks the in-store flow.
+     */
+    .form-label {
+        @apply block text-text-1;
+        margin-bottom: 8px;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 550;
+    }
+
+    .form-input {
+        @apply w-full border border-control bg-surface-0 px-3.5 text-base text-text-1 placeholder:text-text-3;
+        min-height: 48px;
+        border-radius: var(--radius-sm);
+        transition:
+            border-color 120ms ease-out,
+            box-shadow 120ms ease-out;
+    }
+
+    .form-input:focus {
+        border-color: var(--color-brand-600);
+        box-shadow: 0 0 0 3px var(--color-brand-100);
+    }
+
+    .form-input[aria-invalid='true'] {
+        border-color: var(--color-error-strong);
+        box-shadow: 0 0 0 3px var(--color-error-fill);
+    }
+
+    /* The flow input variant: 52px tall, 18px text, for reading
+       at arm's length in the customer flow. */
+    .form-input-flow {
+        min-height: 52px;
+        font-size: 18px;
+    }
+
+    /* App-density inputs (dashboard toolbars and forms): 44px. */
+    .form-input-app {
+        min-height: 48px;
+    }
+
+    .form-help {
+        @apply text-text-2;
+        margin-top: 6px;
+        font-size: 13px;
+        line-height: 18px;
+    }
+
+    .form-error {
+        @apply text-error-strong;
+        margin-top: 6px;
+        font-size: 13px;
+        line-height: 18px;
+        font-weight: 550;
+    }
+
+    /* Selects share the input box with a custom chevron; native
+       arrows are banned in restyled views (Section 7.5). */
+    .form-select {
+        appearance: none;
+        padding-right: 40px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2366594a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+    }
+
+    /* The password field (component password-input): the input
+       reserves room on its right for the show and hide toggle,
+       which is a full 48px target pinned to the field's right
+       edge and centered on it. The toggle is a real button with
+       aria-pressed; its state is carried by the pressed state and
+       the eye versus eye-off glyph, never by color alone. */
+    .form-input-password {
+        padding-right: 52px;
+    }
+
+    .password-toggle {
+        @apply absolute top-1/2 right-0 flex -translate-y-1/2 items-center justify-center rounded-sm text-text-3 hover:text-text-1;
+        width: 48px;
+        height: 48px;
+    }
+
+    /* OTP boxes (Section 7.5): 56px in the flow, the only place
+       the component renders. */
+    .otp-box {
+        @apply w-full min-w-[48px] border border-control bg-surface-0 text-center text-text-1 tabular-nums;
+        height: 56px;
+        min-height: 56px;
+        border-radius: var(--radius-md);
+        font-size: 22px;
+        font-weight: 650;
+    }
+
+    .otp-box:focus {
+        border-color: var(--color-brand-600);
+        box-shadow: 0 0 0 3px var(--color-brand-100);
+    }
+
+    .otp-group-error .otp-box {
+        border-color: var(--color-error-strong);
+    }
+
+    /* The settings switch (Section 7.5): a checkbox wearing the
+       switch presentation; behavior is the checkbox's own. */
+    .switch {
+        appearance: none;
+        flex: none;
+        width: 40px;
+        height: 22px;
+        margin: 0;
+        border-radius: 9999px;
+        background: var(--color-surface-3);
+        position: relative;
+        cursor: pointer;
+        transition: background-color 150ms ease-out;
+    }
+
+    .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9999px;
+        background: var(--color-surface-0);
+        transition: transform 150ms ease-out;
+    }
+
+    .switch:checked {
+        background: var(--color-brand-600);
+    }
+
+    .switch:checked::after {
+        transform: translateX(18px);
+    }
+
+    /*
+     | Legacy form scope: bare semantic markup in the auth and
+     | owner views takes the design system's form styling from
+     | these rules. Elements carrying explicit component classes
+     | (form-label, form-input, tbl, btn) are excluded: pages
+     | migrate to explicit classes and this scope shrinks.
+     | Auth-density surfaces add .auth-scope for 48px fields.
+     */
+    .ui-scope label:not(.form-label) {
+        @apply block text-text-1;
+        margin-bottom: 8px;
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 550;
+    }
+
+    .ui-scope input:not([type='checkbox']):not([type='radio']):not(.form-input):not(.otp-box),
+    .ui-scope select:not(.form-input),
+    .ui-scope textarea:not(.form-input) {
+        @apply w-full border border-control bg-surface-0 px-3.5 text-base text-text-1;
+        min-height: 48px;
+        border-radius: var(--radius-sm);
+        transition:
+            border-color 120ms ease-out,
+            box-shadow 120ms ease-out;
+    }
+
+    .ui-scope select:not(.form-input) {
+        appearance: none;
+        padding-right: 40px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2366594a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+    }
+
+    .ui-scope input:not([type='checkbox']):not([type='radio']):not(.form-input):focus,
+    .ui-scope select:not(.form-input):focus,
+    .ui-scope textarea:not(.form-input):focus {
+        border-color: var(--color-brand-600);
+        box-shadow: 0 0 0 3px var(--color-brand-100);
+    }
+
+    .ui-scope input[aria-invalid='true']:not(.form-input),
+    .ui-scope select[aria-invalid='true']:not(.form-input),
+    .ui-scope textarea[aria-invalid='true']:not(.form-input) {
+        border-color: var(--color-error-strong);
+    }
+
+    .auth-scope input:not([type='checkbox']):not([type='radio']):not(.form-input),
+    .auth-scope select:not(.form-input),
+    .auth-scope textarea:not(.form-input) {
+        min-height: 48px;
+    }
+
+    .ui-scope input[type='checkbox']:not(.switch),
+    .ui-scope input[type='radio']:not(.switch) {
+        width: 18px;
+        height: 18px;
+        border-radius: 5px;
+        accent-color: var(--color-brand-600);
+    }
+
+    .ui-scope button[type='submit']:not(.btn) {
+        @apply inline-flex items-center justify-center gap-2 bg-brand-600 px-5 text-white hover:bg-brand-700 active:bg-brand-800 disabled:bg-surface-2 disabled:text-text-disabled;
+        min-height: 48px;
+        border-radius: var(--radius-md);
+        font-size: 15px;
+        line-height: 20px;
+        font-weight: 550;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+        transition:
+            background-color 120ms ease-out,
+            box-shadow 150ms ease-out;
+    }
+
+    .auth-scope button[type='submit']:not(.btn) {
+        min-height: 48px;
+        width: 100%;
     }
 
     .ui-scope fieldset {
-        @apply mb-6 rounded-lg border border-line bg-surface-0 p-5;
+        border: 0;
+        padding: 0;
+        margin: 0 0 24px;
     }
 
     .ui-scope legend {
-        @apply px-2 text-lg font-semibold text-text-1;
+        font-size: 20px;
+        line-height: 26px;
+        font-weight: 620;
+        letter-spacing: -0.015em;
+        color: var(--color-text-1);
+        padding: 0;
+        margin-bottom: 8px;
     }
 
-    .ui-scope table {
+    .ui-scope table:not(.tbl) {
         @apply w-full border-collapse;
     }
 
-    .ui-scope th,
-    .ui-scope td {
+    .ui-scope table:not(.tbl) th,
+    .ui-scope table:not(.tbl) td {
         @apply border-b border-line px-2 py-2 text-left;
     }
 
-    /* Banners and notices (Section 2.5). The .status and .gate
-       classes are Phase 1 view hooks kept as component aliases. */
+    /*
+     | Banners and notices (Sections 7.6, 7.8). Radius-lg, 15px
+     | text, the semantic fill carries the tone; warning adds a
+     | border for separation on white. The .status and .gate
+     | classes are view hooks kept as aliases of the banner set.
+     */
     .banner {
-        @apply mb-4 flex items-start gap-3 rounded-md px-4 py-3 text-base;
+        @apply flex items-start gap-3;
+        margin-bottom: 16px;
+        border-radius: var(--radius-lg);
+        padding: 14px 16px;
+        font-size: 15px;
+        line-height: 22px;
+    }
+
+    .status,
+    .gate,
+    .errors {
+        margin-bottom: 16px;
+        border-radius: var(--radius-lg);
+        padding: 14px 16px;
+        font-size: 15px;
+        line-height: 22px;
     }
 
     .banner-success,
-    .status {
+    .status-success {
         @apply bg-success-fill text-success-text;
     }
 
     .banner-error,
+    .status-error,
     .errors {
         @apply bg-error-fill text-error-text;
     }
 
     .banner-warning,
+    .status-warning,
     .gate {
         @apply bg-warning-fill text-warning-text;
+        border: 1px solid rgb(181 71 8 / 0.35);
     }
 
-    .banner-info {
-        @apply bg-info-fill text-info-text;
-    }
-
-    /* Status tone variants (CF-12): the .status base carries the
-       box chrome and the success fill; a variant class retunes the
-       tone so an informational or error notice never renders in
-       the success fill. */
-    .status-success {
-        @apply bg-success-fill text-success-text;
-    }
-
+    .banner-info,
     .status-info {
         @apply bg-info-fill text-info-text;
     }
 
-    .status-warning {
-        @apply bg-warning-fill text-warning-text;
+    .status {
+        @apply bg-success-fill text-success-text;
     }
 
-    .status-error {
-        @apply bg-error-fill text-error-text;
-    }
-
-    .status,
-    .gate {
-        @apply mb-4 rounded-md px-4 py-3 text-base;
-    }
-
-    .errors {
-        @apply mb-4 rounded-md px-4 py-3 text-base;
-    }
-
-    /* Cards, tiles, pills (Section 2.5). */
+    /*
+     | Cards, panels, wells (Sections 7.3, 7.4). A card is
+     | surface-0, the hairline, radius-lg, shadow-e1, 24px
+     | padding (20px on small screens). Cards never nest; a well
+     | groups content inside a panel instead.
+     */
     .card {
-        @apply rounded-lg bg-surface-0 p-5 shadow-e1 md:p-6;
+        @apply border border-line bg-surface-0 shadow-e1;
+        border-radius: var(--radius-lg);
+        padding: 20px;
     }
 
+    @media (min-width: 768px) {
+        .card {
+            padding: 24px;
+        }
+    }
+
+    .panel {
+        @apply border border-line bg-surface-0 shadow-e1;
+        border-radius: var(--radius-lg);
+        padding: 24px;
+    }
+
+    .well {
+        @apply bg-surface-1;
+        border-radius: var(--radius-lg);
+        padding: 16px;
+    }
+
+    .well-2 {
+        @apply bg-surface-2;
+        border-radius: var(--radius-lg);
+        padding: 16px;
+    }
+
+    /* Danger-zone card: card chrome in the error tone for
+       destructive sections such as replacing a live QR code. */
+    .card-danger {
+        @apply border border-error-strong bg-error-fill;
+        border-radius: var(--radius-lg);
+        padding: 20px;
+    }
+
+    @media (min-width: 768px) {
+        .card-danger {
+            padding: 24px;
+        }
+    }
+
+    /* Stat tiles (Section 7.6): the label and value classes are
+       the type-eyebrow and type-stat-sm steps of the scale. */
     .tile-label {
-        @apply text-xs font-medium tracking-[0.02em] text-text-2 uppercase;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--color-text-2);
     }
 
     .tile-value {
-        @apply text-[28px] leading-8 font-semibold text-text-1 tabular-nums;
+        font-size: 30px;
+        line-height: 34px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-1);
     }
 
-    /* The tile's context line under the value (CF-20). */
     .tile-delta {
-        @apply mt-1 text-sm text-text-2;
+        @apply text-text-2;
+        margin-top: 4px;
+        font-size: 13px;
+        line-height: 18px;
     }
 
-    /* Danger-zone card (CF-13): card chrome in the error tone for
-       destructive sections such as replacing a live QR code. */
-    .card-danger {
-        @apply rounded-lg border border-error-strong bg-error-fill p-5 md:p-6;
-    }
-
+    /* Pills (Section 7.6): 24px tall, 13px at 550, semantic
+       fills with their strong text colors. */
     .pill {
-        @apply inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium whitespace-nowrap;
+        @apply inline-flex items-center rounded-full whitespace-nowrap;
+        height: 24px;
+        padding-inline: 10px;
+        font-size: 13px;
+        line-height: 18px;
+        font-weight: 550;
     }
 
     .pill-neutral {
@@ -333,8 +873,259 @@
     }
 
     /*
-     | Success flood (Section 3.5): the check glyph scales in once
-     | over 150ms, the only animation on a result screen. The
+     | Tables (Section 7.6): the .tbl component. Header row on
+     | surface-1 in the eyebrow step, 52px body rows, dividers in
+     | line, numeric columns right-aligned and tabular via .num.
+     | The wrapper panel supplies radius and overflow.
+     */
+    .tbl {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .tbl th {
+        @apply bg-surface-1 text-text-3;
+        padding: 12px 16px;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .tbl td {
+        @apply text-text-2;
+        padding: 12px 16px;
+        font-size: 15px;
+        line-height: 22px;
+        border-top: 1px solid var(--color-line);
+        vertical-align: middle;
+    }
+
+    .tbl tbody tr {
+        transition: background-color 120ms ease-out;
+    }
+
+    .tbl tbody tr:hover {
+        @apply bg-surface-1;
+    }
+
+    .tbl td:first-child {
+        color: var(--color-text-1);
+    }
+
+    .tbl .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /*
+     | The stacked table (CP-07): below 720px a .tbl-stack table
+     | stops being a table. The header row leaves the visual flow
+     | (it stays available to assistive technology), each row
+     | becomes a card, and each cell renders as a label and value
+     | row whose label comes from the cell's data-label, which the
+     | views set to the column header text. The first cell is the
+     | card heading and carries no label. The sticky first column
+     | of .tbl-sticky is released in this mode; a squeezed table
+     | is banned at this width outright (MT checks).
+     */
+    @media (max-width: 719px) {
+        .tbl-stack {
+            display: block;
+        }
+
+        .tbl-stack thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+        }
+
+        .tbl-stack tbody,
+        .tbl-stack tr,
+        .tbl-stack td {
+            display: block;
+            width: 100%;
+        }
+
+        .tbl-stack tbody tr {
+            padding: 10px 16px 12px;
+            border-top: 1px solid var(--color-line);
+        }
+
+        .tbl-stack tbody tr:first-child {
+            border-top: 0;
+        }
+
+        .tbl-stack td {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 24px;
+            border-top: 0;
+            padding: 3px 0;
+        }
+
+        .tbl-stack td::before {
+            content: attr(data-label);
+            font-size: 12px;
+            line-height: 16px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--color-text-3);
+            text-align: left;
+        }
+
+        .tbl-stack td:first-child {
+            display: block;
+            padding-top: 2px;
+        }
+
+        .tbl-stack td:first-child::before {
+            content: none;
+        }
+
+        .tbl-stack.tbl-sticky th:first-child,
+        .tbl-stack.tbl-sticky td:first-child {
+            position: static;
+            background: transparent;
+        }
+    }
+
+    /* Skeleton loading (Section 7.7): surface-2 blocks pulsing
+       in opacity; the reduced-motion rule stills them. */
+    .skel {
+        @apply bg-surface-2;
+        border-radius: var(--radius-sm);
+        animation: skel-pulse 1400ms ease-in-out infinite alternate;
+    }
+
+    @keyframes skel-pulse {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: 0.55;
+        }
+    }
+
+    /* The flow field stack (Section 5): 20px between fields. */
+    .field + .field {
+        margin-top: 20px;
+    }
+
+    /* Joined controls (Sections 10.1, 10.4): an input and its
+       attached button sharing one outline. */
+    .joined {
+        display: flex;
+    }
+
+    .joined .form-input {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right: 0;
+    }
+
+    .joined .btn {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        flex: none;
+    }
+
+    /* Progress tracks and segments (Sections 10.2, 10.5): the
+       segmented pattern for the signup steps, one track with a
+       fill for checklists and caps. */
+    .progress-track {
+        @apply bg-surface-3;
+        height: 8px;
+        border-radius: 9999px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        @apply bg-brand-600;
+        height: 100%;
+        border-radius: 9999px;
+    }
+
+    .segment {
+        @apply bg-surface-3;
+        flex: 1;
+        height: 4px;
+        border-radius: 9999px;
+    }
+
+    .segment-on {
+        @apply bg-brand-600;
+    }
+
+    /* The eyebrow pill (Section 10.1): brand-50 ground, brand-700
+       eyebrow text, for the hero and panel eyebrows. */
+    .eyebrow-pill {
+        @apply inline-flex items-center bg-brand-50 text-brand-700;
+        border-radius: 9999px;
+        padding: 6px 12px;
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+    }
+
+    /* The product window frame (Section 6.1): marketing product
+       captures framed as a window with a chrome strip. */
+    .window {
+        @apply border border-line bg-surface-0 shadow-e3;
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+    }
+
+    .window-bar {
+        @apply flex items-center gap-2 border-b border-line bg-surface-1;
+        height: 36px;
+        padding-inline: 16px;
+    }
+
+    .window-dot {
+        @apply bg-surface-3;
+        width: 10px;
+        height: 10px;
+        border-radius: 9999px;
+        flex: none;
+    }
+
+    .window-url {
+        @apply bg-surface-0 text-text-3;
+        min-width: 0;
+        margin-inline: auto;
+        border-radius: 9999px;
+        padding: 2px 12px;
+        font-size: 12px;
+        line-height: 16px;
+        max-width: 60%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Empty state medallion (Section 7.8). */
+    .medallion {
+        @apply flex items-center justify-center rounded-full bg-surface-2 text-text-3;
+        width: 48px;
+        height: 48px;
+        flex: none;
+    }
+
+    /*
+     | Success flood (Section 7.8): the check scales in once over
+     | 150ms, the only animation on a result screen. The
      | reduced-motion rule above makes it instant for anyone who
      | asks for that.
      */
@@ -354,19 +1145,270 @@
         }
     }
 
-    /* OTP boxes (Section 2.5): six boxes, at least 48px in both
-       dimensions at every width (Section 6.5 grid sizing). */
-    .otp-box {
-        @apply h-[52px] min-h-[48px] w-full min-w-[48px] rounded-md border border-text-3 bg-surface-0 text-center text-2xl font-semibold text-text-1 tabular-nums;
-    }
-
-    .otp-group-error .otp-box {
-        @apply border-error-strong;
-    }
-
-    /* Skip link (Section 6.6): first focusable element on dashboard
-       and marketing layouts, top of the T-5 z-index scale. */
+    /* Skip link (Section 7.7): first focusable element on the
+       dashboard and marketing layouts, top of the z-index scale. */
     .skip-link {
         @apply sr-only z-[80] rounded-md bg-brand-600 px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2;
+    }
+}
+
+/*
+ | Marketing chrome, graduated from scoped view style blocks at
+ | the release 07 integration (each rule lives here only now).
+ | The block stays unlayered on purpose: these rules override
+ | utilities (pt-6 on the hero shell, the display utilities on
+ | the hero stack) exactly as the scoped blocks did.
+ */
+
+/* The marketing header (SL-11): hides on scroll down and
+   returns on scroll up; the transition stays inside the MO-02
+   duration cap and is removed under reduced motion, where the
+   header simply stays in place. A transform never shifts
+   layout (PF-04). M-04: header tap targets are at least 48px;
+   the logo link wraps a 28px lockup, and the menu toggle
+   carries h-12 w-12 classes and is pinned here as well. */
+#site-header {
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+#site-header.site-header-hidden {
+    transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #site-header {
+        transition: none;
+    }
+}
+
+#site-header .logo-link {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+}
+
+#site-header .menu-toggle {
+    width: 48px;
+    height: 48px;
+}
+
+/* The consent card (M-03): capped at the smaller of its 380px
+   design width and the viewport minus the 16px side insets, so
+   the card and both of its buttons always sit inside the
+   frame, on a 360px phone and at every other width. */
+.consent-card {
+    max-width: min(380px, calc(100vw - 32px));
+}
+
+/* The home hero (MT-08, C-05, H-02, H-04, M-02): below lg the
+   column is a flex stack whose actions render directly under
+   the headline, ahead of the lede and the check row (the DOM
+   order, and the desktop layout, are unchanged); the friction
+   row sits directly under the actions; the display size wraps
+   the headline to three lines instead of four; the top
+   padding and the product window margin tighten so the
+   window's top edge enters the first viewport. */
+.mkt-sticky-cta {
+    display: none;
+}
+
+@media (max-width: 1023.98px) {
+    .mkt-hero {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .mkt-hero-actions {
+        order: 3;
+    }
+
+    .mkt-hero-trust {
+        order: 4;
+    }
+
+    .mkt-hero-lede {
+        order: 5;
+    }
+
+    .mkt-hero-title {
+        font-size: 32px;
+        line-height: 36px;
+        letter-spacing: -0.025em;
+    }
+
+    .mkt-hero-shell {
+        padding-top: 8px;
+    }
+
+    .mkt-hero-window {
+        margin-top: 40px;
+    }
+
+    /* M-02 sticky action bar: visibility (not just the
+       transform) toggles with .is-on, so the hidden bar is
+       also out of the tab order. */
+    .mkt-sticky-cta {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 30;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        background: var(--color-surface-0);
+        border-top: 1px solid var(--color-line);
+        transform: translateY(110%);
+        visibility: hidden;
+        transition: transform 150ms ease-out, visibility 0s linear 150ms;
+    }
+
+    .mkt-sticky-cta.is-on {
+        transform: translateY(0);
+        visibility: visible;
+        transition: transform 150ms ease-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mkt-sticky-cta {
+            transition: none;
+        }
+    }
+}
+
+/* Wide owner tables keep the first column in view while the rest
+   scrolls horizontally (the index pages opt in per table). */
+.tbl-sticky th:first-child,
+.tbl-sticky td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--color-surface-0);
+}
+
+/*
+ | The printed pieces (redesign-spec.md Section 8.5, PE-02 and
+ | PE-03): the QR poster and the counter tent card are the only
+ | designed print surfaces, and this block is their print
+ | stylesheet of record. Each variant prints on its real paper
+ | through a named page (US Letter for the window poster, A5 for
+ | the counter tent card: the size the QR page labels it and the
+ | paper owners buy). The page assignment keys on the variant
+ | classes Lane B adds to the sheet (poster-window,
+ | poster-counter) and, until those land, on the wrap width
+ | classes that currently distinguish the variants (max-w-2xl,
+ | max-w-lg); if the wrap classes ever change, the assignment
+ | must move with them. No global @page rule is set, so printing
+ | any other page of the app is untouched.
+ */
+@page poster-window {
+    size: letter;
+    margin: 0;
+}
+
+@page poster-counter {
+    size: A5;
+    margin: 0;
+}
+
+.poster-sheet.poster-window,
+.poster-sheet.max-w-2xl {
+    page: poster-window;
+}
+
+.poster-sheet.poster-counter,
+.poster-sheet.max-w-lg {
+    page: poster-counter;
+}
+
+@media print {
+    /* F2 (PE-03): the piece prints its colors under default
+       print settings too. Without print-color-adjust, browsers
+       drop CSS backgrounds when the background-graphics option
+       is off (the dialog default), and the ink band, its white
+       text, and the reversed lockup would vanish. Exact keeps
+       the designed piece in both modes. */
+    .poster-sheet,
+    .poster-sheet * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* F1 (PE-02): the sheet is exactly one page. It fills the
+       page box (the named pages above carry zero margins), lays
+       out as a flex column, and the QR block takes whatever
+       height remains, so the band can never spill onto a second
+       sheet. */
+    .poster-sheet {
+        display: flex !important;
+        flex-direction: column;
+        width: 100% !important;
+        max-width: none !important;
+        height: 100vh;
+        margin: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: hidden;
+        break-inside: avoid;
+    }
+
+    /* F3 (spec 8.5): 18mm inner margins; the content column
+       stretches so the QR area can claim the remaining height. */
+    .poster-sheet > div:first-child {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 18mm 18mm 0 !important;
+    }
+
+    /* F3: the headline runs at 11 percent of the sheet width and
+       the subline at 4.5 percent, in page-relative units so both
+       pieces hold the proportion at their own paper size. */
+    .poster-sheet h1 {
+        font-size: 11vw !important;
+        line-height: 1.04 !important;
+    }
+
+    .poster-sheet h1 + p {
+        font-size: 4.5vw !important;
+        line-height: 1.35 !important;
+    }
+
+    /* F1: the QR area takes the height the fixed content leaves;
+       the framed code scales from that height and never pushes
+       the band off the page. The QR image is the sheet's only
+       img, and it stays pure black inside its full quiet zone
+       (PE-02); nothing here recolors it. */
+    .poster-sheet > div:first-child > div:last-of-type {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .poster-sheet > div:first-child > div:last-of-type > div {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .poster-sheet img {
+        width: auto !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+    }
+
+    /* F3: the ink band is 14 percent of the sheet height, with
+       its content on the same 18mm inner margin as the body. */
+    .poster-sheet > div:last-child {
+        flex: none;
+        height: 14vh;
+        margin-top: 0 !important;
+        padding: 0 18mm !important;
     }
 }

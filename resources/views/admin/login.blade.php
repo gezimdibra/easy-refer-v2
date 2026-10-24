@@ -18,11 +18,7 @@
                 @if ($errors->has('email')) aria-describedby="email-error" @endif>
             @error('email') <p class="form-error" id="email-error">{{ $message }}</p> @enderror
 
-            <label for="password">Password</label>
-            <input id="password" name="password" type="password" required autocomplete="current-password"
-                aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}"
-                @if ($errors->has('password')) aria-describedby="password-error" @endif>
-            @error('password') <p class="form-error" id="password-error">{{ $message }}</p> @enderror
+            <x-password-input name="password" label="Password" required />
 
             <p class="mt-4"><button type="submit" class="btn btn-primary">Sign in</button></p>
         </form>

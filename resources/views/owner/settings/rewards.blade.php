@@ -5,13 +5,23 @@
 @section('notices_summary_only', '1')
 
 @section('content')
-    <h1 class="text-2xl font-bold">Rewards</h1>
+    <h1 class="type-title-2 text-text-1">Rewards</h1>
 
-    @include('owner.settings.nav')
+    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-3">
+        <a class="text-text-2 hover:text-text-1" href="{{ route('settings') }}">Settings</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-text-1">Rewards</span>
+    </nav>
+
+    <div class="mt-6 lg:flex lg:items-start lg:gap-8">
+        <div class="lg:w-[220px] lg:flex-none">
+            @include('owner.settings.nav')
+        </div>
+        <div class="mt-6 min-w-0 flex-1 lg:mt-0">
 
     @if ($packs !== [])
-        <div class="card mb-4">
-            <h2 class="text-xl font-semibold">Start from a pack owners like you use</h2>
+        <div class="panel mb-4">
+            <h2 class="type-title-3 text-text-1">Start from a pack owners like you use</h2>
             <p class="mt-1 text-text-2">You can edit both rewards after picking.</p>
             <div class="mt-3 space-y-3">
                 @foreach ($packs as $pack)
@@ -28,7 +38,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('settings.rewards.update') }}" class="card">
+    <form method="POST" action="{{ route('settings.rewards.update') }}" class="panel [&_input]:max-w-[560px] [&_select]:max-w-[560px] [&_textarea]:max-w-[560px]">
         @csrf
 
         <label for="friend_reward_text">Friend welcome reward</label>
@@ -53,4 +63,6 @@
 
         <p class="mt-4"><button type="submit" class="btn btn-primary">Save changes</button></p>
     </form>
+        </div>
+    </div>
 @endsection

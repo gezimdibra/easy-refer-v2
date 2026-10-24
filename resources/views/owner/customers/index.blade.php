@@ -7,52 +7,58 @@
          only. Phone renders masked, always (Section 7.3): the
          owner works with names and last fours. --}}
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-bold">Customers</h1>
+        <h1 class="type-title-2 text-text-1">Customers</h1>
         <a class="btn btn-primary" href="{{ route('customers.create') }}">Add a customer</a>
     </div>
 
-    <form method="GET" action="{{ route('customers.index') }}" class="card mt-4">
-        <label for="q">Search by name or phone</label>
+    <form method="GET" action="{{ route('customers.index') }}" class="mt-5">
+        <label class="form-label" for="q">Search by name or phone</label>
         <div class="flex gap-2">
-            <input id="q" name="q" type="search" value="{{ $search }}" class="flex-1">
+            <span class="relative flex-1">
+                <span class="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-text-3"><x-icon name="search" :size="20" /></span>
+                <input id="q" name="q" type="search" value="{{ $search }}" class="form-input form-input-app pl-11">
+            </span>
             <button type="submit" class="btn btn-secondary">Search</button>
         </div>
     </form>
 
-    <div class="card mt-4">
+    <div class="mt-4 overflow-hidden rounded-lg border border-line bg-surface-0 shadow-e1">
         @if ($memberships->isEmpty())
-            @if ($search !== '')
-                <p class="text-text-2">No customers match that search.</p>
-                <p class="mt-2"><a class="btn btn-secondary" href="{{ route('customers.index') }}">Clear search</a></p>
-            @else
-                <p class="text-text-2">No customers yet.</p>
-            @endif
+            <div class="flex flex-col items-center px-6 py-10 text-center">
+                <span class="medallion"><x-icon name="users" :size="24" /></span>
+                @if ($search !== '')
+                    <p class="type-title-3 mt-4 text-text-1">No customers match that search.</p>
+                    <p class="mt-4"><a class="btn btn-secondary" href="{{ route('customers.index') }}">Clear search</a></p>
+                @else
+                    <p class="type-title-3 mt-4 text-text-1">No customers yet.</p>
+                @endif
+            </div>
         @else
-            <table class="w-full text-left text-base">
+            <div class="overflow-x-auto"><table class="tbl tbl-sticky tbl-stack">
                 <thead>
-                    <tr class="border-b border-line">
-                        <th scope="col" class="py-2 pr-3 font-semibold">Customer</th>
-                        <th scope="col" class="py-2 pr-3 font-semibold">Phone</th>
-                        <th scope="col" class="py-2 pr-3 font-semibold">Joined</th>
-                        <th scope="col" class="py-2 pr-3 font-semibold">Referrals made</th>
-                        <th scope="col" class="py-2 pr-3 font-semibold">Rewards earned</th>
-                        <th scope="col" class="py-2 font-semibold">Texts</th>
+                    <tr>
+                        <th scope="col">Customer</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Joined</th>
+                        <th scope="col" class="num">Referrals made</th>
+                        <th scope="col" class="num">Rewards earned</th>
+                        <th scope="col">Texts</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($memberships as $membership)
-                        <tr class="border-b border-line">
-                            <td class="py-2 pr-3">
+                        <tr>
+                            <td>
                                 <a class="font-semibold text-brand-700 hover:underline" href="{{ route('customers.show', $membership) }}">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</a>
                                 @if ($membership->consent_source === 'owner_asserted')
                                     <span class="block text-sm text-text-2">Added by you, waiting for their confirmation</span>
                                 @endif
                             </td>
-                            <td class="py-2 pr-3">{{ \App\Support\PhoneNumber::mask($membership->customer->phone_e164) }}</td>
-                            <td class="py-2 pr-3">{{ $membership->created_at->format('M j, Y') }}</td>
-                            <td class="py-2 pr-3">{{ $membership->referrals_made_count }}</td>
-                            <td class="py-2 pr-3">{{ $membership->rewards_count }}</td>
-                            <td class="py-2">
+                            <td class="whitespace-nowrap" data-label="Phone">{{ \App\Support\PhoneNumber::mask($membership->customer->phone_e164) }}</td>
+                            <td class="whitespace-nowrap" data-label="Joined">{{ $membership->created_at->format('M j, Y') }}</td>
+                            <td class="num" data-label="Referrals made">{{ $membership->referrals_made_count }}</td>
+                            <td class="num" data-label="Rewards earned">{{ $membership->rewards_count }}</td>
+                            <td data-label="Texts">
                                 @if ($membership->sms_consent)
                                     <span class="pill pill-success">OK to text</span>
                                 @else
@@ -62,8 +68,8 @@
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
-            <div class="mt-3">{{ $memberships->links() }}</div>
+            </table></div>
+            <div class="border-t border-line px-4 py-3">{{ $memberships->links() }}</div>
         @endif
     </div>
 @endsection

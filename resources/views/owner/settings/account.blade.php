@@ -5,12 +5,22 @@
 @section('notices_summary_only', '1')
 
 @section('content')
-    <h1 class="text-2xl font-bold">Account</h1>
+    <h1 class="type-title-2 text-text-1">Account</h1>
 
-    @include('owner.settings.nav')
+    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-3">
+        <a class="text-text-2 hover:text-text-1" href="{{ route('settings') }}">Settings</a>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page" class="text-text-1">Account</span>
+    </nav>
 
-    <div class="card">
-        <h2 class="text-xl font-semibold">Close your account</h2>
+    <div class="mt-6 lg:flex lg:items-start lg:gap-8">
+        <div class="lg:w-[220px] lg:flex-none">
+            @include('owner.settings.nav')
+        </div>
+        <div class="mt-6 min-w-0 flex-1 lg:mt-0">
+
+    <div class="panel">
+        <h2 class="type-title-3 text-text-1">Close your account</h2>
         @if ($business->isClosed())
             <p class="mt-1 text-text-2">Your account closed on {{ $business->closed_at?->format('M j, Y') }}. You can still sign in to confirm claims and view your history until {{ $business->closed_at?->copy()->addDays(30)->format('M j, Y') }}.</p>
         @else
@@ -33,5 +43,7 @@
                 <p class="mt-4"><button type="submit" class="btn btn-danger" :disabled="! confirmed">Close account</button></p>
             </form>
         @endif
+    </div>
+        </div>
     </div>
 @endsection

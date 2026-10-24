@@ -8,9 +8,9 @@
          item 3, design 3.5): the business eyebrow, the reward as
          the headline, whose it is, the kind line, and one action.
          No PIN, no account: whoever holds the phone confirms. --}}
-    <p class="text-sm font-semibold text-text-2">{{ $business->name }}</p>
+    <p class="type-eyebrow text-text-3">{{ $business->name }}</p>
 
-    <h1 class="mt-1 text-[32px] font-bold leading-[38px]">{{ $business->friend_reward_text ?? 'First visit reward' }}</h1>
+    <h1 class="mt-1 type-display-xs">{{ $business->friend_reward_text ?? 'First visit reward' }}</h1>
 
     <p class="mt-2 text-lg">For {{ $friend->first_name }}</p>
     @if ($business->friend_reward_text)

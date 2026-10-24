@@ -193,16 +193,36 @@ class VerifierFixTest extends TestCase
     {
         // AP-08 as amended 2026-10-23 (coordinator ruling on CF-04):
         // exactly one Primary per VIEWPORT region, not per page.
-        // The hero Primary and the pricing card's Start free are
-        // both Primary by design and never share a viewport on
-        // these long pages; the browser-measured half of the rule
-        // is verified in the Phase 2 AP run. What this test pins:
-        // exactly those two Primaries exist in main, no third one
-        // sneaks in (header and starter-kit buttons stay Secondary).
-        foreach ([route('home'), route('vertical', ['vertical' => 'barbers'])] as $url) {
+        // The original pin (exactly two Primaries in main: hero and
+        // pricing card) predates the benchmark fix lane, whose
+        // rubric (landing-benchmark.md, C-03 / M-02) requires the
+        // primary action repeated after every major proof block so
+        // no scroll position sits more than one viewport from a
+        // visible Primary, plus the mobile sticky bar, which its
+        // observer shows only while no other Primary is in view.
+        // Reconciled at the release 07 integration (2026-10-24):
+        // the per-viewport rule stands, and what this test pins is
+        // its anti-creep core. Every Primary in main is the Start
+        // free register action (no other action wears Primary;
+        // header and starter-kit buttons stay Secondary), and the
+        // totals are exact, so adding or removing a repeat fails
+        // loudly: home carries the hero, six section repeats, the
+        // pricing card, the calculator, and the sticky bar (10);
+        // the vertical carries the hero, the pricing card, and the
+        // calculator (3). Flagged for ratification in spec
+        // amendment 8 (docs-side integration).
+        $expected = [
+            route('home') => 10,
+            route('vertical', ['vertical' => 'barbers']) => 3,
+        ];
+        foreach ($expected as $url => $count) {
             $html = $this->get($url)->assertOk()->getContent();
             $main = substr($html, strpos($html, '<main'), strpos($html, '</main>') - strpos($html, '<main'));
-            $this->assertSame(2, substr_count($main, 'btn btn-primary'), $url);
+            $this->assertSame($count, substr_count($main, 'btn btn-primary'), $url);
+            // One further Start free wears the accent rank: the
+            // closing band's, on its ink ground.
+            $this->assertSame($count + 1, substr_count($main, '>Start free</a>'), $url);
+            $this->assertSame(1, substr_count($main, 'btn btn-accent'), $url);
         }
     }
 

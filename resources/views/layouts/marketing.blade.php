@@ -12,12 +12,15 @@
         $metaTitle = trim($__env->yieldContent('title', config('app.name')));
         $metaDescription = trim($__env->yieldContent('meta_description', 'Easy Refer turns your customers into referrers with QR codes, verified visits, and rewards you only pay for when they work.'));
         $metaUrl = url()->current();
-        $metaImage = asset('images/photos/og-stores.jpg');
+        $metaImage = asset('images/photos/og-image.png');
     @endphp
     <meta name="description" content="{{ $metaDescription }}">
     <title>{{ $metaTitle }}</title>
     <link rel="canonical" href="{{ $metaUrl }}">
     <meta name="theme-color" content="#ffffff">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Easy Refer">
     <meta property="og:title" content="{{ $metaTitle }}">
@@ -26,7 +29,7 @@
     <meta property="og:image" content="{{ $metaImage }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="A printed Easy Refer referral sign with a QR code on the counter at Ungaro Coal Fired Pizza Cafe.">
+    <meta property="og:image:alt" content="Easy Refer: Turn Your Customers Into Your Best Marketers. Referral marketing for local businesses.">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $metaTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
@@ -64,37 +67,52 @@
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('partials.analytics')
+    {{-- SL-11: the marketing header hides on scroll down and returns
+         on scroll up (the script sits at the end of the body). The
+         transition stays inside the MO-02 duration cap and is
+         removed under reduced motion, where the header simply
+         stays in place. A transform never shifts layout (PF-04).
+         The rules live in app.css, with the M-04 header tap
+         targets (at least 48px for the logo link and the menu
+         toggle), graduated at the release 07 integration. --}}
 </head>
 <body class="bg-surface-0 text-text-1">
     <a class="skip-link" href="#main">Skip to content</a>
 
-    <header class="sticky top-0 z-20 border-b border-line bg-surface-0">
-        <div class="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-4 px-5">
-            <a href="{{ route('home') }}" class="text-xl font-bold text-text-1">Easy Refer</a>
+    <header id="site-header" class="sticky top-0 z-20 border-b border-line bg-surface-0">
+        <div class="shell flex h-16 items-center justify-between gap-4">
+            <a href="{{ route('home') }}" class="logo-link" aria-label="Easy Refer home"><x-logo :size="28" /></a>
 
             @if (trim($__env->yieldContent('chrome')) === 'minimal')
-                {{-- Vertical landings (spec Section 2.6): the wordmark
+                {{-- Vertical landings (spec Section 2.6): the lockup
                      and one Sign in link only; every other link is an
                      exit the advertiser paid to create. --}}
-                <a href="{{ route('login') }}" class="font-semibold text-brand-700 hover:underline">Sign in</a>
+                <a href="{{ route('login') }}" class="text-[15px] font-medium text-text-2 hover:text-text-1">Sign in</a>
             @else
-                <nav aria-label="Site" class="hidden items-center gap-6 md:flex">
-                    <a class="text-text-1 hover:underline" href="{{ route('home') }}#features">Features</a>
-                    <a class="text-text-1 hover:underline" href="{{ route('home') }}#benefits">Benefits</a>
-                    <a class="text-text-1 hover:underline" href="{{ route('home') }}#how-it-works">How It Works</a>
-                    <a class="text-text-1 hover:underline" href="{{ route('home') }}#pricing">Pricing</a>
-                    <a class="text-text-1 hover:underline" href="{{ route('about') }}">About Us</a>
-                    <a href="{{ route('login') }}" class="btn btn-secondary">Business Portal</a>
+                <nav aria-label="Site" class="hidden items-center gap-1 md:flex">
+                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#features">Features</a>
+                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#benefits">Benefits</a>
+                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#how-it-works">How It Works</a>
+                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#pricing">Pricing</a>
+                    <a class="rounded-md px-3 py-2 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('about') }}">About Us</a>
+                    <span class="ml-3 flex items-center gap-2">
+                        <a href="{{ route('login') }}" class="btn btn-ghost btn-sm">Sign in</a>
+                        <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Start free</a>
+                    </span>
                 </nav>
 
                 <div class="relative md:hidden" x-data="{ open: false }">
-                    <button type="button" class="btn btn-secondary" aria-haspopup="true" :aria-expanded="open.toString()" @click="open = ! open">Menu</button>
-                    <nav aria-label="Site menu" x-show="open" x-cloak class="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-line bg-surface-0 p-3 shadow-e2">
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('home') }}#features">Features</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('home') }}#benefits">Benefits</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('home') }}#how-it-works">How It Works</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('home') }}#pricing">Pricing</a>
-                        <a class="block rounded-md px-3 py-2 hover:bg-surface-1" href="{{ route('about') }}">About Us</a>
+                    <button type="button" class="menu-toggle inline-flex h-12 w-12 items-center justify-center rounded-md text-text-1 hover:bg-surface-1" aria-label="Open menu" aria-haspopup="true" :aria-expanded="open.toString()" @click="open = ! open"><x-icon name="menu" :size="24" /></button>
+                    <nav aria-label="Site menu" x-show="open" x-cloak class="absolute right-0 z-40 mt-2 w-60 rounded-lg border border-line bg-surface-0 p-2 shadow-e2">
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#features">Features</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#benefits">Benefits</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#how-it-works">How It Works</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#pricing">Pricing</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('about') }}">About Us</a>
+                        {{-- C-04: the open mobile menu carries the primary
+                             action, so a convinced visitor is never
+                             stranded at the moment of intent. --}}
+                        <a class="btn btn-primary mt-2 w-full" href="{{ route('register') }}">Start free</a>
                         <a class="btn btn-secondary mt-2 w-full" href="{{ route('login') }}">Business Portal</a>
                     </nav>
                 </div>
@@ -113,5 +131,37 @@
         @include('partials.marketing-footer')
     @endunless
     @include('partials.consent-banner')
+
+    {{-- SL-11 behavior: hide the marketing header while scrolling
+         down, bring it back the moment the direction reverses.
+         This layout is marketing-only; the app shell and the flow
+         action bar live in other layouts and never hide. Reduced
+         motion opts out entirely, and the header also stays put
+         while the mobile menu is open or focus is inside it, so it
+         can never carry a focused element off screen (SL-09). --}}
+    <script>
+        (function () {
+            var header = document.getElementById('site-header');
+            if (!header || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                return;
+            }
+            var lastY = window.scrollY;
+            var hidden = false;
+            function onScroll() {
+                var y = window.scrollY;
+                var menuOpen = header.querySelector('[aria-expanded="true"]') !== null;
+                var focusInside = header.contains(document.activeElement);
+                if (!hidden && y > 96 && y > lastY + 4 && !menuOpen && !focusInside) {
+                    header.classList.add('site-header-hidden');
+                    hidden = true;
+                } else if (hidden && (y < lastY - 4 || y <= 96)) {
+                    header.classList.remove('site-header-hidden');
+                    hidden = false;
+                }
+                lastY = y;
+            }
+            window.addEventListener('scroll', onScroll, { passive: true });
+        })();
+    </script>
 </body>
 </html>

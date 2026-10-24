@@ -1,12 +1,17 @@
 import Alpine from 'alpinejs';
+import { initSubmitLoading } from './submit-loading';
 
 // The customer flow entry is deliberately minimal (design-system.md
 // Section 4.6): Alpine only, no other library, and no webfont payload;
 // the flow's font stack falls back to the system face, which Section
-// 2.2 explicitly permits on this surface.
+// 2.2 explicitly permits on this surface. The one shared module is
+// the submit loading state, so a posting flow form gives the same
+// CP-02 feedback as every other surface.
 window.Alpine = Alpine;
 
 Alpine.start();
+
+initSubmitLoading();
 
 // Device signal (spec Section 3.1): a stable per-device random id
 // persisted locally and offered to the flow forms through their

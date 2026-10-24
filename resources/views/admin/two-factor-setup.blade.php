@@ -33,8 +33,7 @@
                     @if ($errors->has('code')) aria-describedby="code-error" @endif>
                 @error('code') <p class="form-error" id="code-error">{{ $message }}</p> @enderror
 
-                <label for="current_password">Current password</label>
-                <input id="current_password" name="current_password" type="password" required autocomplete="current-password">
+                <x-password-input name="current_password" label="Current password" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-primary">Confirm and turn on</button></p>
             </form>
@@ -42,8 +41,7 @@
             <form method="POST" action="{{ route('admin.two-factor.start') }}" class="mt-4">
                 @csrf
 
-                <label for="current_password">Current password (required to set this up)</label>
-                <input id="current_password" name="current_password" type="password" required autocomplete="current-password">
+                <x-password-input name="current_password" label="Current password (required to set this up)" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-primary">Start setup</button></p>
             </form>

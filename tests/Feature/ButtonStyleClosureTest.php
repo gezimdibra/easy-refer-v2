@@ -78,7 +78,7 @@ class ButtonStyleClosureTest extends TestCase
         // interactive element, and the primary button carries its
         // own on-fill variant so the ring stays visible against
         // the brand fill.
-        $this->assertMatchesRegularExpression('/:focus-visible\s*\{[^}]*outline:\s*3px solid/', $css);
+        $this->assertMatchesRegularExpression('/:focus-visible\s*\{[^}]*outline:\s*2px solid/', $css);
         $this->assertNotNull($this->cssRule($css, 'btn-primary:focus-visible'), '.btn-primary must define its focus-visible ring');
     }
 }

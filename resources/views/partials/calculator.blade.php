@@ -9,9 +9,13 @@
     estimate. Plan values arrive as server-rendered bootstrap data;
     no URL string is built in JavaScript beyond appending the
     visitor's own ticket input to the server-rendered signup URL.
+    Redesign (redesign-spec.md Section 10.1 item 8): the worksheet
+    becomes a surface-0 panel at radius-xl with 32px padding; the
+    result sentences keep their inventory wording, with the figures
+    set in the stat-sm step.
 --}}
 @php($plan = $plan ?? \App\Models\Plan::launch())
-<div class="card mx-auto mt-10 max-w-[720px]"
+<div class="mx-auto mt-10 max-w-[720px] rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px"
     x-data="{
         weekly: 100,
         ticket: 40,
@@ -40,12 +44,15 @@
         </div>
     </div>
 
-    <div class="mt-6 space-y-1 text-lg text-text-1" aria-live="polite">
-        <p>About <strong x-text="customers">22</strong> new customers a month</p>
-        <p>Your Easy Refer fee: about $<strong x-text="fee">44</strong> a month</p>
-        <p>Worth about $<strong x-text="value">880</strong> in first-visit sales</p>
+    <div class="mt-6 space-y-2" aria-live="polite">
+        <p class="type-body-lg text-text-1">About <strong class="type-stat-sm" x-text="customers">22</strong> new customers a month</p>
+        <p class="type-body-lg text-text-1">Your Easy Refer fee: about $<strong class="type-stat-sm" x-text="fee">44</strong> a month</p>
+        <p class="type-body-lg text-text-1">Worth about $<strong class="type-stat-sm" x-text="value">880</strong> in first-visit sales</p>
     </div>
-    <p class="form-help mt-3">Estimates from your own numbers, not our results.</p>
+    <p class="form-help mt-4">Estimates from your own numbers, not our results.</p>
 
-    <a class="btn btn-secondary mt-5" :href="registerUrl + (registerUrl.includes('?') ? '&' : '?') + 'ticket=' + ticket">Start free</a>
+    {{-- C-02: this anchor IS the primary signup action, so it carries
+         the primary treatment; the label never rides an outline or
+         secondary button. --}}
+    <a class="btn btn-primary mt-5" :href="registerUrl + (registerUrl.includes('?') ? '&' : '?') + 'ticket=' + ticket">Start free</a>
 </div>

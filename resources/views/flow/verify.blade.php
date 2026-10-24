@@ -3,8 +3,9 @@
 @section('title', 'Enter your code | Easy Refer')
 @section('flow_label', 'Verification')
 
+@section('step_number', '2')
 @section('step')
-    <span class="text-sm text-text-2">Step 2 of 3</span>
+    <span class="type-caption text-text-2">Step 2 of 3</span>
 @endsection
 
 @section('content')
@@ -13,7 +14,7 @@
          own cadence, and the wrong-number escape. The wrong-code
          message is wired to the boxes with aria-describedby and
          announced (Section 6.6). --}}
-    <h1 class="text-[32px] font-bold leading-[38px]">Enter the verification code we sent to {{ $maskedPhone }}.</h1>
+    <h1 class="type-display-xs">Enter the verification code we sent to {{ $maskedPhone }}.</h1>
 
     @if ($channel === 'call')
         <p class="status status-info mt-3">That number cannot receive text messages, so we are calling it with your code instead.</p>
@@ -23,7 +24,7 @@
         <p class="status status-success mt-3" role="status">{{ $notice }}</p>
     @endif
 
-    <form method="POST" action="{{ route('refer.verify.check') }}" class="mt-5" id="verify-form" x-data>
+    <form method="POST" action="{{ route('refer.verify.check') }}" class="mt-5" id="verify-form" x-data data-loading>
         @csrf
         <input type="hidden" name="device_signal" data-device-signal>
 
@@ -43,15 +44,15 @@
     </form>
 
     <div class="mt-4 flex items-center justify-between">
-        <form method="POST" action="{{ route('refer.verify.resend') }}" class="flex items-center gap-2">
+        <form method="POST" action="{{ route('refer.verify.resend') }}" class="flex items-center gap-2" data-loading>
             @csrf
-            <span class="text-text-2">Did not get a code?</span>
-            <button type="submit" class="btn btn-ghost">Resend code</button>
+            <span class="type-caption text-text-2">Did not get a code?</span>
+            <button type="submit" class="btn btn-ghost btn-sm">Resend code</button>
         </form>
 
-        <form method="POST" action="{{ route('refer.verify.change') }}">
+        <form method="POST" action="{{ route('refer.verify.change') }}" data-loading>
             @csrf
-            <button type="submit" class="btn btn-ghost">Use a different number</button>
+            <button type="submit" class="btn btn-ghost btn-sm">Use a different number</button>
         </form>
     </div>
 @endsection

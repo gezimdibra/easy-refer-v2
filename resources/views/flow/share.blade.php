@@ -3,8 +3,9 @@
 @section('title', 'Share with a friend | Easy Refer')
 @section('flow_label', 'Share')
 
+@section('step_number', '3')
 @section('step')
-    <span class="text-sm text-text-2">Step 3 of 3</span>
+    <span class="type-caption text-text-2">Step 3 of 3</span>
 @endsection
 
 @section('content')
@@ -15,7 +16,7 @@
          the clipboard everywhere else), the copyable link, the
          in-person QR, and the honest referral count. No channel
          grid: the share sheet owns destinations. --}}
-    <h1 class="text-[32px] font-bold leading-[38px]">
+    <h1 class="type-display-xs">
         @if ($returning)
             Welcome back, {{ $customer->first_name }}
         @else
@@ -35,18 +36,18 @@
 
         <div class="field mt-4">
             <label class="form-label" for="share_url">Your referral link</label>
-            <div class="flex gap-2">
+            <div class="joined">
                 <input class="form-input" id="share_url" type="text" readonly value="{{ $shareUrl }}" x-ref="shareUrl">
-                <button type="button" class="btn btn-secondary"
+                <button type="button" class="btn btn-primary"
                     @click="navigator.clipboard.writeText($refs.shareUrl.value); copied = true"
                     x-text="copied ? 'Copied' : 'Copy link'">Copy link</button>
             </div>
         </div>
     </div>
 
-    <div class="mt-5 text-center">
-        <img src="{{ $shareQrUrl }}" alt="Your personal referral QR code" width="200" height="200" class="mx-auto">
-        <p class="mt-2 text-text-2">Show this to a friend in person</p>
+    <div class="well mt-5 text-center">
+        <img src="{{ $shareQrUrl }}" alt="Your personal referral QR code" width="200" height="200" class="mx-auto rounded-lg border border-line bg-surface-0 p-3">
+        <p class="type-body-sm mt-3 text-text-2">Show this to a friend in person</p>
     </div>
 
     @if ($referralCount > 0)
