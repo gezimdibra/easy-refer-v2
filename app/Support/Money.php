@@ -14,7 +14,7 @@ final class Money
     public static function dollars(int $cents): string
     {
         return $cents % 100 === 0
-            ? (string) intdiv($cents, 100)
+            ? number_format(intdiv($cents, 100))
             : number_format($cents / 100, 2);
     }
 

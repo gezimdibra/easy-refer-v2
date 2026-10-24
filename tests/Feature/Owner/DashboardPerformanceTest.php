@@ -29,6 +29,7 @@ use Tests\TestCase;
  * `perf` so it can be selected or excluded on its own.
  */
 #[Group('perf')]
+#[Group('slow')]
 class DashboardPerformanceTest extends TestCase
 {
     use RefreshDatabase;

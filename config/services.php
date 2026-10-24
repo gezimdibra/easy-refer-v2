@@ -37,15 +37,16 @@ return [
 
     // Spec Section 9. Credentials live only in env, never in code, the
     // database, logs, or any client response (audit C4, C6). The API
-    // version pins at Phase 4 kickoff via SQUARE_VERSION; empty means
-    // the SDK default applies until then.
+    // version was pinned at Phase 4 kickoff: 2026-09-16, the version
+    // the installed square/square SDK targets; SQUARE_VERSION in the
+    // environment overrides it only as a deliberate, reviewed act.
     'square' => [
         'environment' => env('SQUARE_ENVIRONMENT', 'sandbox'),
         'access_token' => env('SQUARE_ACCESS_TOKEN'),
         'application_id' => env('SQUARE_APPLICATION_ID'),
         'location_id' => env('SQUARE_LOCATION_ID'),
         'webhook_signature_key' => env('SQUARE_WEBHOOK_SIGNATURE_KEY'),
-        'version' => env('SQUARE_VERSION'),
+        'version' => env('SQUARE_VERSION', '2026-09-16'),
         'timeout' => 10,
     ],
 

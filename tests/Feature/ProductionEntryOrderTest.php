@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Routing\Router;
 use Symfony\Component\Process\Process;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
@@ -84,11 +85,13 @@ class ProductionEntryOrderTest extends TestCase
         $this->assertNotSame('404', $facts['status'] ?? null);
     }
 
+    #[Group('slow')]
     public function test_kernel_built_in_production_order_shares_the_application_router_at_the_subdirectory_mount(): void
     {
         $this->assertProductionEntryServes($this->runProbe('http://localhost/new', '/new'));
     }
 
+    #[Group('slow')]
     public function test_kernel_built_in_production_order_shares_the_application_router_at_the_root_mount(): void
     {
         $this->assertProductionEntryServes($this->runProbe('http://localhost', '/'));

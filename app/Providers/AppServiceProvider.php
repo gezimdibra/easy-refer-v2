@@ -6,8 +6,11 @@ use App\Contracts\PhoneLookupGateway;
 use App\Contracts\PhoneVerificationGateway;
 use App\Contracts\SmsGateway;
 use App\Contracts\SquareCustomerGateway;
+use App\Contracts\SquarePaymentsGateway;
 use App\Services\Square\NullSquareCustomerGateway;
+use App\Services\Square\NullSquarePaymentsGateway;
 use App\Services\Square\SdkSquareCustomerGateway;
+use App\Services\Square\SdkSquarePaymentsGateway;
 use App\Services\Twilio\NullPhoneLookupGateway;
 use App\Services\Twilio\NullPhoneVerificationGateway;
 use App\Services\Twilio\NullSmsGateway;
@@ -40,6 +43,16 @@ class AppServiceProvider extends ServiceProvider
             return empty(config('services.square.access_token'))
                 ? $app->make(NullSquareCustomerGateway::class)
                 : $app->make(SdkSquareCustomerGateway::class);
+        });
+
+        // Spec Section 9, Phase 4: the payments gateway follows
+        // the same switch. Record-only mode is a separate gate
+        // (billing.charges_enabled); this binding only decides
+        // whether a configured environment can move money at all.
+        $this->app->bind(SquarePaymentsGateway::class, function ($app) {
+            return empty(config('services.square.access_token'))
+                ? $app->make(NullSquarePaymentsGateway::class)
+                : $app->make(SdkSquarePaymentsGateway::class);
         });
 
         // Spec Section 10, same switch discipline as Square: the

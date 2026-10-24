@@ -9,6 +9,7 @@ use App\Services\Auth\TwoFactorService;
 use App\Support\Totp;
 use Database\Seeders\TwoBusinessFixtureSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
@@ -108,6 +109,7 @@ class StepUpTest extends TestCase
         $this->assertSame('new.a@example.test', $user->fresh()->email);
     }
 
+    #[Group('slow')]
     public function test_a_password_change_leaves_the_step_up_window_fresh(): void
     {
         $user = $this->ownerA();

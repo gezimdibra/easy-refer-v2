@@ -31,6 +31,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Fakes\FakePhoneLookupGateway;
 use Tests\Fakes\FakePhoneVerificationGateway;
 use Tests\Fakes\FakeSmsGateway;
@@ -374,6 +375,7 @@ class Sprint2BranchTest extends TestCase
     // ------------------------------------------------------------------
     // Signup prefills and Turnstile on the owner forms
 
+    #[Group('slow')]
     public function test_signup_ticket_prefill_applies_to_the_business(): void
     {
         Mail::fake();

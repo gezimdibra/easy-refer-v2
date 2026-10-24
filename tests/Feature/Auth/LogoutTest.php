@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\TwoBusinessFixtureSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
@@ -26,6 +27,7 @@ class LogoutTest extends TestCase
         $this->seed(TwoBusinessFixtureSeeder::class);
     }
 
+    #[Group('slow')]
     public function test_logout_is_post_only(): void
     {
         $user = User::query()->where('email', TwoBusinessFixtureSeeder::A_EMAIL)->first();

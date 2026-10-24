@@ -1,0 +1,83 @@
+# .cpanel.yml — Easy Refer v2 staging deployment (cPanel Git Version Control)
+#
+# STATUS: enablement prep, authored 2026-10-24. NOT yet adopted. Do not rely
+# on this file until the trial in hidden_files/cpanel-git-trial-plan.md has
+# passed, including the sabotage test. The classic batched-script path
+# (deploy protocol v2) remains the deploy path of record until then.
+#
+# How cPanel runs this (cPanel 134 deployment guide, verified in the spike,
+# hidden_files/deploy-speed-spike.md section (c)):
+#   - The operator (or the UAPI) first runs "Update from Remote", which
+#     fast-forwards the clone at /home/easyrefe/repos/easy-refer-v2 to the
+#     pushed HEAD of main. "Deploy HEAD Commit" then runs the tasks below,
+#     in order, as the account user (easyrefe), with the working directory
+#     set to the repository root (the clone).
+#   - Deployment is only offered when this file is valid in the checked-out
+#     HEAD and the clone's working tree is CLEAN. The first task re-verifies
+#     the clean tree on the server, because the panel check alone is a UI
+#     state, not a proof.
+#
+# Checkout assumptions (stated per the enablement brief):
+#   - RESET-SAFE: this deployment never fetches, resets, stashes, or cleans.
+#     "Update from Remote" is the only step that moves the clone, and it is
+#     the panel's own action, taken before these tasks start. The tasks
+#     treat the checked-out tree as read-only input: every output lands in
+#     /home/easyrefe/er2-staging/ (release dirs, shared state), never as a
+#     new untracked file inside the clone, so the tree stays clean for the
+#     next deployment. The only in-clone writes are the gitignored build
+#     outputs the classic recipe already produces there (node_modules/,
+#     public/build/).
+#   - The deployed commit and the pushed commit are the same object by
+#     construction: the tasks assemble from HEAD as checked out and record
+#     it in the release manifest.
+#   - NO MIGRATIONS: releases that carry database migrations stay on the
+#     classic path (deploy-protocol.md, protocol v2) until a bundle
+#     migration phase is proven twice. There is deliberately no migrate
+#     task below.
+#
+# Pinned absolutes (the panel environment provides no login shell profile,
+# so nothing here may rely on PATH defaults or aliases):
+#   - PHP:       /usr/local/bin/ea-php82 (server CLI is PHP 8.2; the local
+#                test PHP 8.3 never runs on the server)
+#   - Composer:  /usr/local/bin/composer, always invoked through ea-php82
+#   - Node 20:   /opt/alt/alt-nodejs20/root/usr/bin (exported in task 1)
+#   - Clone:     /home/easyrefe/repos/easy-refer-v2
+#   - Staging:   /home/easyrefe/er2-staging (releases/, shared/, current)
+#
+# Failure design (the load-bearing property):
+#   - Tasks run in order and the flip is the FINAL task. The Gate 1 task
+#     (task 4) exits non-zero on any probe failure (any of /, /up,
+#     /auth/login, /sitemap.xml, /robots.txt not returning its designed
+#     200 through the production entry order), so under cPanel's
+#     abort-on-failure semantics the flip task never runs.
+#   - Defense in depth, independent of those semantics: task 4 writes a
+#     READY marker (release id + HEAD) into shared/deploy-state/ ONLY on a
+#     full pass, and the flip script refuses to run unless that marker
+#     matches the assembly state and the live `current` symlink still
+#     points at the release the assembly recorded. Even if a failed task
+#     did not stop the list, the flip is unreachable without a passing
+#     probe for this exact assembly.
+#   - Rollback is unchanged: `current` is a symlink; flipping it back to
+#     the previous release directory is the classic manual step, and this
+#     file never deletes or mutates an existing release directory.
+---
+deployment:
+  tasks:
+    # Task 1: pin the Node 20 toolchain for the tasks that follow (cPanel
+    # runs the task list as one shell sequence; the export persists).
+    - export PATH=/opt/alt/alt-nodejs20/root/usr/bin:$PATH
+    # Task 2: precheck + assemble a NEW release dir from the checked-out
+    # HEAD (allowlist copy, warm vendor, Vite build, binary assets from
+    # the previous release, shared/ links, cache builds, manifest,
+    # assets check). Exits non-zero on any failure, including a dirty
+    # clone tree. Never flips.
+    - bash scripts/deploy/release-assemble.sh
+    # Task 3: Gate 1 production-order probe against the assembled
+    # release, in-process through bootstrap/app.php with the kernel
+    # constructed before bootstrap (the release 03 defect shape). Any
+    # 404/500 fails the deployment here. On a full pass it writes the
+    # READY marker the flip requires.
+    - /usr/local/bin/ea-php82 scripts/deploy/gate1.php
+    # Task 4 (FINAL): the symlink flip. Refuses to run without the READY
+    # marker for this assembly, or if `current` drifted since assembly.
+    - bash scripts/deploy/flip.sh

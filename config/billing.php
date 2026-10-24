@@ -20,4 +20,21 @@ return [
     'free_visits_at_signup' => 5,
     'sms_segment_price_cents' => 2,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Charge execution (Phase 4, spec Section 9.5)
+    |--------------------------------------------------------------------------
+    |
+    | Until the Phase 6 launch approval, charges are disabled at
+    | the provider boundary: the engine computes batches and
+    | stores them as simulated billing_records, and no Square call
+    | is ever made. Enabling charges is a launch-gate act, not a
+    | code change. Square's minimum charge is $1: a month whose
+    | billable total is below it carries forward instead.
+    |
+    */
+
+    'charges_enabled' => env('BILLING_CHARGES_ENABLED', false),
+    'minimum_charge_cents' => 100,
+
 ];

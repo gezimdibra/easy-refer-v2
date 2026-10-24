@@ -14,6 +14,7 @@ use App\Support\CanonicalEmail;
 use App\Support\Totp;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Fakes\FakePhoneLookupGateway;
 use Tests\Fakes\FakePhoneVerificationGateway;
 use Tests\Fakes\FakeSmsGateway;
@@ -69,6 +70,7 @@ class AdminConsoleTest extends TestCase
         return $admin;
     }
 
+    #[Group('slow')]
     public function test_adm01_access_matrix(): void
     {
         World::business();
@@ -240,6 +242,7 @@ class AdminConsoleTest extends TestCase
         ])->assertRedirect(route('admin.home'));
     }
 
+    #[Group('slow')]
     public function test_throttled_admin_login_attempts_are_audited(): void
     {
         // Security verifier F-08: attempts refused by the

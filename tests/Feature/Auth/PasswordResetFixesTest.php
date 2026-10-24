@@ -8,6 +8,7 @@ use Database\Seeders\TwoBusinessFixtureSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ class PasswordResetFixesTest extends TestCase
         return User::where('email', TwoBusinessFixtureSeeder::A_EMAIL)->firstOrFail();
     }
 
+    #[Group('slow')]
     public function test_a_reset_submitted_with_a_plus_variant_email_still_matches_the_token(): void
     {
         $user = $this->ownerA();
@@ -50,6 +52,7 @@ class PasswordResetFixesTest extends TestCase
         ])->assertRedirect(route('dashboard'));
     }
 
+    #[Group('slow')]
     public function test_the_audit_row_is_written_only_when_a_link_is_actually_sent(): void
     {
         Notification::fake();
@@ -74,6 +77,7 @@ class PasswordResetFixesTest extends TestCase
         $this->assertSame(0, AuditLog::where('action', 'owner.password_reset_requested')->count());
     }
 
+    #[Group('slow')]
     public function test_the_reset_submission_endpoint_is_throttled(): void
     {
         for ($i = 0; $i < 5; $i++) {

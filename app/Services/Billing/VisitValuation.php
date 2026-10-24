@@ -82,8 +82,20 @@ class VisitValuation
         // The first-visits-free credit is the one-time allowance
         // on the business row (Section 7.2/9.5), never a plan
         // field: the plan row's included_referrals_per_period is
-        // NULL by the seed contract.
-        $freeAllowance = (int) $business->free_visits_remaining;
+        // NULL by the seed contract. The Phase 4 batch decrements
+        // free_visits_remaining atomically as it persists
+        // free_credit coverage (Section 9.5), so the allowance
+        // this walk may still hand out is the credit already
+        // persisted on events plus the credit remaining on the
+        // row; the two sum to the original allowance, which keeps
+        // this walk's output identical before and after the batch
+        // persists it (the dashboard and the batch reconcile
+        // exactly, or the figure does not render).
+        $persistedFree = BillingEvent::query()
+            ->where('business_id', $business->id)
+            ->where('coverage', 'free_credit')
+            ->count();
+        $freeAllowance = $persistedFree + (int) $business->free_visits_remaining;
         $cap = $plan !== null ? (int) ($plan->monthly_cap_cents ?? PHP_INT_MAX) : PHP_INT_MAX;
 
         $settled = [];
@@ -107,7 +119,15 @@ class VisitValuation
 
             $amount = (int) $event->amount_cents;
 
-            if ($freeUsed < $freeAllowance) {
+            if ($event->coverage === 'refunded') {
+                // A refunded visit is terminal (Section 9.8): it
+                // carries no fee, but it did consume its month's
+                // cap slot when it was charged, so the cap walk
+                // still counts it; a refund never retroactively
+                // promotes an over-cap visit into a charge.
+                $settled[$event->id] = ['coverage' => 'refunded', 'fee_cents' => 0];
+                $monthBilledCents += $amount;
+            } elseif ($freeUsed < $freeAllowance) {
                 $settled[$event->id] = ['coverage' => 'free_credit', 'fee_cents' => 0];
                 $freeUsed++;
             } elseif ($monthBilledCents + $amount > $cap) {

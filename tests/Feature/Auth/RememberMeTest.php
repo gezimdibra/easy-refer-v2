@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
@@ -112,6 +113,7 @@ class RememberMeTest extends TestCase
         $this->assertSame(0, RememberToken::count());
     }
 
+    #[Group('slow')]
     public function test_password_reset_revokes_remember_tokens(): void
     {
         $user = $this->ownerA();

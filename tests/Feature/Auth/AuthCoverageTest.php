@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
@@ -104,6 +105,7 @@ class AuthCoverageTest extends TestCase
         $this->assertSame('argon2id', password_get_info($user->fresh()->password)['algoName']);
     }
 
+    #[Group('slow')]
     public function test_repeated_lockouts_escalate_and_block_even_with_the_attempts_window_cleared(): void
     {
         $this->seed(TwoBusinessFixtureSeeder::class);
