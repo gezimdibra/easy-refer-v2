@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\Membership;
 use App\Models\Referral;
 use App\Models\SmsOptOut;
+use App\Support\ActionToast;
 use App\Support\OpaqueToken;
 use App\Support\PhoneNumber;
 use App\Support\Search;
@@ -345,6 +346,15 @@ class CustomersController extends Controller
         $business = $request->user()->business;
         abort_unless($membership->business_id === $business->id, 404);
 
+        // RS-14: removal is reversible, so the toast carries
+        // an Undo. The snapshot holds the RAW prior values so
+        // the undo restores them byte-for-byte.
+        $prior = [
+            'membership_id' => $membership->id,
+            'removed_at' => $membership->getRawOriginal('removed_at'),
+            'share_token_state' => $membership->getRawOriginal('share_token_state'),
+        ];
+
         $membership->forceFill([
             'removed_at' => now(),
             'share_token_state' => 'revoked',
@@ -353,9 +363,19 @@ class CustomersController extends Controller
         AuditLog::write('customer.removed_from_store', $request->user(), [], $business, $membership);
 
         $name = trim($membership->customer->first_name.' '.$membership->customer->last_name);
+        $displayName = $name === '' ? 'Customer' : $name;
+
+        ActionToast::undoable(
+            $request,
+            $displayName.' was removed from your store.',
+            'customer_removed',
+            $prior,
+            $displayName.' is back in your store.',
+            'customers.index',
+        );
 
         return redirect()
             ->route('customers.index')
-            ->with('status', ($name === '' ? 'Customer' : $name).' was removed from your store.');
+            ->with('status', $displayName.' was removed from your store.');
     }
 }

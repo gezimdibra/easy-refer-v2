@@ -197,7 +197,9 @@ class CampaignsTest extends TestCase
         $response->assertSee('long message');
         $response->assertSee('$0.16');
         $response->assertSee('The $99 monthly cap covers visit charges only');
-        $response->assertSee('Send now');
+        // RS-14 (GEN-05) supersedes the CAMP-01 'Send now' on
+        // this screen: the button restates the scope.
+        $response->assertSee('Send to 2 customers');
     }
 
     public function test_send_dispatches_recipients_and_writes_evidence(): void

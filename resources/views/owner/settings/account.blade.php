@@ -20,6 +20,13 @@
         <div class="mt-6 min-w-0 flex-1 lg:mt-0">
 
     <div class="panel">
+        <h2 class="type-title-3 text-text-1">Account email</h2>
+        <div class="mt-2">
+            @include('partials.account-email-state', ['user' => $user])
+        </div>
+    </div>
+
+    <div class="panel mt-4">
         <h2 class="type-title-3 text-text-1">Close your account</h2>
         @if ($business->isClosed())
             <p class="mt-1 text-text-2">Your account closed on {{ $business->closed_at?->format('M j, Y') }}. You can still sign in to confirm claims and view your history until {{ $business->closed_at?->copy()->addDays(30)->format('M j, Y') }}.</p>

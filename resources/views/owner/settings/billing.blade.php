@@ -26,9 +26,7 @@
          until then by construction. --}}
     @if ($business->billing_status === 'past_due')
         <section class="panel" aria-label="Billing status">
-            <p class="font-semibold text-text-1">A payment failed. Please update your card to keep billing current.</p>
-            <p class="mt-3"><a class="btn btn-primary" href="#card">Update card</a></p>
-            <p class="type-body-sm mt-3 text-text-2">Your QR code and customer links keep working during the grace period.</p>
+            @include('partials.billing-past-due', ['cardHref' => '#card'])
         </section>
     @endif
 
@@ -62,9 +60,11 @@
         <h2 class="type-title-3 text-text-1">Card on file</h2>
         @if ($card !== null)
             <p class="mt-2 text-text-1">Card on file ending {{ $card->last4 }}. Managed securely by Square.</p>
-            <p class="type-body-sm mt-1 text-text-2">{{ $card->card_brand }} · Expires {{ str_pad((string) $card->exp_month, 2, '0', STR_PAD_LEFT) }}/{{ $card->exp_year }}</p>
+            <p class="type-body-sm mt-1 text-text-2">{{ $card->card_brand }} · Expires {{ str_pad((string) $card->exp_month, 2, '0', STR_PAD_LEFT) }}/{{ $card->exp_year }}@if ($cardExpiresSoon) <span class="pill pill-warning ml-2">Expires soon</span>@endif</p>
             @if ($cardExpired)
                 <p class="mt-2 text-text-1">This card has expired. Replace it to keep monthly charges going.</p>
+            @elseif ($cardExpiresSoon)
+                <p class="mt-2 text-text-1">This card expires soon. Replace it to keep monthly charges going.</p>
             @endif
             @include('owner.settings.partials.billing-card-actions')
         @elseif ($pendingCard !== null)
@@ -113,6 +113,7 @@
         </div>
         <p class="type-body-sm mt-2 text-text-2">{{ '$'.number_format($month['fees_cents'] / 100, 2) }} of {{ '$'.number_format($capCents / 100, 0) }} monthly cap</p>
         <p class="mt-3 text-text-1">Built up so far: {{ '$'.number_format($accrued['accrued_cents'] / 100, 2) }}. Charged once a month.</p>
+        @include('partials.billing-forecast', ['preview' => $accrued])
         @if ($accrued['accrued_cents'] > 0 && $accrued['accrued_cents'] < $minimumChargeCents)
             <p class="type-body-sm mt-1 text-text-2">Your amount so far is under {{ '$'.number_format($minimumChargeCents / 100, 0) }}, so it carries forward. It joins your next monthly charge.</p>
         @endif

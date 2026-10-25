@@ -61,7 +61,15 @@
                                         </form>
                                     </span>
                                 @else
-                                    <a class="btn btn-secondary" href="{{ route('campaigns.show', $campaign) }}">View</a>
+                                    <span class="flex flex-wrap gap-2">
+                                        <a class="btn btn-secondary" href="{{ route('campaigns.show', $campaign) }}">View</a>
+                                        @if ($campaign->status === 'sent')
+                                            <form method="POST" action="{{ route('campaigns.duplicate', $campaign) }}" data-loading>
+                                                @csrf
+                                                <button type="submit" class="btn btn-ghost">Send something like this again</button>
+                                            </form>
+                                        @endif
+                                    </span>
                                 @endif
                             </td>
                         </tr>

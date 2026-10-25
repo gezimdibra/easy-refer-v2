@@ -24,10 +24,31 @@
      verify-email view translates into its own sentence, so it is
      never banner text. --}}
 @php($statusMessage = session('status') === 'verification-link-sent' ? null : session('status'))
+{{-- RS-14 toast payload (GEN-01/GEN-04): rendered only when it
+     belongs to THIS status sentence, so a stale or unrelated
+     toast can never attach itself to another page's flash. --}}
+@php($toast = session('toast'))
+@php($toastForStatus = is_array($toast) && ($toast['message'] ?? null) === $statusMessage && (isset($toast['undo']) || isset($toast['view'])) ? $toast : null)
 @if ($statusMessage || $errors->any())
     <div role="region" aria-label="Notices">
         @if ($statusMessage)
-            <p class="banner banner-success" role="status">{{ $statusMessage }}</p>
+            @if ($toastForStatus)
+                <div class="banner banner-success flex flex-wrap items-center gap-x-3 gap-y-2" role="status">
+                    <span>{{ $statusMessage }}</span>
+                    @isset($toastForStatus['view'])
+                        <a class="font-semibold text-link underline" href="{{ $toastForStatus['view']['url'] }}">{{ $toastForStatus['view']['label'] }}</a>
+                    @endisset
+                    @isset($toastForStatus['undo'])
+                        <form method="POST" action="{{ route('actions.undo') }}" data-loading>
+                            @csrf
+                            <input type="hidden" name="undo_token" value="{{ $toastForStatus['undo']['token'] }}">
+                            <button type="submit" class="btn btn-ghost btn-sm">Undo</button>
+                        </form>
+                    @endisset
+                </div>
+            @else
+                <p class="banner banner-success" role="status">{{ $statusMessage }}</p>
+            @endif
         @endif
 
         @if ($errors->any())

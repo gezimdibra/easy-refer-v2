@@ -64,9 +64,25 @@ class DashboardPerformanceTest extends TestCase
         }
 
         // The dashboard's initial-load query count stays a small
-        // constant (26 measured: per-panel counts plus two
-        // one-time relation loads), never a function of history.
-        $this->assertLessThanOrEqual(30, $large['dashboard']['queries']);
+        // constant, never a function of history. Calibrated at
+        // 26 measured in Sprint 6 (per-panel counts plus two
+        // one-time relation loads), cap 30. The base had since
+        // drifted +2: the immediate pre-Train-2 tree (5c366db)
+        // measures 28 at both volumes (the Train 2 review's
+        // probe, T2R-02). Recalibrated 2026-10-25 for Train 2,
+        // whose shell and panels are deliberate dashboard
+        // additions with measured constant costs: the RK-01
+        // Action Center badge read model (7 queries: dismissals,
+        // one shared card lookup, oldest held reward, both hold
+        // sets, latest failed-delivery campaign, first-redemption
+        // check), the RK-03 forecast preview (1), and LV-02's
+        // added checklist step in the panel's own computation
+        // (1; the badge reuses the panel's checklist rather than
+        // recomputing it). 28 + 9 = 37 measured at BOTH volumes —
+        // the equality assertions above remain the N+1 proof;
+        // cap 40 keeps the same small headroom over measured as
+        // the original.
+        $this->assertLessThanOrEqual(40, $large['dashboard']['queries']);
     }
 
     /**

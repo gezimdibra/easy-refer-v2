@@ -73,7 +73,7 @@ class QrPageController extends Controller
      */
     public function poster(Request $request, string $variant): View
     {
-        abort_unless(in_array($variant, ['screen', 'counter', 'window'], true), 404);
+        abort_unless(in_array($variant, ['screen', 'counter', 'window', 'mini', 'tent', 'receipt'], true), 404);
 
         $business = $request->user()->business;
         $this->liveCode($business);

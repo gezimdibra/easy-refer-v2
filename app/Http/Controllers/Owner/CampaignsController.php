@@ -12,6 +12,7 @@ use App\Services\Campaigns\CampaignAudience;
 use App\Services\Campaigns\CampaignSender;
 use App\Services\Referral\MessageCopy;
 use App\Services\Twilio\NullMarketingSmsGateway;
+use App\Support\ActionToast;
 use App\Support\PhoneNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -90,7 +91,75 @@ class CampaignsController extends Controller
             'audience' => $audience,
             'figures' => $figures,
             'estimateUrl' => route('campaigns.estimate'),
+            'presets' => \App\Support\CampaignPresets::all(),
         ]);
+    }
+
+    /**
+     * Start from a ready-made message (LV-01; CAMP-16..19): a
+     * preset creates a draft with the preset body and lands on
+     * the confirm screen, where the estimate and preflight
+     * render before anything sends. The bodies carry no locked
+     * prefix or STOP suffix; those are system parts.
+     */
+    public function preset(Request $request): RedirectResponse
+    {
+        $business = $request->user()->business;
+
+        if (! $this->available()) {
+            return redirect()->route('campaigns.index')
+                ->with('status', 'Text campaigns are not available right now.');
+        }
+
+        $validated = $request->validate([
+            'preset' => ['required', 'string', \Illuminate\Validation\Rule::in(array_keys(\App\Support\CampaignPresets::all()))],
+        ]);
+
+        $preset = \App\Support\CampaignPresets::find($validated['preset']);
+
+        $campaign = SmsCampaign::create([
+            'business_id' => $business->id,
+            'body' => $preset['body'],
+            'status' => SmsCampaign::STATUS_DRAFT,
+            'created_by' => $request->user()->id,
+        ]);
+
+        app(CampaignSender::class)->stampFigures($campaign);
+
+        return redirect()->route('campaigns.confirm', $campaign);
+    }
+
+    /**
+     * Send something like this again (LV-01; CAMP-20): a sent
+     * campaign's body becomes a fresh draft. Only the body
+     * carries over — the audience re-derives from the
+     * eligibility rule at compose, confirm, and send, never
+     * from the original's recipient rows.
+     */
+    public function duplicate(Request $request, int $campaign): RedirectResponse
+    {
+        $business = $request->user()->business;
+
+        if (! $this->available()) {
+            return redirect()->route('campaigns.index')
+                ->with('status', 'Text campaigns are not available right now.');
+        }
+
+        $original = SmsCampaign::query()
+            ->where('business_id', $business->id)
+            ->where('status', SmsCampaign::STATUS_SENT)
+            ->findOrFail($campaign);
+
+        $copy = SmsCampaign::create([
+            'business_id' => $business->id,
+            'body' => $original->body,
+            'status' => SmsCampaign::STATUS_DRAFT,
+            'created_by' => $request->user()->id,
+        ]);
+
+        app(CampaignSender::class)->stampFigures($copy);
+
+        return redirect()->route('campaigns.confirm', $copy);
     }
 
     public function estimate(Request $request, CampaignSender $sender): JsonResponse
@@ -194,8 +263,23 @@ class CampaignsController extends Controller
                 ->with('status', 'The numbers changed since you last saw them. Check the new figures, then send again.'),
             'paused' => redirect()->route('campaigns.confirm', $campaign)
                 ->with('status', 'Text campaigns are paused right now. Please try again tomorrow.'),
-            default => redirect()->route('campaigns.show', $campaign),
+            default => $this->sentRedirect($request, $campaign),
         };
+    }
+
+    /**
+     * RS-14 (GEN-04): a sent campaign's landing carries the
+     * outcome toast — the count the send itself stamped, and a
+     * View results link to the campaign's page.
+     */
+    private function sentRedirect(Request $request, SmsCampaign $campaign): RedirectResponse
+    {
+        $message = 'Campaign sent to '.(int) ($campaign->fresh()->recipient_count ?? 0).' customers.';
+
+        ActionToast::outcome($request, $message, 'View results', route('campaigns.show', $campaign));
+
+        return redirect()->route('campaigns.show', $campaign)
+            ->with('status', $message);
     }
 
     public function show(Request $request, int $campaign): View

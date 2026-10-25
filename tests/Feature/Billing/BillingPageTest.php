@@ -266,6 +266,43 @@ class BillingPageTest extends TestCase
         $response->assertOk();
         $response->assertSee('Card on file ending 5858. Managed securely by Square.');
         $response->assertSee('This card has expired. Replace it to keep monthly charges going.');
+        // SV-02: an expired card shows the expired state only,
+        // never the approaching-expiry pill.
+        $response->assertDontSee('Expires soon');
+        $response->assertDontSee('This card expires soon. Replace it to keep monthly charges going.');
+    }
+
+    public function test_card_expiring_within_sixty_days_carries_the_expires_soon_pill(): void
+    {
+        $business = World::business(['billing_status' => 'active']);
+        $owner = World::owner($business);
+        $soon = now()->addDays(20);
+        $this->card($business, ['exp_month' => $soon->month, 'exp_year' => $soon->year]);
+
+        $response = $this->actingAs($owner)->get(route('settings.billing'));
+
+        $response->assertOk();
+        $response->assertSee('pill-warning', false);
+        $response->assertSee('Expires soon');
+        $response->assertSee('This card expires soon. Replace it to keep monthly charges going.');
+        $response->assertDontSee('This card has expired. Replace it to keep monthly charges going.');
+        // The warning sits on the card panel, beside the
+        // existing Replace action.
+        $response->assertSee('Replace card');
+    }
+
+    public function test_card_expiring_beyond_sixty_days_carries_no_warning(): void
+    {
+        $business = World::business(['billing_status' => 'active']);
+        $owner = World::owner($business);
+        $later = now()->addDays(120);
+        $this->card($business, ['exp_month' => $later->month, 'exp_year' => $later->year]);
+
+        $response = $this->actingAs($owner)->get(route('settings.billing'));
+
+        $response->assertOk();
+        $response->assertDontSee('Expires soon');
+        $response->assertDontSee('This card expires soon. Replace it to keep monthly charges going.');
     }
 
     public function test_rendering_the_page_persists_nothing(): void

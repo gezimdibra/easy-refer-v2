@@ -9,7 +9,9 @@ use App\Models\Referral;
 use App\Models\ReferralEvent;
 use App\Models\Reward;
 use App\Models\SmsMessage;
+use App\Services\Billing\SettlementService;
 use App\Services\Billing\VisitValuation;
+use App\Support\SetupChecklist;
 use App\Support\StarterPacks;
 use Carbon\Carbon;
 use DateTimeImmutable;
@@ -32,7 +34,7 @@ use Illuminate\View\View;
  */
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, VisitValuation $valuation): View
+    public function __invoke(Request $request, VisitValuation $valuation, SettlementService $settlement): View
     {
         $user = $request->user();
         $business = $user->business;
@@ -232,18 +234,15 @@ class DashboardController extends Controller
 
         $packs = StarterPacks::forType($business->business_type);
 
-        $checklist = [
-            'email_verified' => $user->hasVerifiedEmail(),
-            'reward_text' => $business->friend_reward_text !== null && trim((string) $business->friend_reward_text) !== '',
-            'poster_downloaded' => ReferralEvent::query()
-                ->where('business_id', $business->id)
-                ->where('event_type', 'poster_downloaded')
-                ->exists(),
-            // The card-on-file signal that exists in v2 today is
-            // the Square customer record; the card capture surface
-            // itself ships with billing (Phase 4).
-            'card_on_file' => $business->square_customer_id !== null,
-        ];
+        // The checklist computation is shared with the Action
+        // Center (RK-01) so the two surfaces can never disagree
+        // about how far setup has come.
+        $checklist = SetupChecklist::for($business, $user);
+
+        // The shell's Action Center badge reads the same
+        // checklist for its setup row; hand this request's
+        // computation over instead of running it twice.
+        $request->attributes->set('action_center_checklist', $checklist);
 
         return view('owner.dashboard', [
             'business' => $business,
@@ -255,7 +254,11 @@ class DashboardController extends Controller
             // visit has landed yet.
             'firstCustomer' => $hasEnrollments && $counters['completed_total'] === 0,
             'value' => $valuation->forMonth($business, now()),
-            'valueAllTime' => $valuation->settle($business),
+            'valueAllTime' => $allTimeSettlement = $valuation->settle($business),
+            // RK-03's forecast line renders from the accrued
+            // preview of THIS settlement pass: the settlement
+            // runs once per dashboard load, not once per panel.
+            'forecastPreview' => $settlement->accruedPreview($business, $allTimeSettlement),
             'emailVerified' => $user->hasVerifiedEmail(),
             'showStarterPack' => $business->friend_reward_text === null && $packs !== [],
             'packs' => $packs,

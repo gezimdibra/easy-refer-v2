@@ -250,6 +250,71 @@ class Business extends Model
     }
 
     /**
+     * The printed poster's pass-2 line (QR growth kit, copy
+     * REF-POSTER-02a): the scanner's own payoff beside the
+     * friend's, rendered from BOTH reward texts through this
+     * one composer so every print artifact phrases it
+     * identically. The friend reward stays the headline; this
+     * line answers "what do I get" for the person holding the
+     * phone. Each text is trimmed and stripped of a trailing
+     * period, and the "Give" side derives from the friend
+     * reward's leading figure (the poster's own extraction),
+     * so it never prints a whole sentence.
+     */
+    /**
+     * One reward text, normalized for composition: trimmed, a
+     * trailing period stripped, then trimmed again — owners
+     * type "A free coffee ." with a space before the period,
+     * and the space the strip leaves behind must not reach
+     * the line (F-11: it printed "Give A free coffee . Get ..."
+     * and doubled the space before "when" on the Get side).
+     */
+    private static function rewardTextForLine(?string $text): string
+    {
+        return trim(rtrim(trim((string) $text), '.'));
+    }
+
+    public function giveGetLine(): string
+    {
+        $friend = self::rewardTextForLine($this->friend_reward_text);
+        $referrer = self::rewardTextForLine($this->referrer_reward_text);
+
+        if ($friend !== '' && $referrer !== '') {
+            return 'Give '.$this->giveFigure().'. Get '.$referrer.' when your friend visits.';
+        }
+
+        if ($friend !== '') {
+            return 'Share it with a friend. You get a reward when they visit.';
+        }
+
+        if ($referrer !== '') {
+            return 'Your friend gets a reward on their first visit. You get '.$referrer.' when they visit.';
+        }
+
+        return 'Scan, share, and you both get rewarded when your friend visits.';
+    }
+
+    /**
+     * The "Give" amount: the friend reward's leading figure
+     * ("$10", "20%", "10 percent"), plus the word "off" when
+     * the text carries it ("$10 off"). A reward with no
+     * leading figure gives its whole short text ("A free
+     * coffee").
+     */
+    private function giveFigure(): string
+    {
+        $friend = self::rewardTextForLine($this->friend_reward_text);
+
+        if (preg_match('/^(\$?\d+(?:[.,]\d+)?(?:\s*(?:%|percent\b))?)/i', $friend, $match) === 1) {
+            $rest = substr($friend, strlen($match[1]));
+
+            return preg_match('/^\s*off\b/i', $rest) === 1 ? $match[1].' off' : $match[1];
+        }
+
+        return $friend;
+    }
+
+    /**
      * Whether the public referral flow is live (spec Section 9.9):
      * the flow activates only once a card is on file, which flips
      * billing_status from setup_incomplete to active at onboarding

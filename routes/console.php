@@ -5,6 +5,7 @@ use App\Console\Commands\ExpireReferrals;
 use App\Console\Commands\NotifyDueRewards;
 use App\Console\Commands\PruneFlowState;
 use App\Console\Commands\SendDunning;
+use App\Console\Commands\SendForecastReminders;
 use App\Console\Commands\SettleBilling;
 use App\Console\Commands\SweepPendingBilling;
 use App\Console\Commands\SweepPendingCards;
@@ -54,6 +55,13 @@ Schedule::command(SweepPendingBilling::class)->hourly();
 // this contract alone.
 Schedule::command(SettleBilling::class)->dailyAt('02:00');
 Schedule::command(ChargeBilling::class)->monthlyOn(1, '03:00');
+
+// The owner-facing billing reminders (RK-03): the pre-charge
+// forecast email inside the 3 days before the charge and the
+// card-expiry guard inside the 30 days before an expiry that
+// beats the next charge; each sends once per charge cycle,
+// tracked in the audit log, so a daily rhythm is safe.
+Schedule::command(SendForecastReminders::class)->dailyAt('08:00');
 
 // Queue drain (email diagnosis, 2026-10-24): QUEUE_CONNECTION
 // is `database` and nothing else on this platform runs a

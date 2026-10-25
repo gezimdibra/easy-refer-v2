@@ -14,6 +14,7 @@
         ['referrals.index', 'referrals.*', 'share-2', 'Referrals'],
         ['rewards.index', 'rewards.*', 'gift', 'Rewards'],
         ['campaigns.index', 'campaigns.*', 'message-circle', 'Campaigns'],
+        ['actions.index', 'actions.*', 'circle-alert', 'Action Center'],
         ['reviews', 'reviews*', 'clipboard-check', 'Review'],
         ['owner.qr', 'owner.qr', 'qr-code', 'QR Code'],
         ['settings', 'settings*', 'settings', 'Settings'],
@@ -30,6 +31,9 @@
                 {{ $label }}
                 @if ($routeName === 'reviews' && ($reviewQueueCount ?? 0) > 0)
                     <span class="pill pill-danger ml-auto">{{ $reviewQueueCount }}</span>
+                @endif
+                @if ($routeName === 'actions.index' && ($actionCenterCount ?? 0) > 0)
+                    <span class="pill pill-danger ml-auto" data-action-center-badge>{{ $actionCenterCount }}</span>
                 @endif
             </a>
         </li>

@@ -16,9 +16,17 @@
 
     <div class="mx-auto mt-6 max-w-[420px] rounded-xl border border-line bg-surface-0 shadow-e2" style="padding: 32px">
         <img src="{{ $imageUrl }}" alt="QR code for {{ $business->name }}" width="280" height="280" class="mx-auto">
-        <form method="POST" action="{{ route('owner.qr.download') }}" class="mt-6 text-center" data-loading>
+        <p class="mt-6 text-center">
+            {{-- F-06 (coordinator ruling): the mini-poster is a
+                 print artifact this release, so the action says
+                 Print, sibling-consistent with every other poster
+                 action; shareable raster images are decided once
+                 in Train 3 with QRK-08. --}}
+            <a class="btn btn-primary" href="{{ route('owner.qr.poster', ['variant' => 'mini', 'print' => 1]) }}"><x-icon name="printer" :size="20" /> Print mini-poster</a>
+        </p>
+        <form method="POST" action="{{ route('owner.qr.download') }}" class="mt-3 text-center" data-loading>
             @csrf
-            <button type="submit" class="btn btn-primary"><x-icon name="download" :size="20" /> Download QR code</button>
+            <button type="submit" class="btn btn-secondary"><x-icon name="download" :size="20" /> Download code only (for your own designs)</button>
         </form>
         {{-- The public link as a designed copy field (the link
              itself is product surface: owners paste it into
@@ -39,18 +47,28 @@
                 ['screen', 'For a screen or tablet'],
                 ['counter', 'For the counter, A5'],
                 ['window', 'Full page, for the window'],
+                ['tent', 'Table tent, two faces'],
+                ['receipt', 'Receipt / thank-you card'],
             ] as [$variant, $label])
-                <li class="flex flex-wrap items-center gap-4">
-                    <span class="flex h-14 w-14 flex-none items-center justify-center rounded-lg border border-line bg-surface-0 p-1.5">
-                        <img src="{{ $imageUrl }}" alt="" class="h-full w-full">
+                {{-- F-05: on a phone this row stacks (thumb +
+                     label on one line, the action full-width
+                     below) instead of squeezing the label into a
+                     word-per-line column; at sm and up it is the
+                     desktop row again. Mobile is its own design,
+                     not the desktop row narrowed. --}}
+                <li class="poster-row flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                    <span class="flex min-w-0 flex-1 items-center gap-4">
+                        <span class="flex h-14 w-14 flex-none items-center justify-center rounded-lg border border-line bg-surface-0 p-1.5">
+                            <img src="{{ $imageUrl }}" alt="" class="h-full w-full">
+                        </span>
+                        <span class="type-body text-text-1">{{ $label }}</span>
                     </span>
-                    <span class="type-body flex-1 text-text-1">{{ $label }}</span>
                     {{-- T2-F5: these open the poster print page, so
                          they say so (and open it in print mode),
                          matching the Print counter poster action
                          below; "Download" promised a file that
                          never came. --}}
-                    <a class="btn btn-secondary" href="{{ route('owner.qr.poster', ['variant' => $variant, 'print' => 1]) }}"><x-icon name="printer" :size="20" /> Print poster</a>
+                    <a class="btn btn-secondary w-full justify-center sm:w-auto" href="{{ route('owner.qr.poster', ['variant' => $variant, 'print' => 1]) }}"><x-icon name="printer" :size="20" /> Print poster</a>
                 </li>
             @endforeach
         </ul>

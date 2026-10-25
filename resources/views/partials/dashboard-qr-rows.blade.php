@@ -9,7 +9,7 @@
 --}}
 <ul class="mt-3 divide-y divide-line border-t border-line">
     <li>
-        <a class="flex min-h-12 items-center gap-1.5 font-semibold text-link hover:underline" href="{{ route('owner.qr') }}#posters">Download the on-screen poster <x-icon name="arrow-up-right" :size="16" class="flex-none" /></a>
+        <a class="flex min-h-12 items-center gap-1.5 font-semibold text-link hover:underline" href="{{ route('owner.qr') }}#posters">Print your posters <x-icon name="arrow-up-right" :size="16" class="flex-none" /></a>
     </li>
     <li>
         <a class="flex min-h-12 items-center gap-1.5 font-semibold text-link hover:underline" href="{{ route('owner.qr') }}#how-redemption-works">See how redemption works <x-icon name="arrow-up-right" :size="16" class="flex-none" /></a>

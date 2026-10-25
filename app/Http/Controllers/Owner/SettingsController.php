@@ -12,6 +12,7 @@ use App\Models\Referral;
 use App\Models\ReferralEvent;
 use App\Services\Billing\SettlementService;
 use App\Services\Billing\VisitValuation;
+use App\Support\ActionToast;
 use App\Support\GoogleReviewUrl;
 use App\Support\PhoneNumber;
 use Carbon\Carbon;
@@ -154,6 +155,15 @@ class SettingsController extends Controller
 
         $business = $request->user()->business;
 
+        // RS-14: the reward TEXTS are the reversible part of
+        // this save, so the toast's Undo snapshots the raw
+        // prior pair; the windows and vesting in the same save
+        // are settings, not texts, and an undo leaves them be.
+        $priorTexts = [
+            'friend_reward_text' => $business->getRawOriginal('friend_reward_text'),
+            'referrer_reward_text' => $business->getRawOriginal('referrer_reward_text'),
+        ];
+
         $business->forceFill([
             'friend_reward_text' => $data['friend_reward_text'],
             'referrer_reward_text' => $data['referrer_reward_text'] ?? null,
@@ -165,6 +175,15 @@ class SettingsController extends Controller
             'redemption_window_days' => (int) $data['redemption_window_days'],
             'reward_vesting_days' => (int) $data['reward_vesting_days'],
         ], $business);
+
+        ActionToast::undoable(
+            $request,
+            'Rewards saved.',
+            'reward_texts',
+            $priorTexts,
+            'Your reward changes were undone.',
+            'settings.rewards',
+        );
 
         return back()->with('status', 'Rewards saved.');
     }
@@ -304,6 +323,7 @@ class SettingsController extends Controller
     {
         return view('owner.settings.account', [
             'business' => $request->user()->business,
+            'user' => $request->user(),
         ]);
     }
 
@@ -338,6 +358,16 @@ class SettingsController extends Controller
                 || ($card->exp_year === now()->year && $card->exp_month < now()->month);
         }
 
+        // SV-02: an unexpired card whose expiry (the end of its
+        // expiry month) lands within 60 days warns before it can
+        // fail a charge; an expired card never doubles as "soon".
+        $cardExpiresSoon = false;
+        if ($card !== null && ! $cardExpired) {
+            $cardExpiresSoon = Carbon::create($card->exp_year, $card->exp_month, 1)
+                ->endOfMonth()
+                ->lessThanOrEqualTo(now()->addDays(60));
+        }
+
         $records = BillingRecord::query()
             ->where('business_id', $business->id)
             ->where('kind', BillingRecord::KIND_PER_REFERRAL_BATCH)
@@ -351,6 +381,7 @@ class SettingsController extends Controller
             'plan' => $plan,
             'card' => $card,
             'cardExpired' => $cardExpired,
+            'cardExpiresSoon' => $cardExpiresSoon,
             'pendingCard' => $pendingCard,
             'month' => $valuation->forMonth($business, now()),
             'freeTotal' => (int) config('billing.free_visits_at_signup'),

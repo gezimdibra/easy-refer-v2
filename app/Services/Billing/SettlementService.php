@@ -34,11 +34,18 @@ class SettlementService
      * walk is the same one settleAndPersist() persists, so the
      * preview and the eventual batch agree by construction.
      *
+     * A caller that already holds this request's settlement
+     * (the dashboard's Value panel settles for its all-time
+     * figures) passes it in, so the settlement — a full pass
+     * over the business's billing events — runs once per page,
+     * never twice. The figures are identical either way: this
+     * method is their only source.
+     *
      * @return array{accrued_cents: int, billable_events: int}
      */
-    public function accruedPreview(Business $business): array
+    public function accruedPreview(Business $business, ?array $settlement = null): array
     {
-        $settlement = (new VisitValuation)->settle($business);
+        $settlement ??= (new VisitValuation)->settle($business);
 
         $accrued = 0;
         $count = 0;

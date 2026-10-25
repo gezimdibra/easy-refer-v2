@@ -134,5 +134,22 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with('reviewQueueCount', $count);
         });
+
+        // The Action Center badge in the dashboard shell
+        // (RK-01): the count of open items for the signed-in
+        // business. Zero renders no badge at all (silence =
+        // healthy, Amendment 22 AC-02).
+        \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
+            $user = auth()->user();
+            $count = 0;
+
+            if ($user !== null && $user->business !== null) {
+                $checklist = request()->attributes->get('action_center_checklist');
+                $count = app(\App\Services\Owner\ActionCenter::class)
+                    ->openCount($user->business, $user, is_array($checklist) ? $checklist : null);
+            }
+
+            $view->with('actionCenterCount', $count);
+        });
     }
 }

@@ -22,6 +22,9 @@
     @foreach ($heldReferrals as $referral)
         <div class="panel mt-4">
             <p class="type-title-4 text-text-1">{{ $referral->referredCustomer->first_name }}, <span class="font-normal text-text-2">referred by {{ $referral->referrerMembership->customer->first_name }}</span></p>
+            @if ($referral->held_at !== null)
+                <p class="type-body-sm mt-1 text-text-2">Waiting {{ \App\Support\AgeLabel::of($referral->held_at) }}</p>
+            @endif
             @foreach (\App\Support\HoldReasons::sentences($referral->hold_rules, $business) as $sentence)
                 <p class="banner banner-warning mt-3">{{ $sentence }}</p>
             @endforeach
@@ -45,6 +48,9 @@
     @foreach ($heldRewards as $reward)
         <div class="panel mt-4">
             <p class="type-title-4 text-text-1">{{ $reward->membership->customer->first_name }}'s reward: <span class="font-normal text-text-2">{{ $reward->reward_text_snapshot }}</span></p>
+            @if ($reward->held_at !== null)
+                <p class="type-body-sm mt-1 text-text-2">Waiting {{ \App\Support\AgeLabel::of($reward->held_at) }}</p>
+            @endif
             @foreach (\App\Support\HoldReasons::sentences($reward->hold_rules, $business) as $sentence)
                 <p class="banner banner-warning mt-3">{{ $sentence }}</p>
             @endforeach

@@ -51,7 +51,9 @@ class OverviewTest extends TestCase
             ->assertSee('Your program is live. The first step is getting your code where customers can see it.')
             // The action card's designed line and text actions (F-09c).
             ->assertSee('Posters at the register get scanned. Posters in a drawer do not.')
-            ->assertSee('Download the on-screen poster')
+            // DASH-18 (Train 2 LV-02 micro-unit): the row is
+            // honest navigation wording now.
+            ->assertSee('Print your posters')
             ->assertSee('See how redemption works')
             ->assertSee('Print your QR code')
             // PACK-00: the starter pack card shows while rewards
@@ -73,9 +75,9 @@ class OverviewTest extends TestCase
             // the Sprint 3 fix wave (UI F-08): a stable tile set
             // in every state, and the tile links to the list.
             ->assertSee('Rewards waiting to be claimed')
-            // The AUTH-SEC-03 checklist: four items, a progress
-            // line (F-09b).
-            ->assertSee('1 of 4 done')
+            // The checklist: six items since Train 2 LV-02
+            // (DASH-16/17 joined), a progress line (F-09b).
+            ->assertSee('1 of 6 done')
             ->assertSee('Add a card (required to activate your QR code)')
             // The Value panel's zero variant (VAL-01, VAL-03): no
             // estimate, no illustrative numbers.

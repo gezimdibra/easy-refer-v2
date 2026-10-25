@@ -86,4 +86,31 @@ class PosterAudienceTest extends TestCase
             );
         }
     }
+
+    public function test_tent_and_receipt_address_the_customer_not_the_owner(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        World::qr($business);
+
+        foreach (['tent', 'receipt'] as $variant) {
+            $response = $this->actingAs($owner)->get(route('owner.qr.poster', $variant));
+            $response->assertOk();
+
+            $text = html_entity_decode(strip_tags($response->getContent()));
+            $text = (string) preg_replace('/\s+/', ' ', $text);
+
+            foreach ($this->ownerTalk as $phrase) {
+                $this->assertSame(
+                    0,
+                    preg_match('/'.preg_quote($phrase, '/').'/i', $text),
+                    "Poster variant [{$variant}] contains owner-addressed phrasing \"{$phrase}\"; "
+                    .'a printed artifact is read by customers only and must talk to them.'
+                );
+            }
+
+            $this->assertStringContainsString('Get $10 off your first visit', $text);
+            $this->assertStringContainsString('Scan to join', $text);
+        }
+    }
 }

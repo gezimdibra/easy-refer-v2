@@ -12,6 +12,25 @@
          screen; nothing sends from here. --}}
     <h1 class="type-title-2 text-text-1">New text campaign</h1>
 
+    @if ($available)
+        {{-- Presets (LV-01; CAMP-16..19): each button starts a
+             draft with a ready-made body and lands on the
+             confirm screen. The bodies are message text only;
+             the locked prefix and STOP suffix are system parts. --}}
+        <div class="panel mt-5">
+            <h2 class="type-title-3 text-text-1">Start from a ready-made message</h2>
+            <div class="mt-3 flex flex-wrap gap-2">
+                @foreach ($presets as $key => $preset)
+                    <form method="POST" action="{{ route('campaigns.preset') }}" data-loading>
+                        @csrf
+                        <input type="hidden" name="preset" value="{{ $key }}">
+                        <button type="submit" class="btn btn-secondary">{{ $preset['name'] }}</button>
+                    </form>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     @if (! $available)
         <div class="panel mt-5">
             <p class="text-text-1">Text campaigns are not available right now.</p>

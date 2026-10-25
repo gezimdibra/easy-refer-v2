@@ -37,6 +37,16 @@
         </div>
     @endif
 
+    {{-- SV-03 (Train 2): a failed payment gates the dashboard
+         too, in the same words as the billing banner and the
+         Action Center row (one shared partial, BILL-PD-01).
+         The raw status word never renders. --}}
+    @if ($business->billing_status === 'past_due')
+        <div class="gate mt-4">
+            @include('partials.billing-past-due', ['cardHref' => route('settings.billing').'#card'])
+        </div>
+    @endif
+
     {{-- DG-2 (release 08b): the checklist's done count and the
          poster step's state are computed once, ahead of the QR
          card, because both the card's collapsed form and the
@@ -303,6 +313,7 @@
         @else
             <p class="type-body-sm mt-1 text-text-2">After your first visit counts, this panel shows what Easy Refer brought you, in visits and in estimated sales.</p>
         @endif
+        @include('partials.billing-forecast', ['class' => 'mt-2 text-text-1', 'preview' => $forecastPreview])
         @if ((int) $business->average_ticket_cents > 0)
             <p class="mt-2 text-text-2">Estimates use your average ticket of {{ '$'.number_format((int) $business->average_ticket_cents / 100, 2) }}. Update it any time in <a class="font-semibold text-link hover:underline" href="{{ route('settings.value') }}">Settings</a>.</p>
         @else

@@ -81,7 +81,11 @@
 
     <div class="panel mt-4 [&_input]:max-w-[560px] [&_select]:max-w-[560px]">
         <h2 class="type-title-3 text-text-1">Change email</h2>
-        <p class="mt-1 text-text-2">Your current email address is {{ $user->email }}. Changing it sends a verification link to the new address, and your public QR code and billing stay off until that link is used. A notice also goes to the old address.</p>
+        {{-- F-09: the intro no longer restates the consequence;
+             the shared partial below states it once, in its own
+             wording, when the current address is unverified. --}}
+        <p class="mt-1 text-text-2">Your current email address is {{ $user->email }}. @include('partials.account-email-state', ['user' => $user, 'part' => 'pill', 'showAddress' => false, 'context' => 'security']) Changing it sends a verification link to the new address. A notice also goes to the old address.</p>
+        @include('partials.account-email-state', ['user' => $user, 'part' => 'actions', 'showAddress' => false, 'context' => 'security'])
         <form method="POST" action="{{ route('security.email') }}" class="mt-3" data-loading>
             @csrf
 

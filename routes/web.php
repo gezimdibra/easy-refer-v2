@@ -18,6 +18,8 @@ use App\Http\Controllers\ReferController;
 use App\Http\Controllers\StaffRedemptionController;
 use App\Http\Controllers\SquareWebhookController;
 use App\Http\Controllers\TwilioWebhookController;
+use App\Http\Controllers\Owner\ActionCenterController;
+use App\Http\Controllers\Owner\UndoController;
 use App\Http\Controllers\Owner\BillingCardController;
 use App\Http\Controllers\Owner\CampaignsController;
 use App\Http\Controllers\Owner\DashboardController;
@@ -168,6 +170,15 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
     Route::post('auth/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist'])
         ->middleware('origin.check')
         ->name('dashboard.checklist.dismiss');
+    Route::get('auth/actions', [ActionCenterController::class, 'index'])->name('actions.index');
+    Route::post('auth/actions/{key}/dismiss', [ActionCenterController::class, 'dismiss'])
+        ->middleware('origin.check')
+        ->name('actions.dismiss');
+    // RS-14: the one Undo endpoint behind every reversible
+    // action's success toast (token in the POST body only).
+    Route::post('auth/actions/undo', [UndoController::class, 'store'])
+        ->middleware('origin.check')
+        ->name('actions.undo');
     Route::get('auth/security', [SecurityController::class, 'show'])->name('security');
     Route::get('auth/reviews', [ReviewsController::class, 'index'])->name('reviews');
     Route::post('auth/reviews/referrals/{referral}/release', [ReviewsController::class, 'releaseReferral'])->name('reviews.referrals.release');
@@ -246,6 +257,12 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
     Route::post('auth/campaigns', [CampaignsController::class, 'store'])
         ->middleware('origin.check')
         ->name('campaigns.store');
+    Route::post('auth/campaigns/preset', [CampaignsController::class, 'preset'])
+        ->middleware('origin.check')
+        ->name('campaigns.preset');
+    Route::post('auth/campaigns/{campaign}/duplicate', [CampaignsController::class, 'duplicate'])
+        ->middleware('origin.check')
+        ->name('campaigns.duplicate');
     Route::get('auth/campaigns/{campaign}/confirm', [CampaignsController::class, 'confirm'])->name('campaigns.confirm');
     Route::post('auth/campaigns/{campaign}/send', [CampaignsController::class, 'send'])
         ->middleware('origin.check')
