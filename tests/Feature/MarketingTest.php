@@ -343,8 +343,14 @@ class MarketingTest extends TestCase
         $response->assertDontSee('we revolutionize');
         $response->assertDontSee('global standard');
         $response->assertSee('info@easy-refer.com');
-        $response->assertSee('+1 (833) 803-2400');
         $response->assertSee('104 West 27th Street, New York, NY 10001');
+        // Coordinator ruling 2026-10-25: +1 (833) 803-2400 is
+        // the outbound texting line, not a staffed support line,
+        // so it is never published as a contact channel. The
+        // About contact block is email-only and the number does
+        // not render anywhere on the page.
+        $response->assertDontSee('803-2400');
+        $response->assertDontSee('(833)');
 
         // The OD-6 approved set (closed 2026-10-23): the founding
         // clause and the Our Impact counters, from the claims
@@ -463,9 +469,94 @@ class MarketingTest extends TestCase
         $response = $this->get('/refund');
 
         $response->assertOk();
-        $response->assertSee('Businesses are charged $2.00 per verified referral visit.');
+        // Legal decisions (2026-10-25, Amendment 20): the banned
+        // "verified" wording is replaced with the decided plain
+        // strings, and the amount still renders from the plan.
+        $response->assertSee('Businesses are charged $2.00 for each visit that counts.');
         $response->assertSee('We acknowledge disputes within 2 business days');
         $response->assertDontSee('Stripe');
+    }
+
+    public function test_refund_page_states_the_decided_policy(): void
+    {
+        $response = $this->get('/refund');
+
+        $response->assertOk();
+        // Item 3: no subscription exists, so the page no longer
+        // frames charges as subscription fees or partial months.
+        $response->assertDontSee('Subscription');
+        $response->assertDontSee('Partial months');
+        $response->assertSee('You are charged once a month for the visits that counted.');
+        // Item 1: neither banned "verified" use survives anywhere
+        // on this page (the absence is scoped to /refund).
+        $response->assertDontSee('verified');
+        $response->assertSee('failed delivery caused by a system problem on our side.');
+        // Item 2: the exact texting rate, rendered from the same
+        // billing config as the home page's pricing section.
+        $response->assertSee('Text campaigns cost '.(int) config('billing.sms_segment_price_cents').' cents per segment for each customer');
+        // Item 4: one window everywhere: 30 days to raise it,
+        // approved refunds issued within 7 business days.
+        $response->assertSee('Disputes must be raised within 30 days');
+        $response->assertSee('Approved refunds are issued within 7 business days.');
+    }
+
+    public function test_legal_page_states_the_decided_windows_and_compliance(): void
+    {
+        $response = $this->get('/legal');
+
+        $response->assertOk();
+        // Item 4: the legal page carries the same unified window
+        // as the refund page; the old 14-day / 7-to-10-day lines
+        // are gone.
+        $response->assertSee('Refund requests must be made within 30 days of payment. Approved refunds are issued within 7 business days.');
+        $response->assertDontSee('within 14 days of payment');
+        $response->assertDontSee('7 to 10 business days');
+        // Item 6: no blanket compliance certification claim; the
+        // softened line states only what is provable.
+        $response->assertDontSee('built to comply with');
+        $response->assertDontSee('GDPR');
+        $response->assertDontSee('PCI DSS');
+        $response->assertSee('Card payments are handled by Square; card details never touch our servers, and we do not store payment information ourselves.');
+        // Item 7 + coordinator ruling follow-up 2026-10-25:
+        // support stays email-only everywhere, and the absence
+        // now covers the WHOLE response, structured data
+        // included (the layout JSON-LD telephone was removed
+        // under the same ruling; see the structured-data test).
+        $response->assertSee('mailto:support@easy-refer.com');
+        $this->assertStringNotContainsString('803-2400', $response->getContent());
+        $this->assertStringNotContainsString('(833)', $response->getContent());
+    }
+
+    public function test_marketing_structured_data_declares_no_telephone(): void
+    {
+        // Coordinator ruling follow-up 2026-10-25: the marketing
+        // layout's JSON-LD declared the +1 (833) 803-2400
+        // texting line as the organization's telephone, at the
+        // organization level and on the contact point. That line
+        // is an outbound SMS number, not a support channel, so
+        // the structured data is email-only too; the rest of the
+        // JSON-LD stays intact and valid.
+        $response = $this->get('/about');
+        $response->assertOk();
+
+        $content = $response->getContent();
+        $this->assertStringNotContainsString('803-2400', $content);
+        $this->assertStringNotContainsString('(833)', $content);
+
+        $this->assertSame(1, preg_match('/<script type="application\/ld\+json">(.*?)<\/script>/s', $content, $m));
+        $this->assertStringNotContainsString('telephone', $m[1]);
+        $data = json_decode($m[1], true);
+        $this->assertIsArray($data);
+        $org = $data['@graph'][0];
+        $this->assertSame('Organization', $org['@type']);
+        $this->assertSame('Easy Refer', $org['name']);
+        $this->assertSame('support@easy-refer.com', $org['email']);
+        $this->assertArrayNotHasKey('telephone', $org);
+        $this->assertNotEmpty($org['sameAs']);
+        $this->assertSame('ContactPoint', $org['contactPoint']['@type']);
+        $this->assertSame('support@easy-refer.com', $org['contactPoint']['email']);
+        $this->assertSame('customer support', $org['contactPoint']['contactType']);
+        $this->assertArrayNotHasKey('telephone', $org['contactPoint']);
     }
 
     public function test_blog_index_shows_the_intro_and_the_empty_state(): void

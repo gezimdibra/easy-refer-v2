@@ -45,7 +45,14 @@
                 <span class="type-caption block truncate text-text-2">{{ auth()->user()->email }}</span>
             </span>
         </div>
-        <form method="POST" action="{{ route('logout') }}" class="mt-2">
+        {{-- Help (release 18): the shell's support path. The
+             address is the one published on the legal page;
+             the subject is prefilled so the owner's mail opens
+             ready to write. --}}
+        <a href="mailto:support@easy-refer.com?subject=Easy%20Refer%20help" class="mt-2 flex min-h-[48px] w-full items-center gap-2.5 rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1">
+            <x-icon name="mail" :size="20" /> Help
+        </a>
+        <form method="POST" action="{{ route('logout') }}" class="mt-1">
             @csrf
             <button type="submit" class="flex min-h-[48px] w-full items-center gap-2.5 rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1">
                 <x-icon name="log-out" :size="20" /> Sign out

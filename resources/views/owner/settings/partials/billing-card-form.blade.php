@@ -24,6 +24,24 @@
     SDK styles are fed from the page's computed token values at
     init, so the hosted fields follow the light/dark token
     ladder exactly (spec Section 6); no raw hex appears here.
+
+    STYLE VALIDATION (learned live 2026-10-25 against the
+    CDN-served SDK 1.87.1; sqfix probes 1-4): the SDK validates
+    the style object when attach runs and rejects the entire
+    form on any invalid entry with InvalidStylesError. The
+    input element takes the ELEMENT selectors 'input' and
+    'input::placeholder'; the class forms '.input' and
+    '.input::placeholder' are invalid. A font family value is
+    likewise rejected for any named family (the computed stack,
+    a bare family name, and a name-plus-generic list all fail;
+    only a bare generic family passes), and the hosted iframe
+    cannot load this page's webfont in any case, so no font
+    family is passed at all. The original class selectors plus
+    the computed font stack are why the form never rendered in
+    any browser: attach rejected, the catch showed BILL-02, and
+    the error went nowhere. Failures now reach the console via
+    console.error in the failure paths below, so the next SDK
+    change is diagnosable instead of silent.
 --}}
 @php
     $squareEnvironment = (string) config('services.square.environment', 'sandbox');
@@ -69,7 +87,10 @@
         var errorList = ui.querySelector('[data-billing-tokenize-error-list]');
         var live = ui.querySelector('[data-billing-live]');
 
-        function loadFailed() {
+        function loadFailed(error) {
+            if (error) {
+                console.error('[billing] The secure card form failed to load.', error);
+            }
             sdkError.hidden = false;
             live.textContent = sdkError.textContent.trim();
         }
@@ -110,7 +131,7 @@
                 @json((string) config('services.square.location_id'))
             );
         } catch (error) {
-            loadFailed();
+            loadFailed(error);
             return;
         }
 
@@ -120,12 +141,11 @@
                     borderColor: token('--color-line'),
                     borderRadius: '8px'
                 },
-                '.input': {
+                'input': {
                     color: token('--color-text-1'),
-                    fontFamily: getComputedStyle(document.body).fontFamily,
                     fontSize: '16px'
                 },
-                '.input::placeholder': {
+                'input::placeholder': {
                     color: token('--color-text-2')
                 },
                 '.message-text': {
@@ -165,7 +185,8 @@
                         summary.hidden = false;
                         summary.focus();
                         live.textContent = 'Some card details need another look.';
-                    }).catch(function () {
+                    }).catch(function (error) {
+                        console.error('[billing] Card tokenize failed.', error);
                         form.dataset.tokenizing = 'false';
                         setBusy(false);
                         errorList.innerHTML = '';

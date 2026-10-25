@@ -49,7 +49,6 @@
                 "name": "Easy Refer",
                 "url": "{{ route('home') }}",
                 "email": "support@easy-refer.com",
-                "telephone": "+1 (833) 803-2400",
                 "sameAs": [
                     "https://www.facebook.com/people/EasyRefer/61571833155688",
                     "https://www.instagram.com/easy.refer",
@@ -59,7 +58,6 @@
                 "contactPoint": {
                     "@@type": "ContactPoint",
                     "email": "support@easy-refer.com",
-                    "telephone": "+1-833-803-2400",
                     "contactType": "customer support"
                 }
             },

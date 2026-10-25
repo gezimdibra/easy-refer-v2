@@ -124,7 +124,6 @@
         <h2 class="type-title-1 text-text-1">Get in touch</h2>
         <address class="mt-4 text-base not-italic text-text-2">
             <p><a class="font-semibold text-link underline" href="mailto:info@easy-refer.com">info@easy-refer.com</a></p>
-            <p class="mt-1">+1 (833) 803-2400</p>
             <p class="mt-1">104 West 27th Street, New York, NY 10001</p>
         </address>
     </section>

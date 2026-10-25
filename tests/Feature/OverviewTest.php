@@ -85,6 +85,25 @@ class OverviewTest extends TestCase
             ->assertDontSee('Estimated first-visit sales');
     }
 
+    public function test_owner_shell_renders_the_help_link(): void
+    {
+        // Release 18, GROUP A (owner-approved 2026-10-25): the
+        // authed shell carries a Help item in the rail (the same
+        // partial serves the desktop rail and the mobile
+        // slide-over), pointing at the published support address
+        // with the decided prefilled subject. The href is pinned
+        // exactly so the address or subject cannot drift.
+        $business = World::business();
+        $owner = World::owner($business);
+        $owner->forceFill(['email_verified_at' => now()])->save();
+
+        $response = $this->actingAs($owner)->get(route('dashboard'));
+
+        $response->assertOk()
+            ->assertSee('href="mailto:support@easy-refer.com?subject=Easy%20Refer%20help"', false)
+            ->assertSee('Help');
+    }
+
     public function test_starter_pack_prefills_settings_rewards_without_saving(): void
     {
         // Spec Section 5.5 and design 6.4.1 item 3 (Sprint 3

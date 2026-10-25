@@ -81,6 +81,40 @@ class BillingCardCaptureTest extends TestCase
         $response->assertSee('Add card');
     }
 
+    public function test_capture_form_style_object_matches_the_sdk_validator(): void
+    {
+        // The CDN-served SDK validates the style object at attach
+        // and rejects the whole form on any invalid entry (proven
+        // live against SDK 1.87.1 on 2026-10-25, sqfix probes
+        // 1-4): the class selectors '.input' and
+        // '.input::placeholder' throw InvalidStylesError (the
+        // element selectors 'input' / 'input::placeholder' are
+        // the valid forms), and any named font family value,
+        // including the computed stack, is rejected the same
+        // way. The catch-all then showed BILL-02 with the error
+        // swallowed, so the form never rendered in any browser.
+        config([
+            'services.square.application_id' => 'sq0idp-test-app',
+            'services.square.location_id' => 'LOC_TEST',
+            'services.square.environment' => 'sandbox',
+        ]);
+        $business = World::business(['billing_status' => 'none']);
+        $owner = World::owner($business);
+
+        $response = $this->actingAs($owner)->get(route('settings.billing'));
+
+        $response->assertOk();
+        $response->assertDontSee("'.input':", false);
+        $response->assertDontSee("'.input::placeholder':", false);
+        $response->assertSee("'input':", false);
+        $response->assertSee("'input::placeholder':", false);
+        $response->assertDontSee('fontFamily:', false);
+        // A failed load must be diagnosable: the failure path
+        // logs the caught error instead of swallowing it.
+        $response->assertSee('console.error', false);
+        $response->assertSee('loadFailed(error)', false);
+    }
+
     public function test_production_environment_loads_the_production_sdk_host(): void
     {
         config(['services.square.environment' => 'production']);

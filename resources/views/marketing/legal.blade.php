@@ -44,10 +44,10 @@
             <p class="mt-3 text-base text-text-2">The end user license terms for the Easy Refer service are part of the Terms of Service above and apply to every account and every use of the service.</p>
 
             <h2 id="compliance" class="mt-10 type-title-1 text-text-1">Compliance</h2>
-            <p class="mt-3 text-base text-text-2">Easy Refer is built to comply with GDPR, CCPA, and PCI DSS. We do not store payment information ourselves.</p>
+            <p class="mt-3 text-base text-text-2">Card payments are handled by Square; card details never touch our servers, and we do not store payment information ourselves. Our data practices are the ones described in the Privacy Policy above.</p>
 
             <h2 class="mt-10 type-title-1 text-text-1">Refunds</h2>
-            <p class="mt-3 text-base text-text-2">Refund requests must be made within 14 days of payment. Approved refunds are processed within 7 to 10 business days. Contact <a class="font-semibold text-link underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>.</p>
+            <p class="mt-3 text-base text-text-2">Refund requests must be made within 30 days of payment. Approved refunds are issued within 7 business days. Contact <a class="font-semibold text-link underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>.</p>
             <p class="mt-3 text-base"><a class="font-semibold text-link underline" href="{{ route('refund') }}">Refund Policy</a></p>
         </div>
     </section>
