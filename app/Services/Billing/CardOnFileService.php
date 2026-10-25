@@ -67,6 +67,72 @@ class CardOnFileService
             return $method;
         }
 
+        $this->applySavedCard($business, $method, $result, $actor);
+
+        return $method;
+    }
+
+    /**
+     * Settle a card save whose Square outcome was unknown (the
+     * pending-card resolver, billing UI spec Section 3): the
+     * gateway is asked what it holds for the save, and the row
+     * lands in the same truthful state a synchronous save would
+     * have produced. A save Square never completed fails with
+     * `card_not_created`; an answer that is still unknown leaves
+     * the row pending for the next sweep.
+     *
+     * @return 'adopted'|'failed'|'still_pending'
+     */
+    public function resolvePendingCard(PaymentMethod $method): string
+    {
+        if ($method->state !== PaymentMethod::STATE_PENDING) {
+            return 'still_pending';
+        }
+
+        $business = $method->business;
+
+        if ($business === null) {
+            return 'still_pending';
+        }
+
+        try {
+            $result = $this->gateway->resolveCard($method);
+        } catch (SquareOutcomeUnknown) {
+            return 'still_pending';
+        }
+
+        if ($result === null) {
+            $method->forceFill([
+                'state' => PaymentMethod::STATE_FAILED,
+                'error_code' => 'card_not_created',
+            ])->save();
+
+            return 'failed';
+        }
+
+        if (! $result->succeeded) {
+            $method->forceFill([
+                'state' => PaymentMethod::STATE_FAILED,
+                'error_code' => $result->errorCode,
+            ])->save();
+
+            return 'failed';
+        }
+
+        $this->applySavedCard($business, $method, $result, null);
+
+        return 'adopted';
+    }
+
+    /**
+     * The one success application for a saved card, shared by
+     * the synchronous save and the pending resolver: the old
+     * default is demoted in the same transaction, the row takes
+     * the gateway's fields and the default, a first working card
+     * activates the business, and the save is audited.
+     */
+    private function applySavedCard(Business $business, PaymentMethod $method, CardResult $result, ?User $actor): void
+    {
         DB::transaction(function () use ($business, $method, $result, $actor) {
             PaymentMethod::query()
                 ->where('business_id', $business->id)
@@ -93,8 +159,6 @@ class CardOnFileService
                 'last4' => $result->last4,
             ], $business, $method);
         });
-
-        return $method;
     }
 
     /**

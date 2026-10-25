@@ -245,6 +245,7 @@ class TesterAdversarialTest extends TestCase
         $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
         $this->carryFlowCookie($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->travel(29)->minutes();
         $this->post(route('refer.verify.check'), ['code' => '123456'])
@@ -259,6 +260,7 @@ class TesterAdversarialTest extends TestCase
         $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken2]))->assertOk());
         $this->carryFlowCookie($this->post(route('refer.enroll', ['token' => $qrToken2]), [
             'first_name' => 'Kim', 'last_name' => 'Lee', 'phone' => '2125550222',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->travel(31)->minutes();
         $response = $this->post(route('refer.verify.check'), ['code' => '123456']);

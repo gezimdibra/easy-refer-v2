@@ -1,23 +1,29 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"{!! trim($__env->yieldContent('theme_lock')) === 'light' ? ' class="landing-light-lock"' : '' !!}>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="color-scheme" content="{{ trim($__env->yieldContent('theme_lock')) === 'light' ? 'only light' : 'light dark' }}">
     {{-- SEO and social metadata (landing-page-spec.md Section 7):
          one implementation here, per-page description overrides via
          the meta_description section. Every URL is built from the
          app URL config, so the set is correct at both mounts. --}}
     @php
         $metaTitle = trim($__env->yieldContent('title', config('app.name')));
-        $metaDescription = trim($__env->yieldContent('meta_description', 'Easy Refer turns your customers into referrers with QR codes, verified visits, and rewards you only pay for when they work.'));
+        $metaDescription = trim($__env->yieldContent('meta_description', 'Easy Refer turns your customers into referrers with QR codes, visits that count, and rewards you only pay for when they work.'));
         $metaUrl = url()->current();
         $metaImage = asset('images/photos/og-image.png');
     @endphp
     <meta name="description" content="{{ $metaDescription }}">
     <title>{{ $metaTitle }}</title>
     <link rel="canonical" href="{{ $metaUrl }}">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
+    {{-- A light-locked page (theme_lock section) never presents
+         the dark chrome tint: it renders light at any setting. --}}
+    @if (trim($__env->yieldContent('theme_lock')) !== 'light')
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
+    @endif
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
@@ -29,7 +35,7 @@
     <meta property="og:image" content="{{ $metaImage }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Easy Refer: Turn Your Customers Into Your Best Marketers. Referral marketing for local businesses.">
+    <meta property="og:image:alt" content="Easy Refer: Get Your Customers to Refer Their Friends. Referral marketing for local businesses.">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $metaTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
@@ -81,7 +87,7 @@
 
     <header id="site-header" class="sticky top-0 z-20 border-b border-line bg-surface-0">
         <div class="shell flex h-16 items-center justify-between gap-4">
-            <a href="{{ route('home') }}" class="logo-link" aria-label="Easy Refer home"><x-logo :size="28" /></a>
+            <a href="{{ route('home') }}" class="logo-link" aria-label="Easy Refer home"><x-logo variant="auto" :size="28" /></a>
 
             @if (trim($__env->yieldContent('chrome')) === 'minimal')
                 {{-- Vertical landings (spec Section 2.6): the lockup

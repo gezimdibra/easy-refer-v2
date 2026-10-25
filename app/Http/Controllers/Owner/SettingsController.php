@@ -4,11 +4,17 @@ namespace App\Http\Controllers\Owner;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\BillingRecord;
 use App\Models\Business;
+use App\Models\PaymentMethod;
+use App\Models\Plan;
 use App\Models\Referral;
 use App\Models\ReferralEvent;
+use App\Services\Billing\SettlementService;
+use App\Services\Billing\VisitValuation;
 use App\Support\GoogleReviewUrl;
 use App\Support\PhoneNumber;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -282,6 +288,98 @@ class SettingsController extends Controller
     {
         return view('owner.settings.account', [
             'business' => $request->user()->business,
+        ]);
+    }
+
+    /**
+     * The billing page (billing UI spec Sections 1 and 2, build
+     * unit BU-2): one page assembling Blocks A to E from the
+     * bindings the spec names, so every figure agrees with the
+     * dashboard and the batch by construction. Assembling the
+     * page persists nothing: the this-month figures come from
+     * VisitValuation::forMonth, and the accrued figure from
+     * SettlementService's non-persisting preview. The past-due
+     * banner markup ships keyed to billing_status; the status
+     * itself is only ever set by the webhook lane (BU-8), so
+     * until then the banner is inert by construction. Charge
+     * history (Block E) is completed by BU-6.
+     */
+    public function billing(Request $request, VisitValuation $valuation, SettlementService $settlement): View
+    {
+        $business = $request->user()->business;
+        $plan = $business->currentPlan ?? Plan::launch();
+        $card = PaymentMethod::defaultFor($business);
+
+        $pendingCard = PaymentMethod::query()
+            ->where('business_id', $business->id)
+            ->where('state', PaymentMethod::STATE_PENDING)
+            ->latest('id')
+            ->first();
+
+        $cardExpired = false;
+        if ($card !== null) {
+            $cardExpired = $card->exp_year < now()->year
+                || ($card->exp_year === now()->year && $card->exp_month < now()->month);
+        }
+
+        $records = BillingRecord::query()
+            ->where('business_id', $business->id)
+            ->where('kind', BillingRecord::KIND_PER_REFERRAL_BATCH)
+            ->where('state', '!=', BillingRecord::STATE_SUPERSEDED)
+            ->with(['paymentMethod', 'refunds'])
+            ->latest('id')
+            ->get();
+
+        return view('owner.settings.billing', [
+            'business' => $business,
+            'plan' => $plan,
+            'card' => $card,
+            'cardExpired' => $cardExpired,
+            'pendingCard' => $pendingCard,
+            'month' => $valuation->forMonth($business, now()),
+            'freeTotal' => (int) config('billing.free_visits_at_signup'),
+            'accrued' => $settlement->accruedPreview($business),
+            'minimumChargeCents' => (int) config('billing.minimum_charge_cents'),
+            'chargesEnabled' => (bool) config('billing.charges_enabled'),
+            'records' => $records,
+        ]);
+    }
+
+    /**
+     * The per-charge statement (billing UI spec Section 2,
+     * Block F; build unit BU-6): one page per succeeded record,
+     * the monthly value statement. Counts come from the
+     * record's own events (the persisted coverage ledger), the
+     * amount is the record's exact figure, and the value line
+     * is VisitValuation::forMonth over the record's period,
+     * labeled an estimate; the two never share a line. A
+     * record that is not this business's, or never succeeded,
+     * has no statement: 404, the same answer a stranger gets.
+     */
+    public function statement(Request $request, BillingRecord $record, VisitValuation $valuation): View
+    {
+        $business = $request->user()->business;
+
+        if ($record->business_id !== $business->id
+            || $record->kind !== BillingRecord::KIND_PER_REFERRAL_BATCH
+            || $record->state !== BillingRecord::STATE_SUCCEEDED) {
+            abort(404);
+        }
+
+        $counts = $record->events()
+            ->selectRaw('coverage, COUNT(*) as total')
+            ->groupBy('coverage')
+            ->pluck('total', 'coverage');
+
+        $estimate = $valuation->forMonth($business, Carbon::parse($record->period_start));
+
+        return view('owner.settings.billing-statement', [
+            'business' => $business,
+            'record' => $record,
+            'charged' => (int) ($counts['billable'] ?? 0),
+            'freeUsed' => (int) ($counts['free_credit'] ?? 0),
+            'overCap' => (int) ($counts['over_cap'] ?? 0),
+            'estimatedSalesCents' => $estimate['estimated_sales_cents'],
         ]);
     }
 

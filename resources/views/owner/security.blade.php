@@ -11,7 +11,7 @@
          page (cards, the closed button set, F-06 field wiring). --}}
     <h1 class="type-title-2 text-text-1">Security</h1>
 
-    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-3">
+    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-2">
         <a class="text-text-2 hover:text-text-1" href="{{ route('settings') }}">Settings</a>
         <span aria-hidden="true"> / </span>
         <span aria-current="page" class="text-text-1">Security</span>
@@ -119,7 +119,7 @@
             </form>
         @elseif ($user->hasPendingTwoFactorEnrollment())
             <p class="mt-1 text-text-2">You started setup but have not finished it. Two-factor authentication is not on yet.</p>
-            <p class="mt-2"><a class="font-semibold text-brand-700 hover:underline" href="{{ route('security.two-factor.confirm') }}">Finish setting up two-factor authentication</a></p>
+            <p class="mt-2"><a class="font-semibold text-link hover:underline" href="{{ route('security.two-factor.confirm') }}">Finish setting up two-factor authentication</a></p>
             <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3" data-loading>
                 @csrf
 

@@ -155,7 +155,7 @@
         </fieldset>
 
         @if (config('services.turnstile.site_key'))
-            <div class="cf-turnstile mt-6" data-sitekey="{{ config('services.turnstile.site_key') }}"></div>
+            <div class="cf-turnstile mt-6" data-sitekey="{{ config('services.turnstile.site_key') }}" data-theme="auto"></div>
             <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         @endif
 
@@ -167,5 +167,5 @@
         </div>
     </form>
 
-    <p class="mt-6 text-base">Already have an account? {{-- TX-D4 (release 08d): 24px link box; bare inline it measured 20px. --}}<a class="inline-flex min-h-6 items-center font-semibold text-brand-700 underline" href="{{ route('login') }}">Sign in</a></p>
+    <p class="mt-6 text-base">Already have an account? {{-- TX-D4 (release 08d): 24px link box; bare inline it measured 20px. --}}<a class="inline-flex min-h-6 items-center font-semibold text-link underline" href="{{ route('login') }}">Sign in</a></p>
 @endsection

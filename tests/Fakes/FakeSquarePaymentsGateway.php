@@ -9,7 +9,6 @@ use App\Models\PaymentMethod;
 use App\Services\Billing\CardResult;
 use App\Services\Billing\ChargeResult;
 use App\Services\Billing\RefundResult;
-use App\Services\Billing\SquareOutcomeUnknown;
 use Throwable;
 
 /**
@@ -37,6 +36,14 @@ class FakeSquarePaymentsGateway implements SquarePaymentsGateway
 
     /** @var array<string, ChargeResult> seedable resolutions for the sweeper */
     public array $resolvedCharges = [];
+
+    /** @var list<array{business_id: int, key: string}> */
+    public array $resolveCardCalls = [];
+
+    /** @var array<string, CardResult> what Square holds for a pending card save, by idempotency key */
+    public array $resolvedCards = [];
+
+    public ?Throwable $resolveCardException = null;
 
     public ?Throwable $chargeException = null;
 
@@ -90,6 +97,19 @@ class FakeSquarePaymentsGateway implements SquarePaymentsGateway
         return $this->resolvedCharges[$record->idempotency_key]
             ?? $this->chargesByKey[$record->idempotency_key]
             ?? null;
+    }
+
+    public function resolveCard(PaymentMethod $method): ?CardResult
+    {
+        if ($this->resolveCardException !== null) {
+            $exception = $this->resolveCardException;
+            $this->resolveCardException = null;
+            throw $exception;
+        }
+
+        $this->resolveCardCalls[] = ['business_id' => $method->business_id, 'key' => $method->idempotency_key];
+
+        return $this->resolvedCards[$method->idempotency_key] ?? null;
     }
 
     public function saveCard(Business $business, string $sourceId, string $idempotencyKey): CardResult

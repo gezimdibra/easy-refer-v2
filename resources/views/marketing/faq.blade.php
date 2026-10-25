@@ -22,7 +22,7 @@
              action). --}}
         <div class="mt-16 max-w-[640px]">
             <h2 class="type-title-1 text-text-1">Still have a question?</h2>
-            <p class="type-body mt-3 text-text-2">Email us at <a class="font-semibold text-brand-700 underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a> and we will get back to you.</p>
+            <p class="type-body mt-3 text-text-2">Email us at <a class="font-semibold text-link underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a> and we will get back to you.</p>
             <p class="mt-6"><a class="btn btn-primary" href="{{ route('register') }}">Start free</a></p>
         </div>
     </section>

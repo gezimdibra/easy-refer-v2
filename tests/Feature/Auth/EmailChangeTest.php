@@ -99,7 +99,13 @@ class EmailChangeTest extends TestCase
             'hash' => sha1('new.a@example.test'),
         ]);
 
-        $this->actingAs($user->fresh())->get($url)->assertRedirect(route('dashboard').'?verified=1');
+        // Business A has billing_status 'none', so this
+        // verification transition routes to the billing setup
+        // page under the BU-5 rule, which keys on the transition
+        // itself and so also fires for an email-change
+        // re-verification; the gate assertions below are the
+        // email-change substance and are unchanged.
+        $this->actingAs($user->fresh())->get($url)->assertRedirect(route('settings.billing'));
 
         $user->refresh();
         $this->assertNotNull($user->email_verified_at);

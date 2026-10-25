@@ -25,6 +25,42 @@ use RuntimeException;
 class SettlementService
 {
     /**
+     * The accrued, not-yet-charged figure for the billing page
+     * (billing UI spec Section 2, Block D): the settlement
+     * walk's billable outcomes over the events no record has
+     * claimed yet. This is a preview only: it persists nothing,
+     * claims nothing, and never runs the charger, so rendering
+     * a page can never move money or rewrite coverage. The
+     * walk is the same one settleAndPersist() persists, so the
+     * preview and the eventual batch agree by construction.
+     *
+     * @return array{accrued_cents: int, billable_events: int}
+     */
+    public function accruedPreview(Business $business): array
+    {
+        $settlement = (new VisitValuation)->settle($business);
+
+        $accrued = 0;
+        $count = 0;
+
+        $unclaimed = BillingEvent::query()
+            ->where('business_id', $business->id)
+            ->whereNull('billing_record_id')
+            ->pluck('id');
+
+        foreach ($unclaimed as $eventId) {
+            $outcome = $settlement['settled'][$eventId] ?? null;
+
+            if ($outcome !== null && $outcome['coverage'] === 'billable') {
+                $accrued += $outcome['fee_cents'];
+                $count++;
+            }
+        }
+
+        return ['accrued_cents' => $accrued, 'billable_events' => $count];
+    }
+
+    /**
      * Settle one business and persist the coverage outcomes.
      *
      * @return array{verified_visits: int, estimated_sales_cents: int, fees_cents: int, settled: array<int, array{coverage: string, fee_cents: int}>}

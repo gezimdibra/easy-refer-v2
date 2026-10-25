@@ -88,6 +88,7 @@ class RiskAndReleaseTest extends TestCase
     {
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Ay', 'last_name' => 'One', 'phone' => $phone,
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
     }
 

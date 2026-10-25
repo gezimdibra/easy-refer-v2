@@ -63,6 +63,7 @@ class Sprint2FixWaveTest extends TestCase
             'first_name' => $first,
             'last_name' => 'Lee',
             'phone' => $phone,
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         $this->carryFlowCookie($this->post(route('refer.verify.check'), ['code' => '123456'])
@@ -272,8 +273,8 @@ class Sprint2FixWaveTest extends TestCase
 
         $this->actingAs($owner)->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('1 verified visit this month')
-            ->assertSee('All time: 2 verified visits, about $100.00 in first-visit sales (estimate)');
+            ->assertSee('1 visit counted this month')
+            ->assertSee('All time: 2 visits counted, about $100.00 in first-visit sales (estimate)');
     }
 
     public function test_customer_receipts_render_the_success_flood(): void

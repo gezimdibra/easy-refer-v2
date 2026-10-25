@@ -7,7 +7,7 @@
 @section('content')
     <h1 class="type-title-2 text-text-1">Account</h1>
 
-    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-3">
+    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-2">
         <a class="text-text-2 hover:text-text-1" href="{{ route('settings') }}">Settings</a>
         <span aria-hidden="true"> / </span>
         <span aria-current="page" class="text-text-1">Account</span>

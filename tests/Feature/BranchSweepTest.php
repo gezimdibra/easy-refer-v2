@@ -76,6 +76,7 @@ class BranchSweepTest extends TestCase
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         $this->verify->startOutcomes['+12125550111'] = 'provider_error';
@@ -136,6 +137,7 @@ class BranchSweepTest extends TestCase
 
         $this->carry($this->post(route('refer.enroll', ['token' => $betaToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share'));
         $this->assertSame($beta->id, Membership::query()->firstOrFail()->business_id);

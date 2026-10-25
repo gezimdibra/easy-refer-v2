@@ -11,7 +11,7 @@
     <div class="shell pt-16 pb-10">
         <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
             <div class="lg:col-span-2">
-                <x-logo :size="32" />
+                <x-logo variant="auto" :size="32" />
                 <p class="type-body-sm mt-4 max-w-[36ch] text-text-2">The referral platform for local businesses.</p>
 
                 <p class="type-title-4 mt-8 text-text-1">Stay Updated</p>

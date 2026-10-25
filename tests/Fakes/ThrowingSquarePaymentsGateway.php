@@ -33,6 +33,11 @@ class ThrowingSquarePaymentsGateway implements SquarePaymentsGateway
         throw new SquareOutcomeUnknown('Simulated Square timeout on card save.');
     }
 
+    public function resolveCard(PaymentMethod $method): ?CardResult
+    {
+        throw new SquareOutcomeUnknown('Simulated Square timeout on card resolve.');
+    }
+
     public function refundPayment(string $squarePaymentId, int $amountCents, string $idempotencyKey, ?string $reason = null): RefundResult
     {
         throw new SquareOutcomeUnknown('Simulated Square timeout on refund.');

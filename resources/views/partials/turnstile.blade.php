@@ -4,7 +4,7 @@
      still works (staging posture, spec Section 10.5). --}}
 @if (config('services.turnstile.site_key'))
     <div class="field">
-        <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}"></div>
+        <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-theme="auto"></div>
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     </div>
 @endif

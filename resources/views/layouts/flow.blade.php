@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
     {{-- The customer flow is never an acquisition audience: no
          analytics tags load here (spec Section 16). --}}
     <meta name="robots" content="noindex">
@@ -21,7 +24,7 @@
          screen's one task is the whole hierarchy. --}}
     <div class="mx-auto w-full max-w-[480px] px-3 py-4 text-lg sm:px-0">
         <div class="flex items-center justify-between px-1">
-            <x-logo :size="20" />
+            <x-logo variant="auto" :size="20" />
             @yield('step')
         </div>
         @php($stepNumber = (int) trim($__env->yieldContent('step_number')))

@@ -29,6 +29,7 @@
                 'entries' => [
                     ['settings.profile', 'layout-dashboard', 'Business profile', 'Your business name, type, and contact details.'],
                     ['security', 'lock', 'Security', 'Your password and two-factor authentication.'],
+                    ['settings.billing', 'wallet', 'Billing', 'Your plan, your card on file, and your charges.'],
                     ['settings.account', 'settings', 'Account', 'Close your account, and what happens when you do.'],
                 ],
             ],
@@ -39,7 +40,7 @@
                     @foreach ($group['entries'] as [$routeName, $icon, $label, $description])
                         <li>
                             <a href="{{ route($routeName) }}" class="flex min-h-[48px] items-center gap-3 py-3">
-                                <span class="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-surface-2 text-brand-600" aria-hidden="true"><x-icon :name="$icon" :size="20" /></span>
+                                <span class="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-surface-2 text-text-1" aria-hidden="true"><x-icon :name="$icon" :size="20" /></span>
                                 <span class="min-w-0 flex-1">
                                     <span class="block font-semibold text-text-1">{{ $label }}</span>
                                     <span class="type-body-sm block text-text-2">{{ $description }}</span>

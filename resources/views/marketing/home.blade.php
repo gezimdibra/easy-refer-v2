@@ -1,6 +1,12 @@
 @extends('layouts.marketing')
 
-@section('title', 'Easy Refer: Turn Your Customers Into Your Best Marketers')
+@section('title', 'Easy Refer: Get Your Customers to Refer Their Friends')
+
+{{-- Light lock (owner directive, 2026-10-24): the landing page
+     renders the light theme at any device setting. The layout
+     turns this section into the .landing-light-lock scope in
+     app.css; no other page sets it. --}}
+@section('theme_lock', 'light')
 
 @section('content')
     {{-- Hero (redesign-spec.md Section 10.1 item 2): centered single
@@ -9,60 +15,203 @@
          product visual. Release 08b touches this block once, whole:
          D-1 restores the reading order on mobile (headline, lede,
          actions, trust row; the release 07 order overrides are
-         gone from app.css); the lede is copy Option B verbatim
-         (HOME-HERO-02) and the trust row carries the plan-table
-         price facts as fragments, P-01; F1 gives mobile a genuine
-         portrait dashboard capture in a phone-form frame (below);
-         F2/F3 are handled in the consent card and the sticky bar
-         script. Desktop keeps the window treatment and is
-         otherwise unchanged. --}}
+         gone from app.css); F1 gives mobile a genuine portrait
+         dashboard capture in a phone-form frame (below); F2/F3 are
+         handled in the consent card and the sticky bar script.
+         Desktop keeps the window treatment and is otherwise
+         unchanged.
+         Copy release (2026-10-24, Amendment 11): the hero is
+         Version 1 exactly as rendered in the owner-approved
+         mockup (hidden_files/redesign/hero-mockups/v1.png): the
+         H1 gains its terminal period, the lede states the
+         mechanism in three short sentences, and the trust row
+         leads with the free visits, then the per-visit price as
+         fragments. Versions 2 to 4 stay parked as A/B candidates
+         (copy-inventory Amendment 11).
+         Headline change (Amendment 14, 2026-10-24): by owner
+         order the H1 (and the title section above, HOME-CHROME-01)
+         is now "Get Your Customers to Refer their Friends",
+         owner-supplied verbatim with no terminal period, in the
+         spirit of the v1 landing page title. The Amendment 11
+         lede and trust row are unchanged. --}}
     <section class="bg-surface-0">
         <div class="shell mkt-hero-shell pt-6 lg:pt-20">
             <div class="mkt-hero mx-auto max-w-[880px] text-center">
-                <p><span class="eyebrow-pill">Referral marketing for local businesses</span></p>
-                <h1 class="mkt-hero-title type-display mt-6 text-text-1">Turn your customers into your best marketers</h1>
-                <p class="mkt-hero-lede type-lede mx-auto mt-6 max-w-[56ch] text-text-2">Easy Refer turns your customers into referrers with QR codes, verified visits, and rewards you only pay for when they work. Free to start, and your first {{ (int) config('billing.free_visits_at_signup') }} verified visits are free.</p>
+                <p class="hidden lg:block"><span class="eyebrow-pill">Referral marketing for local businesses</span></p>
+                <h1 class="mkt-hero-title type-display mt-6 text-text-1">Get Your Customers to Refer their Friends</h1>
+                <p class="mkt-hero-lede type-lede mx-auto mt-6 max-w-[56ch] text-text-2">Customers scan your QR code. They send it to friends. You pay only when a friend walks in.</p>
                 <div class="mkt-hero-actions mt-8 flex flex-wrap items-center justify-center gap-3">
                     <a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a>
                     <a class="btn btn-secondary btn-lg" href="#how-it-works">See how it works</a>
                 </div>
                 <ul class="mkt-hero-trust mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-                    <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />{{ \App\Support\Money::usd($plan->per_referral_cents) }} per verified referral visit</li>
-                    <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month</li>
+                    <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />First {{ (int) config('billing.free_visits_at_signup') }} visits free</li>
+                    <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />Then {{ \App\Support\Money::usd($plan->per_referral_cents) }} a visit</li>
                     <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />No setup fee</li>
                     <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />Cancel anytime</li>
                 </ul>
             </div>
 
-            {{-- F1 (release 08b): below lg the hero visual is a
-                 genuine portrait capture of the owner dashboard
-                 at phone width (430 CSS px, DPR 3, cropped 9:16),
-                 presented as the phone screen itself: no browser
-                 chrome, no window bar. The asset is the product
-                 the visitor is being sold, in the form they will
-                 actually use it. --}}
-            <div class="mkt-hero-phone mx-auto max-w-[380px] lg:hidden">
-                <div class="overflow-hidden rounded-[2rem] border border-line bg-surface-0 shadow-e2">
-                    <picture>
-                        <source type="image/webp" srcset="{{ asset('images/dashboard-hero-portrait-860.webp') }} 860w, {{ asset('images/dashboard-hero-portrait-1290.webp') }} 1290w" sizes="100vw">
-                        <source type="image/jpeg" srcset="{{ asset('images/dashboard-hero-portrait-860.jpg') }} 860w, {{ asset('images/dashboard-hero-portrait-1290.jpg') }} 1290w" sizes="100vw">
-                        <img src="{{ asset('images/dashboard-hero-portrait-1290.jpg') }}" width="1290" height="2293" alt="The Easy Refer dashboard, showing today's referrals and what they are worth." fetchpriority="high" class="block w-full">
-                    </picture>
-                </div>
-            </div>
+            {{-- Hero animation (owner spec, 2026-10-24; copy
+                 inventory Amendment 13): the static dashboard
+                 captures are replaced by a compact, native, coded
+                 animation of the referral loop in one composed
+                 scene: a customer scans the counter card's QR
+                 code, the phone moves to the share screen (the
+                 real flow's layout language: greeting, reward
+                 line, the ink Share button, the link field), the
+                 link travels to two friends, and the friends
+                 arrive at the storefront; the owner's closing
+                 line fades in, then the scene settles back into
+                 its opening composition and loops. Pure CSS/SVG,
+                 no video, no library. The opening frame carries
+                 the whole story at a glance (card, phone
+                 mid-scan, friends, storefront). Under
+                 prefers-reduced-motion the animation is off and
+                 the same scene sits in its composed static state
+                 (share screen up, bubbles on their paths, friends
+                 at the door, badge shown, closing line visible).
+                 The old hero images stay in the tree untouched
+                 (owner instruction) and are archived under
+                 hidden_files/redesign/hero-assets-archive/. --}}
+            <div class="mkt-hero-stage mx-auto max-w-[920px]">
+                <div class="hero-stage" id="hero-stage" role="img" aria-label="How Easy Refer works: a customer scans the QR code on the counter card, gets a personal referral link on their phone, and shares it with friends, who then visit the business.">
+                    <svg class="hero-scene" viewBox="0 0 880 560" fill="none" aria-hidden="true" focusable="false">
+                        <defs>
+                            <g id="hs-qr">
+                                <rect x="0" y="0" width="18" height="18" fill="var(--color-text-1)"/><rect x="4" y="4" width="10" height="10" fill="var(--color-surface-0)"/><rect x="7" y="7" width="4" height="4" fill="var(--color-text-1)"/>
+                                <rect x="76" y="0" width="18" height="18" fill="var(--color-text-1)"/><rect x="80" y="4" width="10" height="10" fill="var(--color-surface-0)"/><rect x="83" y="7" width="4" height="4" fill="var(--color-text-1)"/>
+                                <rect x="0" y="76" width="18" height="18" fill="var(--color-text-1)"/><rect x="4" y="80" width="10" height="10" fill="var(--color-surface-0)"/><rect x="7" y="83" width="4" height="4" fill="var(--color-text-1)"/>
+                                <path fill="var(--color-text-1)" d="M26 2h8v8h-8zM44 0h8v8h-8zM62 4h8v8h-8zM28 16h8v8h-8zM52 18h8v8h-8zM4 28h8v8H4zM22 30h8v8h-8zM40 26h8v8h-8zM66 28h8v8h-8zM84 24h8v8h-8zM12 44h8v8h-8zM32 46h8v8h-8zM56 42h8v8h-8zM76 46h8v8h-8zM2 58h8v8H2zM24 60h8v8h-8zM46 56h8v8h-8zM64 62h8v8h-8zM86 58h8v8h-8zM28 78h8v8h-8zM48 80h8v8h-8zM70 76h8v8h-8zM86 82h8v8h-8zM56 88h8v6h-8z"/>
+                            </g>
+                            <g id="hs-person">
+                                <circle cx="0" cy="0" r="13" fill="var(--color-surface-0)" stroke="var(--color-line-strong)" stroke-width="2"/>
+                                <path d="M-16 42 L-16 20 Q-16 7 0 7 Q16 7 16 20 L16 42 Z" fill="var(--color-surface-3)" stroke="var(--color-line-strong)" stroke-width="2"/>
+                            </g>
+                            <g id="hs-bubble">
+                                <rect x="-21" y="-15" width="42" height="30" rx="10" fill="var(--color-surface-0)" stroke="var(--color-line-strong)" stroke-width="2"/>
+                                <path d="M-6 15 L-6 24 L6 15 Z" fill="var(--color-surface-0)" stroke="var(--color-line-strong)" stroke-width="2" stroke-linejoin="round"/>
+                                <path d="M-9 0 h7 M5 0 h7" stroke="var(--color-brand-500)" stroke-width="3.5" stroke-linecap="round"/>
+                            </g>
+                        </defs>
 
-            <div class="mkt-hero-window mx-auto mt-16 hidden max-w-[1080px] lg:block">
-                <div class="window">
-                    <div class="window-bar" aria-hidden="true">
-                        <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
-                        <span class="window-url">easy-refer.com/auth</span>
-                        <span class="w-10"></span>
-                    </div>
-                    <picture>
-                        <source type="image/webp" srcset="{{ asset('images/dashboard-overview-480.webp') }} 480w, {{ asset('images/dashboard-overview-768.webp') }} 768w, {{ asset('images/dashboard-overview-1080.webp') }} 1080w" sizes="(min-width: 1024px) 1080px, 100vw">
-                        <source type="image/jpeg" srcset="{{ asset('images/dashboard-overview-480.jpg') }} 480w, {{ asset('images/dashboard-overview-768.jpg') }} 768w, {{ asset('images/dashboard-overview-1080.jpg') }} 1080w" sizes="(min-width: 1024px) 1080px, 100vw">
-                        <img src="{{ asset('images/dashboard-overview-1080.jpg') }}" width="1080" height="810" alt="The Easy Refer dashboard, showing today's referrals and what they are worth." fetchpriority="high" class="block w-full">
-                    </picture>
+                        {{-- Backdrop and ground --}}
+                        <circle cx="440" cy="250" r="235" fill="var(--color-surface-2)" opacity="0.55"/>
+                        <rect x="0" y="438" width="880" height="122" fill="var(--color-surface-2)"/>
+
+                        {{-- Storefront (right, back) --}}
+                        <g>
+                            <rect x="588" y="168" width="268" height="272" rx="10" fill="var(--color-surface-0)" stroke="var(--color-line)" stroke-width="2"/>
+                            <rect x="576" y="146" width="292" height="24" rx="8" fill="var(--color-surface-3)"/>
+                            <rect class="hs-glow hs-anim" x="600" y="278" width="244" height="162" rx="12" fill="var(--color-brand-500)"/>
+                            <path d="M600 236 h240 l-14 26 h-212 Z" fill="var(--color-brand-500)"/>
+                            <path d="M614 262 h212" stroke="var(--color-line-strong)" stroke-width="2" opacity="0.45"/>
+                            <rect x="612" y="288" width="112" height="104" rx="6" fill="var(--color-surface-2)" stroke="var(--color-line)" stroke-width="2"/>
+                            <path d="M668 288 v104 M612 340 h112" stroke="var(--color-line)" stroke-width="2"/>
+                            <rect x="748" y="288" width="70" height="152" rx="6" fill="var(--color-surface-1)" stroke="var(--color-line-strong)" stroke-width="2"/>
+                            <circle cx="806" cy="368" r="3.5" fill="var(--color-line-strong)"/>
+                            <circle cx="650" cy="205" r="15" fill="var(--color-brand-500)"/>
+                            <path d="M643 205 l5 5 l9 -10" stroke="var(--color-ink-950)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        </g>
+
+                        {{-- Customer, standing behind the counter --}}
+                        <g transform="translate(368 312)">
+                            <use href="#hs-person" transform="scale(2.3)"/>
+                        </g>
+
+                        {{-- Counter (left, front) --}}
+                        <rect x="34" y="402" width="440" height="14" rx="4" fill="var(--color-surface-3)"/>
+                        <rect x="48" y="416" width="412" height="66" rx="6" fill="var(--color-surface-0)" stroke="var(--color-line)" stroke-width="2"/>
+                        <g transform="translate(254 449)">
+                            <rect x="-64" y="-14" width="128" height="28" rx="14" fill="var(--color-surface-1)" stroke="var(--color-line)" stroke-width="2"/>
+                            <circle cx="-46" cy="0" r="8" fill="var(--color-brand-500)"/>
+                            <path d="M-49.5 0 l2.5 2.5 l4.5 -5" stroke="var(--color-ink-950)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <rect x="-32" y="-3.5" width="52" height="7" rx="3.5" fill="var(--color-surface-3)"/>
+                        </g>
+
+                        {{-- The counter card with its QR code --}}
+                        <g>
+                            <rect x="102" y="212" width="146" height="192" rx="10" fill="var(--color-surface-0)" stroke="var(--color-line-strong)" stroke-width="2"/>
+                            <rect x="118" y="228" width="20" height="20" rx="5" fill="var(--color-brand-500)"/>
+                            <path d="M124 238 l4.5 4.5 l8 -9" stroke="var(--color-ink-950)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <rect x="146" y="231" width="62" height="6" rx="3" fill="var(--color-surface-3)"/>
+                            <rect x="146" y="241" width="44" height="6" rx="3" fill="var(--color-surface-3)"/>
+                            <use href="#hs-qr" transform="translate(115 262) scale(1.28)"/>
+                            <rect x="122" y="382" width="106" height="6" rx="3" fill="var(--color-surface-3)"/>
+                            <g class="hs-corners hs-anim" stroke="var(--color-action)" stroke-width="4" stroke-linecap="round">
+                                <path d="M96 268 v-14 a6 6 0 0 1 6 -6 h14"/>
+                                <path d="M240 248 h14 a6 6 0 0 1 6 6 v14"/>
+                                <path d="M260 354 v14 a6 6 0 0 1 -6 6 h-14"/>
+                                <path d="M110 374 h-14 a6 6 0 0 1 -6 -6 v-14"/>
+                            </g>
+                            <g class="hs-scanline hs-anim">
+                                <rect x="100" y="254" width="150" height="30" rx="8" fill="var(--color-brand-500)" opacity="0.25"/>
+                                <rect x="100" y="266" width="150" height="4" fill="var(--color-brand-500)"/>
+                            </g>
+                            <g class="hs-chip hs-anim">
+                                <circle cx="252" cy="222" r="14" fill="var(--color-brand-500)"/>
+                                <path d="M245 222 l5 5 l9 -10" stroke="var(--color-ink-950)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                            </g>
+                        </g>
+
+                        {{-- The customer's phone, aimed at the card --}}
+                        <g transform="translate(-8 2) rotate(-6 316 306)">
+                            <rect x="284" y="242" width="66" height="128" rx="12" fill="var(--color-ink-900)" stroke="var(--color-line-strong)" stroke-width="2"/>
+                            <rect x="289" y="249" width="56" height="114" rx="7" fill="var(--color-surface-0)"/>
+                            {{-- Scan screen: viewfinder over the code --}}
+                            <g class="hs-screen-scan hs-anim">
+                                <path d="M298 276 v-8 a4 4 0 0 1 4 -4 h8 M324 264 h8 a4 4 0 0 1 4 4 v8 M336 324 v8 a4 4 0 0 1 -4 4 h-8 M310 336 h-8 a4 4 0 0 1 -4 -4 v-8" stroke="var(--color-text-3)" stroke-width="2.5" stroke-linecap="round"/>
+                                <use href="#hs-qr" transform="translate(303 282) scale(0.30)"/>
+                                <rect x="299" y="344" width="36" height="5" rx="2.5" fill="var(--color-surface-3)"/>
+                            </g>
+                            {{-- Share screen: the real flow's layout
+                                 (greeting, reward line, the ink
+                                 share button, the link field) --}}
+                            <g class="hs-screen-share hs-anim">
+                                <rect x="297" y="259" width="26" height="5" rx="2.5" fill="var(--color-surface-3)"/>
+                                <rect x="297" y="272" width="40" height="7" rx="3.5" fill="var(--color-text-3)" opacity="0.55"/>
+                                <rect x="297" y="285" width="34" height="5" rx="2.5" fill="var(--color-surface-3)"/>
+                                <rect x="297" y="296" width="40" height="5" rx="2.5" fill="var(--color-surface-3)"/>
+                                <rect x="295" y="308" width="44" height="17" rx="8.5" fill="var(--color-action)"/>
+                                <path d="M306 316.5 h14 M316 311 l6 5.5 l-6 5.5" stroke="var(--color-on-action)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <rect x="295" y="331" width="30" height="13" rx="4" fill="var(--color-surface-1)" stroke="var(--color-line-strong)" stroke-width="1.5"/>
+                                <rect x="325" y="331" width="14" height="13" rx="4" fill="var(--color-action)"/>
+                                <rect x="299" y="351" width="36" height="5" rx="2.5" fill="var(--color-surface-3)"/>
+                            </g>
+                        </g>
+
+                        {{-- The link travelling to the friends --}}
+                        <path d="M352 258 C 410 240, 452 262, 492 296" stroke="var(--color-line-strong)" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.6"/>
+                        <path d="M360 302 C 432 292, 502 300, 554 312" stroke="var(--color-line-strong)" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.6"/>
+                        <use href="#hs-bubble" class="hs-bubble-1 hs-anim"/>
+                        <use href="#hs-bubble" class="hs-bubble-2 hs-anim"/>
+
+                        {{-- Friends: the outer group sits at the
+                             storefront door (arrived); the animated
+                             inner group's base transform holds each
+                             friend at their waiting spot --}}
+                        <g transform="translate(716 356) scale(1.9)">
+                            <g class="hs-friend-1 hs-anim">
+                                <use href="#hs-person"/>
+                                <rect x="9" y="12" width="9" height="15" rx="2.5" fill="var(--color-ink-900)"/>
+                                <circle class="hs-dot-1 hs-anim" cx="13.5" cy="17" r="2.2" fill="var(--color-brand-500)"/>
+                            </g>
+                        </g>
+                        <g transform="translate(664 368) scale(1.75)">
+                            <g class="hs-friend-2 hs-anim">
+                                <use href="#hs-person"/>
+                                <rect x="9" y="12" width="9" height="15" rx="2.5" fill="var(--color-ink-900)"/>
+                                <circle class="hs-dot-2 hs-anim" cx="13.5" cy="17" r="2.2" fill="var(--color-brand-500)"/>
+                            </g>
+                        </g>
+
+                        {{-- Success badge at the door --}}
+                        <g class="hs-badge hs-anim">
+                            <circle cx="838" cy="296" r="17" fill="var(--color-brand-500)"/>
+                            <path d="M830 296 l6 6 l11 -12" stroke="var(--color-ink-950)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </g>
+                    </svg>
+                    <p class="hero-stage-line hs-anim" aria-hidden="true">Turn every customer into a referral.</p>
                 </div>
             </div>
         </div>
@@ -79,10 +228,15 @@
          to their own section after How It Works (below), so the
          whole mobile proof stretch before the mechanism is now
          this band alone. --}}
-    <section class="border-y border-line bg-surface-0">
+    {{-- 08f (contrast audit F-10): section grounds are assigned
+         to alternate down the page, so no two neighbours share a
+         ground. This band takes the cream ground and its stat
+         panel inverts to white, keeping the panel a designed
+         object on the new ground. --}}
+    <section class="border-y border-line bg-surface-1">
         <div class="shell py-14 lg:py-20">
-            <p class="type-eyebrow text-center text-brand-700">What stores see with Easy Refer</p>
-            <div class="mx-auto mt-6 max-w-[1080px] rounded-2xl border border-line bg-surface-1 px-4 py-8 sm:px-8">
+            <p class="type-eyebrow text-center text-link">What stores see with Easy Refer</p>
+            <div class="mx-auto mt-6 max-w-[1080px] rounded-2xl border border-line bg-surface-0 px-4 py-8 sm:px-8">
                 <div class="grid grid-cols-2 gap-y-10 lg:grid-cols-4">
                     <div class="px-2 text-center lg:border-l lg:border-line lg:first:border-l-0">
                         <p class="type-stat text-text-1">{{ config('claims.new_customers_per_year') }}</p>
@@ -111,28 +265,78 @@
             <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
         </div>
     </section>
+    {{-- Success Stories (HOME-SUC-01, HOME-SUC-02): the OD-6
+         approved set, verbatim. No photo attaches to either card:
+         no owner-supplied photo depicts either business (AP-07).
+         Redesign: quote panels at radius-xl with an initials
+         medallion and the result figure in brand-700 title-3 with
+         its caption under it (never styled as a link).
+         Copy release (2026-10-24, Amendment 11): the section now
+         sits BEFORE How It Works (tactics A-02: the payoff before
+         the homework); its white ground is unchanged and the
+         sections below re-take their alternating grounds. --}}
+    <section id="success-stories" class="bg-surface-0">
+        <div class="shell section-pad">
+            <h2 class="type-title-1 text-text-1">Success stories</h2>
+            <div class="mt-12 grid gap-6 md:grid-cols-2">
+                <figure class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
+                    <blockquote class="type-quote text-text-1">We used to spend a lot of money on Google Ads. Now our customers do the marketing for us.</blockquote>
+                    <figcaption class="mt-6 flex items-start justify-between gap-4">
+                        <span class="flex items-center gap-3">
+                            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand-50 text-text-1" aria-hidden="true"><span class="type-caption" style="font-weight: 650">NR</span></span>
+                            <span><span class="type-title-4 block text-text-1">Nolan and Megan Ralston, Owners, Pizzeria</span></span>
+                        </span>
+                        <span class="type-title-3 max-w-[220px] text-right text-text-1">150+ New Customers In 3 months</span>
+                    </figcaption>
+                </figure>
+                <figure class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
+                    <blockquote class="type-quote text-text-1">I would have used Easy Refer since day 1 if it was available.</blockquote>
+                    <figcaption class="mt-6 flex items-start justify-between gap-4">
+                        <span class="flex items-center gap-3">
+                            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand-50 text-text-1" aria-hidden="true"><span class="type-caption" style="font-weight: 650">TH</span></span>
+                            <span><span class="type-title-4 block text-text-1">Talia Hollis, Hairstylist</span></span>
+                        </span>
+                        <span class="type-title-3 max-w-[220px] text-right text-text-1">110+ New Customers In 4 months</span>
+                    </figcaption>
+                </figure>
+            </div>
+            <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
+        </div>
+    </section>
+
+
+    {{-- 08f (contrast audit F-10): section grounds alternate
+         down the page; this section takes the cream ground so
+         the alternation holds (STEP-CONTRAST guards the pairs).
+         HIW-C (owner decision 2026-10-24): the steps grid is
+         replaced by the Variant C scroll story (four viewport
+         beats plus a progress strip, in the story partial);
+         the shared steps partial still serves the vertical
+         pages untouched. The poster figure moves below the
+         beats, centered at the variant's measure, and carries
+         the AI cafe scene (W-3); its window chrome and bar
+         label are unchanged. --}}
     <section id="how-it-works" class="bg-surface-1">
         <div class="shell section-pad">
             {{-- D-3 (release 08b): the eyebrow repeated this H2
                  verbatim; it is gone, here and on the features,
                  stories, and pricing sections below. --}}
             <h2 class="type-title-1 text-text-1">How it works</h2>
-            <div class="mt-12 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
-                @include('partials.how-it-works', ['stepCols' => 2])
-                <figure>
-                    <div class="window">
-                        <div class="window-bar" aria-hidden="true">
-                            <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
-                            <span class="window-url">Your printed poster</span>
-                            <span class="w-10"></span>
-                        </div>
-                        <picture>
-                            <source type="image/webp" srcset="{{ asset('images/poster-counter-480.webp') }} 480w" sizes="300px">
-                            <img src="{{ asset('images/poster-counter-480.jpg') }}" width="480" height="480" alt="The printed counter poster for Harbor Street Barbers: the business name, a large QR code, and the words Scan this code to join and start referring." loading="lazy" decoding="async" class="block w-full">
-                        </picture>
+            @include('partials.how-it-works-story')
+            <figure class="mx-auto mt-16 max-w-[560px]">
+                <div class="window">
+                    <div class="window-bar" aria-hidden="true">
+                        <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
+                        <span class="window-url">Your printed poster</span>
+                        <span class="w-10"></span>
                     </div>
-                </figure>
-            </div>
+                    <picture>
+                        <source type="image/webp" srcset="{{ asset('images/poster-ai-a-scene2-480.webp') }} 480w, {{ asset('images/poster-ai-a-scene2-900.webp') }} 900w" sizes="(max-width: 639px) calc(100vw - 2.5rem), 560px">
+                        <source type="image/jpeg" srcset="{{ asset('images/poster-ai-a-scene2-480.jpg') }} 480w, {{ asset('images/poster-ai-a-scene2-900.jpg') }} 900w" sizes="(max-width: 639px) calc(100vw - 2.5rem), 560px">
+                        <img src="{{ asset('images/poster-ai-a-scene2-900.jpg') }}" width="900" height="900" alt="A printed counter poster in a stand on a café counter, reading 'Refer a Friend to Win a Free Coffee!' above a large QR code customers scan to join and start referring." loading="lazy" decoding="async" class="block w-full">
+                    </picture>
+                </div>
+            </figure>
             <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
         </div>
     </section>
@@ -142,12 +346,17 @@
          photo paired with its own business (AP-07), mobile crops
          held to about 60% of a viewport. --}}
     <section class="bg-surface-0">
-        {{-- R-3 (release 08d): compact bottom step on mobile; the
-             Benefits section follows on the same surface. --}}
+        {{-- R-3 (release 08d): compact bottom step on mobile.
+             08f (contrast audit F-10): section grounds alternate.
+             Copy release (2026-10-24): with Stories ahead of How
+             It Works, this section takes the white ground so the
+             alternation holds; lede and captions take the
+             slim-down wording, and the eyebrow-to-H2 and
+             H2-to-lede gaps take the PROSE-GAP floors (mt-4). --}}
         <div class="shell section-pad section-pad-compact-b">
-            <p class="type-eyebrow text-brand-700">In store now</p>
-            <h2 class="type-title-1 mt-3 text-text-1">Running in real stores</h2>
-            <p class="type-lede mt-3 max-w-[56ch] text-text-2">Real counters, real customers, and the same printed code your customers would scan.</p>
+            <p class="type-eyebrow text-link">In store now</p>
+            <h2 class="type-title-1 mt-4 text-text-1">Running in real stores</h2>
+            <p class="type-lede mt-4 max-w-[56ch] text-text-2">Real counters. Real customers. The same code your customers scan.</p>
             <div class="mt-12 grid gap-6 md:grid-cols-3">
                 <figure>
                     <picture>
@@ -155,23 +364,23 @@
                         <source type="image/jpeg" srcset="{{ asset('images/photos/ungaro-counter-480.jpg') }} 480w, {{ asset('images/photos/ungaro-counter-768.jpg') }} 768w, {{ asset('images/photos/ungaro-counter-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
                         <img src="{{ asset('images/photos/ungaro-counter-768.jpg') }}" width="1020" height="1275" alt="A printed Easy Refer referral sign with a QR code on the counter at Ungaro Coal Fired Pizza Cafe." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
                     </picture>
-                    <figcaption class="type-caption mt-4 text-text-2">Ungaro Coal Fired Pizza Cafe, with its referral code at the register.</figcaption>
+                    <figcaption class="type-caption mt-4 text-text-2">Ungaro Coal Fired Pizza Cafe, with its code at the register.</figcaption>
                 </figure>
                 <figure>
                     <picture>
                         <source type="image/webp" srcset="{{ asset('images/photos/reception-desk-480.webp') }} 480w, {{ asset('images/photos/reception-desk-768.webp') }} 768w, {{ asset('images/photos/reception-desk-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
                         <source type="image/jpeg" srcset="{{ asset('images/photos/reception-desk-480.jpg') }} 480w, {{ asset('images/photos/reception-desk-768.jpg') }} 768w, {{ asset('images/photos/reception-desk-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <img src="{{ asset('images/photos/reception-desk-768.jpg') }}" width="1020" height="1230" alt="A printed Easy Refer referral sign with a QR code in an acrylic holder on a clinic reception desk." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
+                        <img src="{{ asset('images/photos/reception-desk-768.jpg') }}" width="1020" height="1230" alt="A printed Easy Refer referral sign with a QR code in an acrylic holder on the reception desk at Focus Vision clinic." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
                     </picture>
-                    <figcaption class="type-caption mt-4 text-text-2">A clinic reception desk, where patients join at check-in.</figcaption>
+                    <figcaption class="type-caption mt-4 text-text-2">Focus Vision clinic, where patients join at check-in.</figcaption>
                 </figure>
                 <figure>
                     <picture>
                         <source type="image/webp" srcset="{{ asset('images/photos/pharmacy-counter-480.webp') }} 480w, {{ asset('images/photos/pharmacy-counter-768.webp') }} 768w, {{ asset('images/photos/pharmacy-counter-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
                         <source type="image/jpeg" srcset="{{ asset('images/photos/pharmacy-counter-480.jpg') }} 480w, {{ asset('images/photos/pharmacy-counter-768.jpg') }} 768w, {{ asset('images/photos/pharmacy-counter-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <img src="{{ asset('images/photos/pharmacy-counter-768.jpg') }}" width="1020" height="1275" alt="A printed Easy Refer referral poster with a QR code at a pharmacy counter in Albania." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
+                        <img src="{{ asset('images/photos/pharmacy-counter-768.jpg') }}" width="1020" height="1275" alt="A printed Easy Refer referral poster with a QR code at a pharmacy counter in Europe." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
                     </picture>
-                    <figcaption class="type-caption mt-4 text-text-2">A pharmacy counter in Albania, running the same program in Albanian.</figcaption>
+                    <figcaption class="type-caption mt-4 text-text-2">A pharmacy counter in Europe. The same program, in Albanian.</figcaption>
                 </figure>
             </div>
             <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
@@ -182,25 +391,33 @@
          the approved stats live in the proof section above.
          Redesign: each column leads with an icon tile (Section
          10.1 item 5). --}}
-    <section id="benefits" class="bg-surface-0">
+    {{-- Copy release (2026-10-24): the section takes the cream
+         ground in the post-reorder alternation; the three bodies
+         take the slim-down wording (the pricing column stops
+         restating the cap, which stands in the hero row, the
+         pricing lede and card, and FAQ-03: the full offer is
+         stated at most three times page-wide, hero, pricing,
+         closing), and the gaps take the PROSE-GAP floors
+         (eyebrow to H2 mt-4, H3 to body mt-3). --}}
+    <section id="benefits" class="bg-surface-1">
         <div class="shell section-pad">
-            <p class="type-eyebrow text-brand-700">Benefits</p>
-            <h2 class="type-title-1 mt-3 text-text-1">Why use Easy Refer?</h2>
+            <p class="type-eyebrow text-link">Benefits</p>
+            <h2 class="type-title-1 mt-4 text-text-1">Why use Easy Refer?</h2>
             <div class="mt-12 grid gap-10 md:grid-cols-3">
                 <div>
-                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-brand-600"><x-icon name="users" :size="24" /></p>
+                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="users" :size="24" /></p>
                     <h3 class="type-title-3 mt-4 text-text-1">Attract new customers</h3>
-                    <p class="type-body mt-2 max-w-[68ch] text-text-2">Your happy customers are your best marketing. Easy Refer makes it simple for them to refer friends, with a code to scan and a link to share.</p>
+                    <p class="type-body mt-3 max-w-[68ch] text-text-2">Happy customers tell their friends. Easy Refer gives them a code to scan and a link to send.</p>
                 </div>
                 <div>
-                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-brand-600"><x-icon name="trending-up" :size="24" /></p>
+                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="trending-up" :size="24" /></p>
                     <h3 class="type-title-3 mt-4 text-text-1">Increase revenue</h3>
-                    <p class="type-body mt-2 max-w-[68ch] text-text-2">Rewards bring referred friends in, and bulk texts bring your customers back. Both sides earn, so both sides return.</p>
+                    <p class="type-body mt-3 max-w-[68ch] text-text-2">Friends come in for a reward. Your customers come back for theirs. Both sides win.</p>
                 </div>
                 <div>
-                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-brand-600"><x-icon name="wallet" :size="24" /></p>
+                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="wallet" :size="24" /></p>
                     <h3 class="type-title-3 mt-4 text-text-1">Affordable pricing</h3>
-                    <p class="type-body mt-2 max-w-[68ch] text-text-2">You pay only when a referred friend actually visits. No monthly fee, and a hard monthly cap, so a great month never becomes a big bill.</p>
+                    <p class="type-body mt-3 max-w-[68ch] text-text-2">You pay only when a referred friend walks in. No monthly fee, no setup fee.</p>
                 </div>
             </div>
             {{-- S-04: on mobile this section ran about 1,250px with no
@@ -210,7 +427,15 @@
         </div>
     </section>
 
-    <section id="features" class="bg-surface-1">
+    {{-- Copy release (2026-10-24): the section takes the white
+         ground in the post-reorder alternation and its panels
+         invert to the cream ground; the panels also receive the
+         eight How It Works micro-bullets demoted from the steps
+         (progressive disclosure, tactics T-05): the scan and
+         claim bullets (steps 1 and 3) join the QR panel's check
+         rows, the share and engage bullets (steps 2 and 4) form
+         the SMS panel's new check list. --}}
+    <section id="features" class="bg-surface-0">
         <div class="shell section-pad">
             <h2 class="type-title-1 text-text-1">Powerful features</h2>
             <div class="mt-12 grid gap-6 lg:grid-cols-2">
@@ -223,17 +448,27 @@
                      scrollWidth to 425. The pill takes min-w-0 too,
                      so it truncates inside its bar like browser
                      chrome instead of forcing the layout wider. --}}
-                <div class="min-w-0 rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
+                <div class="min-w-0 rounded-xl border border-line bg-surface-1 shadow-e1" style="padding: 32px">
                     {{-- D-4 (release 08b): the panel title takes the
                          H3 step, the mechanism is one short line,
                          and the safeguards read as a check row, so
                          the panel no longer leads with a wall. Copy
-                         is R5 with S-10's opening. --}}
+                         is R5 with S-10's opening.
+                         Copy release (2026-10-24): the body takes
+                         the slim-down wording (the dashboard-worth
+                         clause is cut; the calculator makes that
+                         point with the visitor's own numbers), one
+                         check row takes the simpler verb, and the
+                         demoted step 1 and 3 bullets join the list. --}}
                     <h3 class="type-title-3 text-text-1">QR Code referrals</h3>
-                    <p class="type-body mt-3 text-text-2">Print your QR code, put it by the register, and customers join in seconds. Your dashboard shows what each visit was worth.</p>
+                    <p class="type-body mt-3 text-text-2">Print your code. Put it by the register. Customers join in seconds.</p>
                     <ul class="mt-3 space-y-2">
-                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Every visit is verified before it counts</li>
-                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Held rewards are reviewed before they pay out</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Instant QR code generation</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Multiple placement options</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Every visit is checked before it counts</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Instant validation</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Flexible reward options</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Rewards are checked before they pay out</li>
                     </ul>
                     <div class="window mt-6" style="border-radius: var(--radius-lg)">
                         <div class="window-bar" aria-hidden="true">
@@ -247,9 +482,20 @@
                         </picture>
                     </div>
                 </div>
-                <div class="min-w-0 rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
+                <div class="min-w-0 rounded-xl border border-line bg-surface-1 shadow-e1" style="padding: 32px">
                     <h3 class="type-title-3 text-text-1">SMS marketing</h3>
-                    <p class="type-body mt-3 text-text-2">Send bulk text campaigns to customers who opted in. Anyone who replies STOP is opted out automatically.</p>
+                    {{-- Copy release (2026-10-24): slim-down body
+                         (the STOP opt-out fact is legally
+                         load-bearing and stays), and the demoted
+                         step 2 and 4 bullets form the check list,
+                         mirroring the QR panel. --}}
+                    <p class="type-body mt-3 text-text-2">Text your customers in one go. Anyone who replies STOP is out, automatically.</p>
+                    <ul class="mt-3 space-y-2">
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Native share sheet and copy link</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Customizable messages</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Real-time analytics</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Bulk SMS campaigns</li>
+                    </ul>
                     <div class="window mt-6" style="border-radius: var(--radius-lg)">
                         <div class="window-bar" aria-hidden="true">
                             <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
@@ -267,88 +513,63 @@
         </div>
     </section>
 
-    {{-- Success Stories (HOME-SUC-01, HOME-SUC-02): the OD-6
-         approved set, verbatim. No photo attaches to either card:
-         no owner-supplied photo depicts either business (AP-07).
-         Redesign: quote panels at radius-xl with an initials
-         medallion and the result figure in brand-700 title-3 with
-         its caption under it (never styled as a link). --}}
-    <section id="success-stories" class="bg-surface-0">
-        <div class="shell section-pad">
-            <h2 class="type-title-1 text-text-1">Success stories</h2>
-            <div class="mt-12 grid gap-6 md:grid-cols-2">
-                <figure class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
-                    <blockquote class="type-quote text-text-1">We used to spend a lot of money on Google Ads. Now our customers do the marketing for us.</blockquote>
-                    <figcaption class="mt-6 flex items-start justify-between gap-4">
-                        <span class="flex items-center gap-3">
-                            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-hidden="true"><span class="type-caption" style="font-weight: 650">NR</span></span>
-                            <span><span class="type-title-4 block text-text-1">Nolan and Megan Ralston, Owners, Pizzeria</span></span>
-                        </span>
-                        <span class="type-title-3 max-w-[220px] text-right text-brand-700">150+ New Customers In 3 months</span>
-                    </figcaption>
-                </figure>
-                <figure class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
-                    <blockquote class="type-quote text-text-1">I would have used Easy Refer since day 1 if it was available.</blockquote>
-                    <figcaption class="mt-6 flex items-start justify-between gap-4">
-                        <span class="flex items-center gap-3">
-                            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-hidden="true"><span class="type-caption" style="font-weight: 650">TH</span></span>
-                            <span><span class="type-title-4 block text-text-1">Talia Hollis, Hairstylist</span></span>
-                        </span>
-                        <span class="type-title-3 max-w-[220px] text-right text-brand-700">110+ New Customers In 4 months</span>
-                    </figcaption>
-                </figure>
-            </div>
-            <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
-        </div>
-    </section>
-
-    {{-- Release 08b (item 2.2, DG-5): pricing, the calculator,
-         and the FAQ are three sibling sections, not one stack
-         inside #pricing. The pricing card keeps its accepted
-         desktop co-visibility with the calculator heading below
-         it; the FAQ section takes the alternating surface. The
-         sticky bar's #pricing suppression zone is unchanged. --}}
+    {{-- Release 08b (item 2.2, DG-5): pricing and the calculator
+         are sibling sections, not one stack inside #pricing. The
+         pricing card keeps its accepted desktop co-visibility
+         with the calculator heading below it. The sticky bar's
+         #pricing suppression zone is unchanged. (The third 08b
+         sibling, the home FAQ section, is removed by the copy
+         release, O-1.) --}}
     <section id="pricing" class="bg-surface-1">
         <div class="shell section-pad">
             <h2 class="type-title-1 text-center text-text-1">Simple, transparent pricing</h2>
-            <p class="type-lede mx-auto mt-3 max-w-[56ch] text-center text-text-2">One plan: free to start, {{ \App\Support\Money::usd($plan->per_referral_cents) }} per verified referral visit, never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
+            {{-- Copy release (Amendment 11): slim-down lede;
+                 PROSE-GAP floor lifts it to mt-4. --}}
+            <p class="type-lede mx-auto mt-4 max-w-[56ch] text-center text-text-2">One plan. {{ \App\Support\Money::usd($plan->per_referral_cents) }} when a referred friend visits. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
             <div class="mt-12">
                 @include('partials.pricing-plan')
             </div>
+            {{-- Amendment 12 (release 11, HOME-PRC-05): the plain
+                 definition of a visit that counts, met at the
+                 price. Same words close the FAQ-03 answer. --}}
+            <p class="type-body mx-auto mt-6 max-w-[56ch] text-center text-text-2">A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.</p>
+            {{-- Amendment 12 (release 11, HOME-PRC-06): the bulk
+                 text rate stated in public, next to the processor
+                 trust line. The rate and the example total render
+                 from config (100 customers, one segment each). --}}
+            <p class="type-body mx-auto mt-3 max-w-[56ch] text-center text-text-2">Bulk texts cost {{ (int) config('billing.sms_segment_price_cents') }} cents per segment for each customer. Most short texts are one segment. One text to 100 customers costs {{ \App\Support\Money::usd(100 * (int) config('billing.sms_segment_price_cents')) }}.</p>
             <p class="type-caption mt-4 text-center text-text-2">Square handles payments. Twilio handles text messages.</p>
         </div>
     </section>
 
-    <section class="bg-surface-1">
+    {{-- 08f (contrast audit F-10): the calculator block takes
+         the white ground so it stops running on from the cream
+         pricing section above it; its worksheet card now reads
+         through the strengthened line and e1 shadow. --}}
+    <section class="bg-surface-0">
         <div class="shell pb-24">
             @include('partials.calculator')
         </div>
     </section>
 
-    <section class="bg-surface-0">
-        {{-- R-3 (release 08d): compact bottom step on mobile; the
-             starter kit follows on the same surface. --}}
-        <div class="shell section-pad section-pad-compact-b">
-            <div class="mx-auto max-w-[760px]">
-                <h2 class="type-title-1 text-text-1">Frequently asked questions</h2>
-                <div class="mt-6">
-                    @include('partials.faq-list', ['faqs' => $faqs, 'heading' => 'h3'])
-                </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- S-01 (release 08b): the starter kit renders BEFORE the
-         closing band, so the page ends on the band's moment
-         and then the footer, not on a second ending. --}}
-    @include('partials.starter-kit', ['source' => 'home'])
-
+    {{-- Copy release (2026-10-24, O-1): the home FAQ subset is
+         removed. The full set lives on /faq; the verticals keep
+         their embedded subset. S-01's older disposition (the
+         starter kit standing before the closing band) is also
+         superseded here: the kit merges INTO the closing band
+         (O-3, below), so the page has one ending. --}}
 
     {{-- Closing CTA (HOME-CTA-01 with the OD-6 approved body line,
          option (b); HOME-CTA-02 bullets). The band's button is the
          btn-accent component (CF-07). Redesign (Section 10.1 item
          9): centered column on ink-950, reversed lockup, bullets as
-         one centered check row with accent checks. --}}
+         one centered check row with accent checks.
+         Copy release (2026-10-24, Amendment 11): the band gains
+         its adjacent proof element (tactics T-06): the OD-6
+         Ralston result figure with its attribution (HOME-CTA-03),
+         and the starter kit renders inside the band under the
+         divider (O-3), one ask cluster instead of two adjacent
+         asks. --}}
     <section id="closing-cta" class="on-dark bg-ink-950">
         <div class="shell" style="padding-block: 96px">
             <div class="mx-auto max-w-[720px] text-center">
@@ -366,7 +587,9 @@
                     <li class="type-caption flex items-start gap-2 text-white"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-accent-400" />24/7 Support</li>
                 </ul>
                 <p class="mt-8"><a class="btn btn-accent btn-lg" href="{{ route('register') }}">Start free</a></p>
+                <p class="type-caption mt-6 text-dark-muted"><span class="type-title-4 text-white">150+ New Customers In 3 months</span> — Nolan and Megan Ralston, Owners, Pizzeria</p>
             </div>
+            @include('partials.starter-kit', ['source' => 'home', 'band' => true])
         </div>
     </section>
 
@@ -389,6 +612,84 @@
     <div class="mkt-sticky-cta" id="mkt-sticky-cta">
         <a class="btn btn-primary btn-lg w-full" href="{{ route('register') }}">Start free</a>
     </div>
+    <script>
+        (function () {
+            // Hero animation: pause the loop while the stage is
+            // off screen or the tab is hidden (owner spec,
+            // 2026-10-24). Purely presentational; the timeline
+            // itself is CSS.
+            var stage = document.getElementById('hero-stage');
+            if (!stage || !('IntersectionObserver' in window)) {
+                return;
+            }
+            var inView = true;
+            var apply = function () {
+                stage.classList.toggle('hs-paused', !inView || document.hidden);
+            };
+            new IntersectionObserver(function (entries) {
+                inView = entries[0].isIntersecting;
+                apply();
+            }, { threshold: 0.05 }).observe(stage);
+            document.addEventListener('visibilitychange', apply);
+        })();
+    </script>
+    <script>
+        (function () {
+            // How-it-works story: scroll reveal + progress for the
+            // four beats (partials/how-it-works-story). Enhancement
+            // only. The beats render visible by default; the
+            // .hiw-live gate class that hides them pre-reveal is
+            // added solely on this path (observer available,
+            // reduced motion off). Reduced motion or no observer:
+            // every beat is marked in and the strip stands
+            // complete, matching the static no-JS rendering.
+            var story = document.getElementById('hiw-story');
+            if (!story) {
+                return;
+            }
+            var beats = story.querySelectorAll('.hiw-beat');
+            var fill = document.getElementById('hiw-pfill');
+            var labels = story.querySelectorAll('[data-hiw-plabel]');
+            function setProgress(n) {
+                if (fill) {
+                    fill.style.width = (n * 25) + '%';
+                }
+                for (var i = 0; i < labels.length; i++) {
+                    labels[i].classList.toggle('on', i < n);
+                }
+            }
+            var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduced || !('IntersectionObserver' in window)) {
+                for (var i = 0; i < beats.length; i++) {
+                    beats[i].classList.add('hiw-in');
+                }
+                setProgress(4);
+                return;
+            }
+            story.classList.add('hiw-live');
+            setProgress(0);
+            var seen = {};
+            var count = 0;
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (!entry.isIntersecting) {
+                        return;
+                    }
+                    entry.target.classList.add('hiw-in');
+                    var key = entry.target.getAttribute('data-beat');
+                    if (!seen[key]) {
+                        seen[key] = true;
+                        count++;
+                        setProgress(count);
+                    }
+                    io.unobserve(entry.target);
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+            for (var j = 0; j < beats.length; j++) {
+                io.observe(beats[j]);
+            }
+        })();
+    </script>
     <script>
         (function () {
             function init() {

@@ -45,6 +45,11 @@ class NullSquarePaymentsGateway implements SquarePaymentsGateway
         return CardResult::failed('square_not_configured', 'integration');
     }
 
+    public function resolveCard(PaymentMethod $method): ?CardResult
+    {
+        return null;
+    }
+
     public function refundPayment(string $squarePaymentId, int $amountCents, string $idempotencyKey, ?string $reason = null): RefundResult
     {
         Log::error('Square refund attempted without a configured access token.');

@@ -7,7 +7,7 @@
 @section('content')
     <section class="shell section-pad">
         <div class="mx-auto max-w-[640px] text-center">
-            <p class="type-eyebrow text-brand-700">Error 403</p>
+            <p class="type-eyebrow text-link">Error 403</p>
             <h1 class="type-display-sm mt-3 text-text-1">You do not have access to this page</h1>
             <p class="type-lede mt-4 text-text-2">This page is only available to people with the right access for it.</p>
             <div class="mt-8 flex flex-wrap justify-center gap-3">

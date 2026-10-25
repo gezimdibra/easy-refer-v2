@@ -8,11 +8,9 @@
     dismissed. Row states share one pattern: a success circle
     with the check glyph when done, a circle-alert glyph when
     open, and open rows link to the step's surface. The card row
-    is the exception: it stays a status row, because no
-    card-capture surface exists in the product yet (the
-    controller derives card_on_file from the Square customer
-    record; the capture form ships with billing), so there is
-    no honest destination to link it to.
+    links to the billing page in Settings (DG-2 closed, billing
+    UI build unit BU-3); the controller derives card_on_file
+    from the Square customer record.
 --}}
     @if ($checklistDone < 4 && ! $checklistDismissed)
         <div class="card mt-4">
@@ -32,28 +30,28 @@
                     @if ($checklist['email_verified'])
                         <span class="flex items-center gap-2.5"><span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success-fill text-success-strong"><x-icon name="check" :size="16" /></span> Verify your email</span>
                     @else
-                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> <a class="font-semibold text-brand-700 hover:underline" href="{{ route('verification.notice') }}">Verify your email</a>
+                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> <a class="font-semibold text-link hover:underline" href="{{ route('verification.notice') }}">Verify your email</a>
                     @endif
                 </li>
                 <li class="flex items-center gap-2.5">
                     @if ($checklist['reward_text'])
                         <span class="flex items-center gap-2.5"><span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success-fill text-success-strong"><x-icon name="check" :size="16" /></span> Set your rewards</span>
                     @else
-                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> <a class="font-semibold text-brand-700 hover:underline" href="{{ route('settings.rewards') }}">Set your rewards</a>
+                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> <a class="font-semibold text-link hover:underline" href="{{ route('settings.rewards') }}">Set your rewards</a>
                     @endif
                 </li>
                 <li class="flex items-center gap-2.5">
                     @if ($checklist['poster_downloaded'])
                         <span class="flex items-center gap-2.5"><span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success-fill text-success-strong"><x-icon name="check" :size="16" /></span> Print your QR code</span>
                     @else
-                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> <a class="font-semibold text-brand-700 hover:underline" href="{{ route('owner.qr') }}">Print your QR code</a>
+                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> <a class="font-semibold text-link hover:underline" href="{{ route('owner.qr') }}">Print your QR code</a>
                     @endif
                 </li>
                 <li class="flex items-center gap-2.5">
                     @if ($checklist['card_on_file'])
                         <span class="flex items-center gap-2.5"><span class="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success-fill text-success-strong"><x-icon name="check" :size="16" /></span> Add a card (required to activate your QR code)</span>
                     @else
-                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> Add a card (required to activate your QR code)
+                        <span class="flex-none text-text-3" aria-hidden="true"><x-icon name="circle-alert" :size="20" /></span> <a class="font-semibold text-link hover:underline" href="{{ route('settings.billing') }}">Add a card (required to activate your QR code)</a>
                     @endif
                 </li>
             </ul>

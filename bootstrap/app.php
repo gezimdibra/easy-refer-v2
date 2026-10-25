@@ -48,6 +48,23 @@ $app = Application::configure(basePath: dirname(__DIR__))
             'admin.2fa' => EnsureAdminTwoFactor::class,
         ]);
 
+        // Provider webhook deliveries carry no CSRF token: Square
+        // and Twilio authenticate their POSTs with their own
+        // signature schemes, verified inside the webhook
+        // controllers before anything is recorded or applied
+        // (spec Sections 9.4 and 10.3). The exemption is scoped
+        // to the webhook prefix only, which covers exactly the
+        // two registered webhook routes (webhooks.square,
+        // webhooks.twilio.status); every other route stays
+        // token-checked. This list is pinned verbatim by
+        // CsrfTest: widening it fails the suite on purpose. The
+        // evidence for the change is the BU-8 production probe
+        // (2026-10-24): with zero exemptions, real deliveries
+        // were rejected 419 before signature verification ran.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/*',
+        ]);
+
         // Selector/validator remember-me resolution (spec Section 8.4),
         // after the session starts and before the route guard decides.
         $middleware->web(append: [

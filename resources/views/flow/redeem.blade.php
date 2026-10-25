@@ -15,7 +15,7 @@
          the held page. --}}
     @if ($state === 'show')
         <div class="flex items-center gap-3">
-            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-hidden="true"><span style="font-size: 18px; font-weight: 650">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($business->name, 0, 1)) }}</span></span>
+            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-brand-50 text-text-1" aria-hidden="true"><span style="font-size: 18px; font-weight: 650">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($business->name, 0, 1)) }}</span></span>
             <span>
                 <span class="type-title-4 block text-text-1">{{ $business->name }}</span>
                 <span class="type-caption block text-text-2">{{ $business->street }}, {{ $business->city }}</span>
@@ -51,7 +51,7 @@
         <p class="mt-2 text-text-2">Rewards are good for {{ $business->redemption_window_days }} days.</p>
 
         @if ($backUrl ?? null)
-            <p class="mt-4"><a class="font-semibold text-brand-700 hover:underline" href="{{ $backUrl }}">Back to {{ $business->name }}</a></p>
+            <p class="mt-4"><a class="font-semibold text-link hover:underline" href="{{ $backUrl }}">Back to {{ $business->name }}</a></p>
         @endif
     @elseif ($state === 'held')
         <p class="text-sm text-text-2">{{ $business->name }}</p>

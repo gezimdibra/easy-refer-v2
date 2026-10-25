@@ -60,11 +60,45 @@ class EmailVerificationTest extends TestCase
             'hash' => sha1($user->getEmailForVerification()),
         ]);
 
-        $this->actingAs($user)->get($url)->assertRedirect(route('dashboard').'?verified=1');
+        // The factory business has billing_status 'none', so the
+        // verification transition routes to the billing page's
+        // setup state (BU-5), not the dashboard.
+        $this->actingAs($user)->get($url)->assertRedirect(route('settings.billing'));
 
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
         $this->assertNotNull($user->business->fresh()->email_verified_at);
         $this->assertTrue(AuditLog::query()->where('action', 'owner.email_verified')->where('user_id', $user->id)->exists());
+    }
+
+    public function test_signed_link_sends_a_business_already_in_billing_to_the_dashboard(): void
+    {
+        $user = User::factory()->unverified()->create();
+        $user->business->forceFill(['billing_status' => 'active'])->save();
+
+        $url = URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), [
+            'id' => $user->id,
+            'hash' => sha1($user->getEmailForVerification()),
+        ]);
+
+        $this->actingAs($user)->get($url)->assertRedirect(route('dashboard').'?verified=1');
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_repeat_click_after_verification_goes_to_the_dashboard_not_billing(): void
+    {
+        // Route-once (BU-5): the billing detour belongs to the
+        // verification transition itself. An owner who is already
+        // verified and clicks the link again lands on the
+        // dashboard, even while billing is still 'none'.
+        $user = User::factory()->create();
+        $this->assertSame('none', $user->business->billing_status);
+
+        $url = URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), [
+            'id' => $user->id,
+            'hash' => sha1($user->getEmailForVerification()),
+        ]);
+
+        $this->actingAs($user)->get($url)->assertRedirect(route('dashboard').'?verified=1');
     }
 
     public function test_link_with_a_tampered_hash_is_rejected(): void

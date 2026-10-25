@@ -19,7 +19,7 @@
                     @foreach ($posts as $post)
                         <li>
                             <h2 class="type-title-3">
-                                <a class="text-brand-700 hover:underline" href="{{ route('blog.post', ['slug' => $post->slug]) }}">{{ $post->title }}</a>
+                                <a class="text-link hover:underline" href="{{ route('blog.post', ['slug' => $post->slug]) }}">{{ $post->title }}</a>
                             </h2>
                             <p class="mt-1 text-sm text-text-3">{{ $post->published_at->format('M j, Y') }}</p>
                             <p class="mt-2 text-base text-text-2">{{ $post->excerpt }}</p>

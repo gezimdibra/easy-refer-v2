@@ -36,7 +36,7 @@
                 <tbody>
                     @foreach ($businesses as $business)
                         <tr class="border-b border-line">
-                            <td class="py-2 pr-3"><a class="font-semibold text-brand-700 hover:underline" href="{{ route('admin.businesses.show', $business) }}">{{ $business->name }}</a></td>
+                            <td class="py-2 pr-3"><a class="font-semibold text-link hover:underline" href="{{ route('admin.businesses.show', $business) }}">{{ $business->name }}</a></td>
                             <td class="py-2 pr-3">{{ $business->owner?->email }}</td>
                             <td class="py-2 pr-3">
                                 @if ($business->status === 'active') <span class="pill pill-success">Active</span>

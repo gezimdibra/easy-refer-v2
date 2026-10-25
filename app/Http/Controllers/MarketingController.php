@@ -38,7 +38,7 @@ class MarketingController extends Controller
             'h1' => 'Your regulars bring your salon its next clients',
             'line' => 'Built for salons: every compliment on your work is a referral waiting to happen.',
             'objection' => 'My clients already rebook',
-            'objection_answer' => 'Rebooking keeps your clients. Referrals add new ones: your clients share their link, and their friends book with you.',
+            'objection_answer' => 'Rebooking keeps your clients. Referrals add new ones. Your clients share their link, and their friends book with you.',
             'visual' => ['kind' => 'poster', 'base' => 'images/poster-qr', 'width' => 480, 'height' => 398, 'alt' => 'The QR code page in the owner dashboard, showing the large QR code customers scan and the poster downloads.'],
         ],
         'cafes' => [
@@ -46,7 +46,7 @@ class MarketingController extends Controller
             'h1' => 'Your regulars bring your cafe its next customers',
             'line' => 'Built for cafes: your morning regulars know everyone on the block.',
             'objection' => 'Margins are too thin for discounts',
-            'objection_answer' => 'You choose the reward, and you pay our {per_visit} only when a new customer actually visits and redeems.',
+            'objection_answer' => 'You pick the reward. You pay {per_visit} only when a new customer visits and redeems.',
             'visual' => ['kind' => 'photo', 'base' => 'images/photos/ungaro-hero', 'width' => 1080, 'height' => 720, 'alt' => 'A printed Easy Refer referral sign with a QR code on the counter at Ungaro Coal Fired Pizza Cafe.'],
         ],
         'boutiques' => [
@@ -61,11 +61,11 @@ class MarketingController extends Controller
 
     public function home(): View
     {
+        // Copy release (2026-10-24, O-1): home no longer renders
+        // the FAQ subset; the full set lives on /faq. The
+        // verticals still pass faqSubset() below.
         return view('marketing.home', [
             'plan' => Plan::launch(),
-            // The pricing FAQ row (landing-page-spec.md Section
-            // 4.7): FAQ-01, FAQ-02, FAQ-03, FAQ-05.
-            'faqs' => $this->faqSubset(),
         ]);
     }
 
@@ -182,11 +182,19 @@ class MarketingController extends Controller
     }
 
     /**
-     * The seven approved FAQ entries (inventory FAQ-01 to FAQ-07,
-     * in the release 08b S-06 order: money questions together at
-     * positions 3 and 4, FAQ-07 last and FAQ page only), with the
-     * pricing answers' amounts interpolated from the plan table
-     * and config so the page can never drift from the plan row.
+     * The twelve approved FAQ entries (inventory FAQ-01 to
+     * FAQ-12, in the release 08b S-06 order: money questions
+     * together at positions 3 and 4, FAQ-07 last of the original
+     * set and FAQ page only), with the pricing answers' amounts
+     * interpolated from the plan table and config so the page can
+     * never drift from the plan row. Amendment 12 (release 11,
+     * 2026-10-24) extends the FAQ-03 answer with the worked
+     * example and the visit-that-counts definition, amends
+     * FAQ-07, and appends FAQ-08 to FAQ-12 after FAQ-07 so the
+     * vertical subset indices never move. The worked example's
+     * figures are computed from the same plan values: twelve
+     * visits at the per-visit price, and the same twelve in the
+     * first month with the one-time free allowance subtracted.
      *
      * @return list<array{q: string, a: string}>
      */
@@ -196,23 +204,26 @@ class MarketingController extends Controller
         $perVisit = Money::usd($plan->per_referral_cents);
         $cap = Money::usd($plan->monthly_cap_cents);
         $free = (int) config('billing.free_visits_at_signup');
+        $exampleVisits = 12;
+        $exampleCharge = Money::usd($exampleVisits * $plan->per_referral_cents);
+        $exampleFirstMonth = Money::usd(($exampleVisits - $free) * $plan->per_referral_cents);
 
         return [
             [
                 'q' => 'What is Easy Refer?',
-                'a' => 'Easy Refer is a referral platform for local businesses. Customers scan a QR code, share their referral link, and earn rewards when friends visit. You pay only for verified visits, and you can send bulk texts from your dashboard.',
+                'a' => 'Easy Refer turns your customers into referrers. They scan a QR code, share their link, and earn rewards when friends visit. You pay only for visits that count.',
             ],
             [
                 'q' => 'How does the QR code referral system work?',
-                'a' => 'Your business gets its own QR code for the counter. A customer scans it, verifies their phone number, and gets a personal link to share. When a friend visits through that link, both of them can claim a reward.',
+                'a' => 'Your shop gets its own QR code. A customer scans it, confirms their phone, and gets a link to share. When a friend visits, both earn a reward.',
             ],
             [
                 'q' => 'How much does it cost?',
-                'a' => "You pay {$perVisit} only when a referred friend actually visits your store and redeems. There is no monthly fee. Your first {$free} verified visits are free, and you never pay more than {$cap} in a month.",
+                'a' => "Only when a referred friend visits and redeems: {$perVisit}. No monthly fee. First {$free} visits free. Never more than {$cap} a month. Say {$exampleVisits} referred friends visit in a month. That is one {$exampleCharge} charge. In your first month, the first {$free} are free. The same {$exampleVisits} visits cost {$exampleFirstMonth} that month. A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.",
             ],
             [
                 'q' => 'Is there a setup fee?',
-                'a' => "No. There is no setup fee and no monthly fee. You pay only per verified referral visit, and your first {$free} verified visits are free.",
+                'a' => "No. No setup fee, no monthly fee. You pay per visit, and your first {$free} visits are free.",
             ],
             [
                 'q' => 'How do I track referrals?',
@@ -220,20 +231,41 @@ class MarketingController extends Controller
             ],
             [
                 'q' => 'Is my data secure?',
-                'a' => 'Yes. Passwords are stored with strong one-way hashing, sessions expire on their own, and card details never touch our servers: Square handles payments and Twilio handles text messages. You can ask for a copy or deletion of your data any time at support@easy-refer.com.',
+                'a' => 'Yes. Passwords are stored with strong one-way hashing. Sessions expire on their own. Card details never touch our servers: Square handles payments and Twilio handles text messages. You can ask for a copy or deletion of your data any time at support@easy-refer.com.',
             ],
             [
                 'q' => 'Do I need a card to start?',
-                'a' => "Yes, we ask for a card when you sign up so billing can start automatically later. Nothing is charged until after your first {$free} free verified visits, and you can cancel any time before then.",
+                'a' => "Yes. Your QR code turns on once a card is on file. Nothing is charged until after your first {$free} free visits. You can cancel any time before then.",
+            ],
+            [
+                'q' => 'How long does setup take?',
+                'a' => 'Minutes. Sign up in four short steps. Then set your reward, print your QR code, and add your card.',
+            ],
+            [
+                'q' => 'Which businesses does Easy Refer fit?',
+                'a' => 'Any local business customers visit in person. It is built for barbershops, salons, cafes, and boutiques. If people pay at your counter, it can work for you.',
+            ],
+            [
+                'q' => 'What do rewards cost me?',
+                'a' => "You choose the reward, so you choose the cost. A free coffee, a discount, whatever brings people back. You hand it out only when a referred friend redeems it. Our {$perVisit} fee is separate.",
+            ],
+            [
+                'q' => 'How do I cancel?',
+                'a' => 'Close your account any time in Settings, under Account. Billing stops after a final check of your visits. Rewards your customers already earned stay good for 30 days.',
+            ],
+            [
+                'q' => 'What if a customer never scans the code?',
+                'a' => 'Nothing happens, and nothing is charged. You pay only when a referred friend visits and redeems a reward. Put the code where customers cannot miss it.',
             ],
         ];
     }
 
     /**
-     * The home and vertical pages' FAQ subset (spec Section 2.6):
+     * The vertical pages' FAQ subset (spec Section 2.6):
      * FAQ-01, FAQ-02, FAQ-03, FAQ-05, which sit at indices 0 to 3
      * after the release 08b S-06 reorder (01, 02, 03, 05, 04, 06,
-     * then FAQ-07, FAQ page only).
+     * then FAQ-07, FAQ page only). Home carried the same subset
+     * until the copy release removed it (O-1, 2026-10-24).
      *
      * @return list<array{q: string, a: string}>
      */

@@ -26,6 +26,6 @@
         <button type="submit" class="btn btn-counter btn-primary w-full">Mark as Claimed</button>
     </form>
     <p class="mt-3 text-center">
-        <a class="font-semibold text-brand-700 hover:underline" href="{{ route('home') }}">Not now</a>
+        <a class="font-semibold text-link hover:underline" href="{{ route('home') }}">Not now</a>
     </p>
 @endsection

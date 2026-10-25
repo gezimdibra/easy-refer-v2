@@ -32,6 +32,25 @@ class ConfigSeedAgreementTest extends TestCase
         $this->assertSame((int) config('billing.monthly_cap_cents'), $plan->monthly_cap_cents);
         $this->assertNull($plan->price_cents);
         $this->assertNull($plan->included_referrals_per_period);
+        // Every price figure the billing page's plan block renders
+        // agrees with config: the per-visit figure resolves from
+        // this row to the configured per-verified-visit price, and
+        // the cap line is the configured monthly cap.
+        $this->assertSame((int) config('billing.price_per_verified_visit_cents'), $plan->perVisitPriceCents());
+        $this->assertSame((int) config('billing.monthly_cap_cents'), $plan->monthly_cap_cents);
+    }
+
+    public function test_per_visit_price_resolves_by_plan_model_for_both_rows(): void
+    {
+        // price_cents is the subscription slot and per_referral_cents
+        // the per-visit slot; each row fills only its own. The
+        // unlimited row carries its period price in price_cents and
+        // has no per-visit price; the launch row is the mirror.
+        $unlimited = Plan::query()->where('key', 'unlimited')->firstOrFail();
+        $this->assertSame('subscription', $unlimited->model);
+        $this->assertSame(4900, $unlimited->price_cents);
+        $this->assertNull($unlimited->per_referral_cents);
+        $this->assertNull($unlimited->perVisitPriceCents());
     }
 
     public function test_signup_credit_and_sms_price_come_from_config(): void

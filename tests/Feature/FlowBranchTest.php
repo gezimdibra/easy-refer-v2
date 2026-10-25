@@ -57,6 +57,7 @@ class FlowBranchTest extends TestCase
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => $phone,
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
     }
 
@@ -153,6 +154,7 @@ class FlowBranchTest extends TestCase
 
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share'));
@@ -172,6 +174,7 @@ class FlowBranchTest extends TestCase
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertOk()->assertSee('Something went wrong on our end');
     }
 
@@ -197,6 +200,7 @@ class FlowBranchTest extends TestCase
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertSessionHasErrors('phone');
     }
 
@@ -265,6 +269,7 @@ class FlowBranchTest extends TestCase
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Patricia', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share'));
 

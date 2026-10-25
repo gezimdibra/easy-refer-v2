@@ -29,7 +29,7 @@
             <p class="mt-3 text-base text-text-2">A first-party cookie named er_attrib holds those same values on the visitor's browser for 90 days so the signup can be attributed; it is a functional cookie, it records campaign parameters only (no names, emails, or phone numbers), and declining on the cookie banner deletes it and stops further capture.</p>
             <h3 class="mt-6 type-title-3 text-text-1">Payments, messages, and measurement</h3>
             <p class="mt-3 text-base text-text-2">Payments are processed by Square and text messages and phone verification by Twilio. Ad measurement, only with your consent, uses Google Analytics and the Meta Pixel. Card details never touch our servers: we do not store payment information ourselves.</p>
-            <p class="mt-3 text-base text-text-2">Data requests: <a class="font-semibold text-brand-700 underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>. You can request a copy or deletion of your data any time.</p>
+            <p class="mt-3 text-base text-text-2">Data requests: <a class="font-semibold text-link underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>. You can request a copy or deletion of your data any time.</p>
 
             <h2 id="terms-of-service" class="mt-10 type-title-1 text-text-1">Terms of Service</h2>
             <ul class="mt-3 list-inside list-disc space-y-1 text-base text-text-2">
@@ -47,8 +47,8 @@
             <p class="mt-3 text-base text-text-2">Easy Refer is built to comply with GDPR, CCPA, and PCI DSS. We do not store payment information ourselves.</p>
 
             <h2 class="mt-10 type-title-1 text-text-1">Refunds</h2>
-            <p class="mt-3 text-base text-text-2">Refund requests must be made within 14 days of payment. Approved refunds are processed within 7 to 10 business days. Contact <a class="font-semibold text-brand-700 underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>.</p>
-            <p class="mt-3 text-base"><a class="font-semibold text-brand-700 underline" href="{{ route('refund') }}">Refund Policy</a></p>
+            <p class="mt-3 text-base text-text-2">Refund requests must be made within 14 days of payment. Approved refunds are processed within 7 to 10 business days. Contact <a class="font-semibold text-link underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>.</p>
+            <p class="mt-3 text-base"><a class="font-semibold text-link underline" href="{{ route('refund') }}">Refund Policy</a></p>
         </div>
     </section>
 @endsection

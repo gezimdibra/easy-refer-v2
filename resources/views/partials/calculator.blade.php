@@ -24,7 +24,9 @@
      the verticals' pricing section. --}}
 <div class="mx-auto mt-16 max-w-[720px] text-center">
     <h2 class="type-title-1 text-text-1">See what referrals could bring in</h2>
-    <p class="type-body mt-3 text-text-2">Put in your own numbers. The calculator uses your counter traffic and your average ticket. It applies the same {{ \App\Support\Money::usd($plan->per_referral_cents) }} per verified visit and the same {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} monthly cap.</p>
+    {{-- Copy release (Amendment 11, O-2): the intro is the
+         slim-down short form; PROSE-GAP floor lifts it to mt-4. --}}
+    <p class="type-body mt-4 text-text-2">Use your own numbers: your weekly customers and your average sale. The math uses the same {{ \App\Support\Money::usd($plan->per_referral_cents) }} fee and the same {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} limit.</p>
 </div>
 <div class="mx-auto mt-10 max-w-[720px] rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px"
     x-data="{
@@ -50,11 +52,11 @@
             <input class="form-input" id="calc-ticket" type="number" min="0" max="100000" x-model.number="ticket">
         </div>
         <div>
-            <label class="form-label" for="calc-share">Share of customers who bring a friend who visits</label>
+            <label class="form-label" for="calc-share">Customers who bring a friend</label>
             {{-- F5 (release 08b): the inline share input takes the
                  48px target height (h-12); the font stays 16px and
                  the "1 in [ ]" sentence layout is unchanged. --}}
-            <p class="form-input flex items-center gap-2">1 in <input class="h-12 w-16 border-0 bg-transparent p-0 focus:outline-none" id="calc-share" type="number" min="1" max="1000" x-model.number="oneIn" aria-label="Share of customers who bring a friend who visits, as one in a number"></p>
+            <p class="form-input flex items-center gap-2">1 in <input class="h-12 w-16 border-0 bg-transparent p-0 focus:outline-none" id="calc-share" type="number" min="1" max="1000" x-model.number="oneIn" aria-label="Customers who bring a friend, as one in a number"></p>
         </div>
     </div>
 
@@ -64,6 +66,14 @@
         <p class="type-body-lg text-text-1">Worth about $<strong class="type-stat-sm" x-text="value">880</strong> in first-visit sales</p>
     </div>
     <p class="form-help mt-4">Estimates from your own numbers, not our results.</p>
+    {{-- Amendment 12 (release 11, LAND-CALC-01): the honesty
+         notes sit with the estimate label, glued to the results:
+         the sales figure is gross of the rewards the business
+         hands out, and the monthly fee estimate does not
+         subtract the one-time free visits. The free count
+         renders from config. --}}
+    <p class="form-help mt-2">The sales figure is before the rewards you hand out. Our fee, shown above, is the only charge from us.</p>
+    <p class="form-help mt-2">Your first {{ (int) config('billing.free_visits_at_signup') }} visits are free. This monthly estimate does not subtract them.</p>
 
     {{-- C-02: this anchor IS the primary signup action, so it carries
          the primary treatment; the label never rides an outline or

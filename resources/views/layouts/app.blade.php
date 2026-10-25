@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
     <title>@yield('title', config('app.name'))</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
@@ -44,7 +47,7 @@
                      lg, where the rail and its signature are
                      hidden; the bar's 60px height and the avatar's
                      place at the right are unchanged. --}}
-                <span class="lg:hidden"><x-logo :wordmark="false" :size="30" /></span>
+                <span class="lg:hidden"><x-logo variant="auto" :wordmark="false" :size="30" /></span>
 
                 {{-- The top-bar title yields to the page's own
                      H1 below lg, so a phone never states the
@@ -54,7 +57,7 @@
                 @auth
                     <span class="ml-auto flex items-center gap-3">
                         <span class="hidden rounded-full bg-surface-1 px-3 py-1.5 text-[13px] font-medium text-text-1 sm:block">{{ auth()->user()->business?->name }}</span>
-                        <span class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-hidden="true"><span style="font-size: 13px; font-weight: 650">{{ collect(explode(' ', trim(auth()->user()->name)))->map(fn ($w) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($w, 0, 1)))->take(2)->implode('') }}</span></span>
+                        <span class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-brand-50 text-text-1" aria-hidden="true"><span style="font-size: 13px; font-weight: 650">{{ collect(explode(' ', trim(auth()->user()->name)))->map(fn ($w) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($w, 0, 1)))->take(2)->implode('') }}</span></span>
                     </span>
                 @endauth
             </header>

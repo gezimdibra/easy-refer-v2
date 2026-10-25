@@ -132,6 +132,7 @@ class VerifierFixTest extends TestCase
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         // The six boxes posted individually (the no-JS path) are
@@ -151,6 +152,7 @@ class VerifierFixTest extends TestCase
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Ay', 'last_name' => 'One', 'phone' => '2125550111',
             'device_signal' => 'device-abc',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456', 'device_signal' => 'device-abc'])->assertRedirect(route('refer.share'));
         $membershipA = Membership::query()->firstOrFail();
@@ -297,6 +299,7 @@ class VerifierFixTest extends TestCase
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->carry($this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share')));
 

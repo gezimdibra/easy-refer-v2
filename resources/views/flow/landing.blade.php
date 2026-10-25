@@ -19,7 +19,7 @@
          the R1 pattern: one summary line above the form, each
          problem stated once at its field (Section 4.4 rule 6). --}}
     <div class="flex items-center gap-3">
-        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-hidden="true"><span style="font-size: 18px; font-weight: 650">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($business->name, 0, 1)) }}</span></span>
+        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-brand-50 text-text-1" aria-hidden="true"><span style="font-size: 18px; font-weight: 650">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($business->name, 0, 1)) }}</span></span>
         <span>
             <span class="type-title-4 block text-text-1">{{ $business->name }}</span>
             <span class="type-caption block text-text-2">{{ $business->street }}, {{ $business->city }}</span>
@@ -77,9 +77,12 @@
         @endif
 
         <label class="well mt-5 flex items-start gap-3 text-base">
-            <input type="checkbox" name="consent" value="1" class="mt-0.5 h-[22px] w-[22px] flex-none accent-brand-600" @checked(old('consent', $draft['consent'] ?? false))>
+            <input type="checkbox" name="consent" value="1" class="mt-0.5 h-[22px] w-[22px] flex-none accent-action" @checked(old('consent', $draft['consent'] ?? false))
+                aria-invalid="{{ $errors->has('consent') ? 'true' : 'false' }}"
+                @if ($errors->has('consent')) aria-describedby="consent-error" @endif>
             <span>I agree to receive text messages about my rewards from {{ $business->name }}. Message and data rates may apply. Reply STOP to opt out.</span>
         </label>
+        @error('consent') <p class="form-error mt-2" id="consent-error">{{ $message }}</p> @enderror
 
         @error('turnstile') <p class="form-error mt-3">{{ $message }}</p> @enderror
         @include('partials.turnstile')

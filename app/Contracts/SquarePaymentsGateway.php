@@ -58,6 +58,19 @@ interface SquarePaymentsGateway
     public function saveCard(Business $business, string $sourceId, string $idempotencyKey): CardResult;
 
     /**
+     * Resolve what Square holds for a card save whose outcome was
+     * unknown, for the pending-card resolver (billing UI spec
+     * Section 3). The single-use token is gone and was never
+     * stored, so the save cannot be replayed; the answer comes
+     * from what Square holds for the business's customer. Returns
+     * the definitive card result, or null when Square holds no
+     * card for the save (the save never completed).
+     *
+     * @throws SquareOutcomeUnknown when no definitive answer exists
+     */
+    public function resolveCard(PaymentMethod $method): ?CardResult;
+
+    /**
      * Refund (part of) a payment (blueprint Section 1.7).
      *
      * @throws SquareOutcomeUnknown when Square's answer is unknown

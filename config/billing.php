@@ -37,4 +37,18 @@ return [
     'charges_enabled' => env('BILLING_CHARGES_ENABLED', false),
     'minimum_charge_cents' => 100,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dunning (spec Section 9.6, Amendment 3)
+    |--------------------------------------------------------------------------
+    |
+    | A failed charge opens a grace window of this many days: the
+    | QR flow keeps working through it, the dunning emails go out
+    | on the schedule in DunningService (day 0, day 3, day 6), and
+    | enrollment pauses only when the window closes.
+    |
+    */
+
+    'dunning_grace_days' => 7,
+
 ];

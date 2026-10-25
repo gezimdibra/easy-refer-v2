@@ -9,7 +9,7 @@
     {{-- Referral detail (spec Section 5.3): the timeline is the
          referral_events ledger for this referral, in order, with
          the inventory's event labels (REFL-06). --}}
-    <nav aria-label="Breadcrumb" class="type-caption flex min-h-12 items-center gap-1 text-text-3">
+    <nav aria-label="Breadcrumb" class="type-caption flex min-h-12 items-center gap-1 text-text-2">
         <a class="text-text-2 hover:text-text-1" href="{{ route('referrals.index') }}">Back to referrals</a>
         <span aria-hidden="true"> / </span>
         <span aria-current="page" class="text-text-1">Referral detail</span>
@@ -25,7 +25,7 @@
             @endif
         </p>
         @if ($referral->hold && $holdReasons !== [])
-            <p class="mt-2 text-text-2">Held for review: {{ implode(' ', $holdReasons) }} <a class="inline-flex min-h-12 items-center font-semibold text-brand-700 hover:underline" href="{{ route('reviews') }}">Open the review queue</a></p>
+            <p class="mt-2 text-text-2">Held for review: {{ implode(' ', $holdReasons) }} <a class="inline-flex min-h-12 items-center font-semibold text-link hover:underline" href="{{ route('reviews') }}">Open the review queue</a></p>
         @endif
 
         @if ($redeemUrl !== null)

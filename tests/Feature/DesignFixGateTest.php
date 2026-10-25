@@ -34,7 +34,7 @@ class DesignFixGateTest extends TestCase
         $login = $this->get(route('login'));
         $login->assertOk();
         $this->assertSame(3, substr_count($login->getContent(), 'inline-flex min-h-6 items-center'));
-        $login->assertSee('inline-flex min-h-11 items-center font-medium text-brand-700 underline', false);
+        $login->assertSee('inline-flex min-h-11 items-center font-medium text-link underline', false);
     }
 
     public function test_app_shell_menu_buttons_and_mobile_brand_mark(): void
@@ -158,7 +158,7 @@ class DesignFixGateTest extends TestCase
         $response->assertDontSee('font-size: 11px', false);
         $response->assertDontSee('<span aria-hidden="true">✓</span>', false);
         $response->assertSee('<line x1="12" x2="12" y1="8" y2="12" />', false);
-        $response->assertSee('flex min-h-12 items-center gap-1.5 font-semibold text-brand-700', false);
+        $response->assertSee('flex min-h-12 items-center gap-1.5 font-semibold text-link', false);
         $response->assertSee('flex-none', false);
     }
 }

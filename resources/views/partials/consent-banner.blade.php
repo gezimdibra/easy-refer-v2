@@ -21,11 +21,11 @@
         <div class="consent-inner flex flex-col gap-4 p-5">
             <p class="type-caption flex-1 text-text-2 lg:hidden">
                 Cookies: we measure how visitors find us and whether our ads work. Accept turns that on; Decline keeps it off. One basic cookie remembers how you found us either way; our
-                <a class="font-semibold text-brand-700 underline" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a> explains it.
+                <a class="font-semibold text-link underline" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a> explains it.
             </p>
             <p class="type-body-sm hidden flex-1 text-text-2 lg:block">
                 We use cookies to see how visitors find us and whether our ads work. Accept turns that measurement on. Decline keeps it off. One basic cookie remembers how you found us either way; our
-                <a class="font-semibold text-brand-700 underline" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a> explains it.
+                <a class="font-semibold text-link underline" href="{{ route('legal') }}#privacy-policy">Privacy Policy</a> explains it.
             </p>
             <form method="POST" action="{{ route('consent') }}" class="flex justify-end gap-3">
                 @csrf

@@ -122,7 +122,10 @@ class WelcomeEmailTest extends TestCase
         $this->assertStringContainsString($user->business->name, $html);
         $this->assertStringContainsString('Pay Per Visit', $html);
         $this->assertStringContainsString('you pay $2 only when a referred friend actually visits your store and redeems', $html);
-        $this->assertStringContainsString('first 5 verified visits are free', $html);
+        $this->assertStringContainsString('first 5 visits are free', $html);
+        // Amendment 12 (release 11) jargon sweep: the word is
+        // gone from the rendered email entirely.
+        $this->assertStringNotContainsString('verified', $html);
         $this->assertStringContainsString('never pay more than $99 in a month', $html);
         $this->assertStringContainsString('Nothing is charged today', $html);
         $this->assertStringContainsString('One step left before your code works: verify this email address', $html);
@@ -143,7 +146,8 @@ class WelcomeEmailTest extends TestCase
 
         $html = (new WelcomeMail($user))->render();
 
-        $this->assertStringContainsString('Your email address is verified', $html);
+        $this->assertStringContainsString('Your email address is confirmed', $html);
+        $this->assertStringNotContainsString('verified', $html);
         $this->assertStringContainsString('Get your QR code', $html);
         $this->assertStringContainsString(route('owner.qr'), $html);
         $this->assertStringNotContainsString('Verify your email address', $html);

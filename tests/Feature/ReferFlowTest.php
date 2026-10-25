@@ -67,6 +67,9 @@ class ReferFlowTest extends TestCase
             'first_name' => $first,
             'last_name' => 'Lee',
             'phone' => $phone,
+            // Step-1 consent gates the flow (round-2 audit F02);
+            // the shared helper enrolls a consenting customer.
+            'consent' => '1',
         ], $extra))->assertRedirect(route('refer.verify')));
 
         // Verification rotates the flow token; carry the rotated
@@ -187,7 +190,7 @@ class ReferFlowTest extends TestCase
 
         $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
         $this->carryFlowCookie($this->post(route('refer.enroll', ['token' => $qrToken]), [
-            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         $this->assertSame(0, Customer::count());
@@ -203,7 +206,7 @@ class ReferFlowTest extends TestCase
 
         $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
         $this->carryFlowCookie($this->post(route('refer.enroll', ['token' => $qrToken]), [
-            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         for ($i = 0; $i < 5; $i++) {
@@ -228,7 +231,7 @@ class ReferFlowTest extends TestCase
 
         $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
         $this->carryFlowCookie($this->post(route('refer.enroll', ['token' => $qrToken]), [
-            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         // One SMS start (blocked) and one voice start.
@@ -248,6 +251,43 @@ class ReferFlowTest extends TestCase
         ])->assertSessionHasErrors('phone');
 
         $this->assertSame([], $this->verify->starts);
+    }
+
+    public function test_enrollment_without_consent_is_blocked_and_sends_no_code(): void
+    {
+        // Round-2 audit F02: the step-1 consent panel used to be
+        // decorative. A submission without consent advanced to
+        // step 2 and a code was sent, under copy that reads as a
+        // real agreement. Consent now gates the flow.
+        $business = World::business();
+        [, $qrToken] = World::qr($business);
+
+        $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
+        $this->post(route('refer.enroll', ['token' => $qrToken]), [
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+        ])->assertSessionHasErrors('consent');
+
+        // No code was requested from the provider, nothing is
+        // pending, and the verify step bounces home instead of
+        // showing the code form.
+        $this->assertSame([], $this->verify->starts);
+        $this->get(route('refer.verify'))->assertRedirect(route('home'));
+        $this->assertSame(0, Customer::count());
+        $this->assertSame(0, Membership::count());
+    }
+
+    public function test_enrollment_with_consent_advances_and_sends_one_code(): void
+    {
+        $business = World::business();
+        [, $qrToken] = World::qr($business);
+
+        $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
+        $this->carryFlowCookie($this->post(route('refer.enroll', ['token' => $qrToken]), [
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111', 'consent' => '1',
+        ])->assertRedirect(route('refer.verify')));
+
+        $this->assertCount(1, $this->verify->starts);
+        $this->assertSame('sms', $this->verify->starts[0]['channel']);
     }
 
     public function test_returning_customer_gets_the_same_share_token_back(): void
@@ -437,14 +477,14 @@ class ReferFlowTest extends TestCase
             $this->flushSessionAndCookies();
             $this->get(route('refer.landing', ['token' => $qrToken]))->assertOk();
             $this->post(route('refer.enroll', ['token' => $qrToken]), [
-                'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+                'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111', 'consent' => '1',
             ])->assertRedirect(route('refer.verify'));
         }
 
         $this->flushSessionAndCookies();
         $this->get(route('refer.landing', ['token' => $qrToken]))->assertOk();
         $this->post(route('refer.enroll', ['token' => $qrToken]), [
-            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111', 'consent' => '1',
         ])->assertOk()->assertSee('Too many tries');
 
         $this->assertCount(3, $this->verify->starts);

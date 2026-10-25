@@ -10,9 +10,11 @@ use App\Services\Billing\CardResult;
 use App\Services\Billing\ChargeResult;
 use App\Services\Billing\RefundResult;
 use App\Services\Billing\SquareOutcomeUnknown;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Psr\Http\Client\ClientInterface;
 use Square\Cards\Requests\CreateCardRequest;
+use Square\Cards\Requests\ListCardsRequest;
 use Square\Environments;
 use Square\Exceptions\SquareApiException;
 use Square\Payments\Requests\CreatePaymentRequest;
@@ -47,6 +49,15 @@ use Throwable;
  * original payment for a repeated key instead of creating a
  * second charge (EC-33), so a replay either adopts the original
  * outcome or completes the one intended charge, never two.
+ *
+ * resolveCard cannot replay: the card token is single-use and
+ * was never stored. It lists the customer's cards instead and
+ * adopts a card only when it is the single one Square holds
+ * that no local row mirrors and that was created no earlier
+ * than the pending save (a small clock-skew allowance aside).
+ * Zero candidates means the save never completed; two or more
+ * means the answer is not definite, and the row stays pending
+ * rather than adopting a guess.
  */
 class SdkSquarePaymentsGateway implements SquarePaymentsGateway
 {
@@ -172,6 +183,91 @@ class SdkSquarePaymentsGateway implements SquarePaymentsGateway
 
             return CardResult::failed('card_not_created', 'processing');
         }
+
+        return CardResult::succeeded(
+            (string) $card->getId(),
+            $card->getCardBrand(),
+            $card->getLast4(),
+            $card->getExpMonth(),
+            $card->getExpYear(),
+        );
+    }
+
+    public function resolveCard(PaymentMethod $method): ?CardResult
+    {
+        $business = $method->business;
+
+        if ($business === null || $business->square_customer_id === null) {
+            return null;
+        }
+
+        $token = $this->token($business);
+
+        if ($token === null) {
+            return CardResult::failed('square_not_configured', 'integration');
+        }
+
+        try {
+            $pager = $this->client($token)->cards->list(
+                new ListCardsRequest(['customerId' => (string) $business->square_customer_id]),
+            );
+
+            $cards = [];
+            foreach ($pager as $card) {
+                $cards[] = $card;
+            }
+        } catch (SquareApiException $e) {
+            // The list itself was refused; that is no evidence
+            // about the card, so the outcome stays unknown.
+            Log::error('Square card list failed with an API error during resolution.', [
+                'business_id' => $business->id,
+                'status_code' => $e->getStatusCode(),
+                'square_errors' => $this->errorSummary($e),
+            ]);
+
+            throw new SquareOutcomeUnknown('Square card resolution unknown for business '.$business->id, 0, $e);
+        } catch (Throwable $e) {
+            Log::error('Square card resolution outcome is unknown.', [
+                'business_id' => $business->id,
+                'exception' => $e::class,
+            ]);
+
+            throw new SquareOutcomeUnknown('Square card resolution unknown for business '.$business->id, 0, $e);
+        }
+
+        $mirrored = PaymentMethod::query()
+            ->where('business_id', $business->id)
+            ->whereNotNull('square_card_id')
+            ->pluck('square_card_id')
+            ->all();
+
+        $earliest = $method->created_at?->copy()->subSeconds(120);
+
+        $candidates = [];
+        foreach ($cards as $card) {
+            $cardId = $card->getId();
+
+            if ($cardId === null || in_array($cardId, $mirrored, true)) {
+                continue;
+            }
+
+            $createdAt = $card->getCreatedAt();
+            if ($createdAt !== null && $earliest !== null && Carbon::parse($createdAt)->lt($earliest)) {
+                continue;
+            }
+
+            $candidates[] = $card;
+        }
+
+        if (count($candidates) > 1) {
+            throw new SquareOutcomeUnknown('Square holds more than one candidate card for the pending save of business '.$business->id);
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        $card = $candidates[0];
 
         return CardResult::succeeded(
             (string) $card->getId(),

@@ -34,7 +34,7 @@
             @foreach ($filters as $key => $label)
                 <li role="presentation">
                     <a role="tab" aria-selected="{{ $filter === $key ? 'true' : 'false' }}" href="{{ route('rewards.index', ['filter' => $key]) }}"
-                        @if ($filter === $key) class="inline-flex min-h-[48px] items-center rounded-full bg-brand-50 px-4 text-[15px] font-semibold text-brand-700" @else class="inline-flex min-h-[48px] items-center rounded-full px-4 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" @endif>{{ $label }} ({{ $counts[$key] }})</a>
+                        @if ($filter === $key) class="inline-flex min-h-[48px] items-center rounded-full border border-line-strong bg-brand-50 px-4 text-[15px] font-semibold text-link" @else class="inline-flex min-h-[48px] items-center rounded-full px-4 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" @endif>{{ $label }} ({{ $counts[$key] }})</a>
                 </li>
             @endforeach
         </ul>
@@ -74,7 +74,7 @@
                             <td class="whitespace-nowrap" data-label="Claimed">{{ $reward->claimed_at?->format('M j, Y') }}</td>
                             <td data-label="Text">
                                 @if ($reward->notification_state === 'failed')
-                                    <span class="text-error">{{ \App\Support\RewardStatus::notificationLabel($reward) }}</span>
+                                    <span class="text-error-strong">{{ \App\Support\RewardStatus::notificationLabel($reward) }}</span>
                                     <form method="POST" action="{{ route('rewards.resend', $reward) }}" class="mt-1" data-loading>
                                         @csrf
                                         <button type="submit" class="btn btn-secondary btn-sm">Text again</button>

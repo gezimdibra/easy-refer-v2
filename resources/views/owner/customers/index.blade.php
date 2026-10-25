@@ -27,8 +27,15 @@
             <div class="flex flex-col items-center px-6 py-10 text-center">
                 <span class="medallion"><x-icon name="users" :size="24" /></span>
                 @if ($search !== '')
+                    {{-- CP-11 search variant: name what was
+                         searched, suggest the recovery, and
+                         offer the one next action. --}}
                     <p class="type-title-3 mt-4 text-text-1">No customers match that search.</p>
-                    <p class="mt-4"><a class="btn btn-secondary" href="{{ route('customers.index') }}">Clear search</a></p>
+                    <p class="mt-2 text-text-2">Nothing found for "{{ $search }}". Check the spelling, or add them as a new customer.</p>
+                    <p class="mt-4 flex flex-wrap justify-center gap-2">
+                        <a class="btn btn-primary" href="{{ route('customers.create') }}">Add a customer</a>
+                        <a class="btn btn-secondary" href="{{ route('customers.index') }}">Clear search</a>
+                    </p>
                 @else
                     <p class="type-title-3 mt-4 text-text-1">No customers yet.</p>
                 @endif
@@ -49,7 +56,7 @@
                     @foreach ($memberships as $membership)
                         <tr>
                             <td>
-                                <a class="card-link font-semibold text-brand-700 hover:underline" href="{{ route('customers.show', $membership) }}">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</a>
+                                <a class="card-link font-semibold text-link hover:underline" href="{{ route('customers.show', $membership) }}">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</a>
                                 @if ($membership->consent_source === 'owner_asserted')
                                     <span class="block text-sm text-text-2">Added by you, waiting for their confirmation</span>
                                 @endif

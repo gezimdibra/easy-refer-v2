@@ -82,7 +82,7 @@
     @endforelse
 
     <h2 class="type-title-3 mt-10 text-text-1">Pending number links</h2>
-    <p class="type-body-sm mt-1 max-w-[68ch] text-text-2">Customers who verified with a new number inside the cooling window. Their claims hold automatically until the window passes.</p>
+    <p class="type-body-sm mt-1 max-w-[68ch] text-text-2">Customers who confirmed a new number inside the cooling window. Their claims hold automatically until the window passes.</p>
     @forelse ($numberLinks as $event)
         <div class="panel mt-3">
             <p>{{ $event->customer_name ?? 'A customer' }} linked a new number on {{ $event->created_at->format('F j, Y') }}.</p>

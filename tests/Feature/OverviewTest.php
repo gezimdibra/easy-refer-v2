@@ -80,7 +80,7 @@ class OverviewTest extends TestCase
             // The Value panel's zero variant (VAL-01, VAL-03): no
             // estimate, no illustrative numbers.
             ->assertSee('What Easy Refer brought you')
-            ->assertSee('After your first verified visit, this panel shows what Easy Refer brought you')
+            ->assertSee('After your first visit counts, this panel shows what Easy Refer brought you')
             ->assertSee('Estimates use your average ticket of $50.00')
             ->assertDontSee('Estimated first-visit sales');
     }
@@ -147,13 +147,13 @@ class OverviewTest extends TestCase
         $response = $this->actingAs($owner)->get(route('dashboard'));
         $response->assertOk()
             // VAL-02 verbatim, with correct number agreement.
-            ->assertSee('2 verified visits this month')
+            ->assertSee('2 visits counted this month')
             // 2 visits x $50 average ticket = $100.00 estimated.
             ->assertSee('About $100.00 in first-visit sales (estimate)')
             // First five visits are free: fees are exactly zero and
             // they reconcile with the billing rows.
             ->assertSee('Fees so far this month: $0.00')
-            ->assertDontSee('After your first verified visit');
+            ->assertDontSee('After your first visit counts');
     }
 
     public function test_qr_page_shows_the_live_code_and_download_records(): void

@@ -62,12 +62,12 @@
         @endif
 
         <label class="well mt-5 flex items-start gap-3 text-base">
-            <input type="checkbox" name="consent" value="1" class="mt-0.5 h-[22px] w-[22px] flex-none accent-brand-600" @checked(old('consent', $draft['consent'] ?? false))>
+            <input type="checkbox" name="consent" value="1" class="mt-0.5 h-[22px] w-[22px] flex-none accent-action" @checked(old('consent', $draft['consent'] ?? false))>
             <span>I agree to receive text messages about my rewards from {{ $business->name }}. Message and data rates may apply. Reply STOP to opt out.</span>
         </label>
 
         <label class="mt-3 flex items-start gap-3 text-base">
-            <input type="checkbox" name="send_link" value="1" class="mt-0.5 h-[22px] w-[22px] flex-none accent-brand-600" @checked(old('send_link'))>
+            <input type="checkbox" name="send_link" value="1" class="mt-0.5 h-[22px] w-[22px] flex-none accent-action" @checked(old('send_link'))>
             <span>Text me my reward link so I can find it at the store.</span>
         </label>
 

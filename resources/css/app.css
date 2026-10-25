@@ -38,19 +38,71 @@
     --color-brand-700: #0d0b08;
     --color-brand-800: #050403;
 
+    /* Dark mode (owner directive, 2026-10-24; dark-mode-spec.md
+       Section 3.2): the role tokens. Components hard-paired the
+       ink primitives (brand-600/700/800) with text-white for the
+       action, link and focus roles, so a table-only swap could
+       never theme them; these six roles are what components point
+       at instead. Their LIGHT values equal the hard-paired values
+       they replace, so the light theme renders unchanged; the
+       dark block below re-points the roles at the amber family. */
+    --color-action: #16130e;
+    --color-action-hover: #0d0b08;
+    --color-action-pressed: #050403;
+    --color-on-action: #ffffff;
+    --color-link: #0d0b08;
+    --color-focus: #16130e;
+    /* The danger split: the danger BUTTON fill gets its own role
+       so error-strong can be a text-only tone in dark (brightened
+       for text contrast) while the fill brightens only one step
+       (its boundary must still clear 3:1 on the dark card). */
+    --color-danger-fill: #b42318;
+    --color-danger-hover: #9a1b12;
+    --color-danger-pressed: #7a271a;
+    /* Hairlines on ink grounds (the auth brand panel borders):
+       a constant in both themes, tokenized so the two inline
+       styles in layouts/auth become a class. */
+    --color-on-dark-line: rgb(255 255 255 / 0.12);
+
     --color-ink-950: #0d0b08;
     --color-ink-900: #16130e;
 
     --color-accent-400: #ffb224;
     --color-accent-500: #f5a300;
 
+    /* 08f (contrast audit F-5 / T-3): the data color for chart
+       strokes on light grounds. Brand-500 #f5a300 measures
+       2.07:1 on white, below the 3:1 non-text floor, so chart
+       lines bind to data-amber instead (3.47 on white, 3.22 on
+       cream). Brand-500 itself does not move: it stays the fill
+       and dark-ground accent, and the dark theme keeps #f5a300
+       for data (9.47 on ink-950), so this token's dark value is
+       #f5a300 when the dark block lands. */
+    --color-data-amber: #b97e04;
+
     --color-surface-0: #ffffff;
     --color-surface-1: #faf6ef;
-    --color-surface-2: #f3ecdf;
+    /* 08f (contrast audit F-3 / T-1): surface-2 deepened one step
+       from #f3ecdf. The old ramp steps measured 1.08 and 1.09, so
+       every chip, tint and medallion rode on the hairline alone;
+       surface-2 now measures 1.17 against surface-1 and 1.26
+       against white. surface-3 keeps its current value behind it
+       (1.26 against surface-1), per the audit's computed repair. */
+    --color-surface-2: #efe4cf;
     --color-surface-3: #e7dcc8;
 
-    --color-line: #e7dfce;
-    --color-line-strong: #c4b698;
+    /* 08f (contrast audit F-3): line strengthened from #e7dfce
+       (1.33 on white, 1.23 on cream) to 1.54 on white and 1.43 on
+       cream, so card edges register without leaving the hairline
+       class. line-strong deepened from #c4b698, which measured
+       2.00 on white and 1.86 on cream, below the 3:1 component
+       floor (audit F-2): #8f7c5c measures 4.03 on white, 3.74 on
+       cream and 3.20 on the deepened surface-2, which carries the
+       .btn-secondary border and every strong hairline at once.
+       Light values only; the dark border ramp is separately
+       derived in the dark-mode spec. */
+    --color-line: #dccfb2;
+    --color-line-strong: #8f7c5c;
     --color-control: #6e6252;
 
     --color-text-1: #16130e;
@@ -104,7 +156,10 @@
        CC-01 covers it through this registration. */
     --color-mail-well-dark: #29231a;
 
-    --shadow-e1: 0 1px 2px rgb(22 19 14 / 0.05), 0 1px 3px rgb(22 19 14 / 0.04);
+    /* 08f (contrast audit F-3 / T-4): e1 alpha raised from
+       5%/4% to 8%/6% so the shadow half of the card pair
+       registers on a phone in daylight; geometry unchanged. */
+    --shadow-e1: 0 1px 2px rgb(22 19 14 / 0.08), 0 1px 3px rgb(22 19 14 / 0.06);
     --shadow-e2: 0 8px 24px -6px rgb(22 19 14 / 0.12), 0 2px 6px rgb(22 19 14 / 0.06);
     --shadow-e3: 0 32px 64px -24px rgb(22 19 14 / 0.28), 0 12px 24px -12px rgb(22 19 14 / 0.14);
 
@@ -114,6 +169,257 @@
     --radius-lg: 16px;
     --radius-xl: 20px;
     --radius-2xl: 24px;
+}
+
+/*
+ | Dark mode (owner directive, 2026-10-24: the site follows the
+ | device setting automatically; dark-mode-spec.md Sections 3
+ | and 8). One media block re-declares the swap tokens and the
+ | dark shadows and sets color-scheme; no JavaScript, no class
+ | on <html>, so the correct theme is in force at first paint.
+ | The ladder is warm Ink and Amber re-valued, never pure black
+ | (surface-1 #161310) and never pure white text (#F4EEE1 at
+ | 16.01:1), the Linear halation rule. Amber in dark earns
+ | exactly the action, link and focus roles plus the tint
+ | grounds at well depth; brand-500 itself never moves (it is
+ | the chart tone on the dark card at 8.15:1, and data-amber
+ | binds to it here per the 08f dark flag). Constants (ink-900,
+ | ink-950, the amber values, dark-muted, mail-well-dark) are
+ | deliberately absent: they do not swap. DM-01 and DM-02 check
+ | this block in the BUILT css against the spec tables.
+ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+
+        --color-surface-1: #161310;
+        --color-surface-0: #221d17;
+        --color-surface-2: #2c251d;
+        --color-surface-3: #383021;
+        --color-line: #3a342a;
+        --color-line-strong: #6f6350;
+        --color-control: #9a8a6d;
+
+        --color-text-1: #f4eee1;
+        --color-text-2: #cec3ac;
+        --color-text-3: #a89b81;
+        --color-text-disabled: #716553;
+
+        --color-brand-50: #2e2413;
+        --color-brand-100: #4d3a10;
+
+        --color-action: #ffb224;
+        --color-action-hover: #f5a300;
+        --color-action-pressed: #e09500;
+        --color-on-action: #16130e;
+        --color-link: #ffb224;
+        --color-focus: #ffb224;
+        --color-danger-fill: #c62f21;
+        --color-danger-hover: #b42318;
+        --color-danger-pressed: #9a1b12;
+
+        /* Same value as light by design: this line sits on ink
+           grounds, which are constant in both schemes; it is
+           re-declared so the role set is complete per theme. */
+        --color-on-dark-line: rgb(255 255 255 / 0.12);
+
+        --color-data-amber: #f5a300;
+
+        --color-success-strong: #52c184;
+        --color-success-fill: #122a1e;
+        --color-success-text: #52c184;
+        --color-warning-strong: #f0a35c;
+        --color-warning-fill: #2f2108;
+        --color-warning-text: #f6c07e;
+        --color-error-strong: #ff8f80;
+        --color-error-fill: #331512;
+        --color-error-text: #ffb4a6;
+        --color-info-strong: #8ec3da;
+        --color-info-fill: #152329;
+        --color-info-text: #b5d9ea;
+
+        --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.25);
+        --shadow-e2: 0 8px 24px -6px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
+        --shadow-e3: 0 32px 64px -24px rgb(0 0 0 / 0.65), 0 12px 24px -12px rgb(0 0 0 / 0.5);
+    }
+
+    /* The select chevron is a data-URI stroke (registered
+       constant R-9): the light stroke is text-3 on light cards;
+       here it re-strokes at the dark text-3 so the indicator
+       holds its floor on the dark card. */
+    .form-select,
+    .ui-scope select:not(.form-input) {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a89b81' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    }
+
+    /* Logo variant="auto": the reversed lockup takes over. */
+    .logo-auto .logo-for-light {
+        display: none;
+    }
+
+    .logo-auto .logo-for-dark {
+        display: inline;
+    }
+}
+
+/* Logo variant="auto" (dark-mode-spec.md C-19): both lockups
+   render, wrapped in a display:contents shell so the swap costs
+   no layout; the media blocks flip which one shows. In light
+   the reversed lockup is the hidden one. The light default MUST
+   stay scoped to the light scheme (release 09a, G3-09-1): as an
+   unconditional rule it sat after the dark block at equal
+   specificity (0,2,0) and won the cascade in dark too, hiding
+   BOTH lockups. DM-05-COMPUTED (dark/logo-probe.mjs) is the
+   named check: it asserts computed display, not rule presence. */
+.logo-auto {
+    display: contents;
+}
+
+@media (prefers-color-scheme: light) {
+    .logo-auto .logo-for-dark {
+        display: none;
+    }
+}
+
+/* The printed-poster island (dark-mode-spec.md C-22): the poster
+   is a print artifact and stays light at any device setting, so
+   its root re-declares the light token values and locks its
+   color-scheme; the on-screen preview is the printed truth.
+   Values are the @theme light table verbatim (DM-01 compares
+   them), never a second palette. */
+.theme-light-lock {
+    color-scheme: only light;
+    background-color: #faf6ef;
+    color: #16130e;
+
+    --color-surface-0: #ffffff;
+    --color-surface-1: #faf6ef;
+    --color-surface-2: #efe4cf;
+    --color-surface-3: #e7dcc8;
+    --color-line: #dccfb2;
+    --color-line-strong: #8f7c5c;
+    --color-control: #6e6252;
+    --color-text-1: #16130e;
+    --color-text-2: #453d31;
+    --color-text-3: #66594a;
+    --color-text-disabled: #9c9389;
+    --color-brand-50: #fff6e8;
+    --color-brand-100: #fdebc8;
+    --color-brand-500: #f5a300;
+    --color-brand-600: #16130e;
+    --color-brand-700: #0d0b08;
+    --color-brand-800: #050403;
+    --color-data-amber: #b97e04;
+    --color-success-strong: #0e5a36;
+    --color-success-fill: #e9f7ee;
+    --color-success-text: #0e5a36;
+    --color-warning-strong: #b54708;
+    --color-warning-fill: #fffaeb;
+    --color-warning-text: #93370d;
+    --color-error-strong: #b42318;
+    --color-error-strong-hover: #9a1b12;
+    --color-error-strong-pressed: #7a271a;
+    --color-error-fill: #fef3f2;
+    --color-error-text: #912018;
+    --color-error: #b42318;
+    --color-danger: #b42318;
+    --color-info-strong: #2f5d75;
+    --color-info-fill: #e8f0f3;
+    --color-info-text: #23485e;
+    --color-action: #16130e;
+    --color-action-hover: #0d0b08;
+    --color-action-pressed: #050403;
+    --color-on-action: #ffffff;
+    --color-link: #0d0b08;
+    --color-focus: #16130e;
+    --color-danger-fill: #b42318;
+    --color-danger-hover: #9a1b12;
+    --color-danger-pressed: #7a271a;
+    --shadow-e1: 0 1px 2px rgb(22 19 14 / 0.08), 0 1px 3px rgb(22 19 14 / 0.06);
+    --shadow-e2: 0 8px 24px -6px rgb(22 19 14 / 0.12), 0 2px 6px rgb(22 19 14 / 0.06);
+    --shadow-e3: 0 32px 64px -24px rgb(22 19 14 / 0.28), 0 12px 24px -12px rgb(22 19 14 / 0.14);
+}
+
+/* The landing page light lock (owner directive, 2026-10-24):
+   the home page renders the light theme at any device setting,
+   while every other surface keeps the automatic dark behavior
+   of the block above. The marketing layout puts this class on
+   <html> only for pages that ask for it (the theme_lock
+   section; today only the home page). Inside the dark media
+   query the lock scope re-declares the @theme light values,
+   which outrank the :root dark redeclaration by specificity,
+   and pins the color-scheme so UA chrome and form controls
+   stay light too. Values are the @theme light table verbatim,
+   the same set .theme-light-lock carries. The dark theme
+   itself is untouched and remains the saved palette for the
+   surfaces that still follow the device setting. The two
+   non-token dark rules are countered inside the scope: the
+   logo shows its light lockup and selects keep the light
+   chevron stroke. */
+@media (prefers-color-scheme: dark) {
+    html.landing-light-lock {
+        color-scheme: only light;
+
+        --color-surface-0: #ffffff;
+        --color-surface-1: #faf6ef;
+        --color-surface-2: #efe4cf;
+        --color-surface-3: #e7dcc8;
+        --color-line: #dccfb2;
+        --color-line-strong: #8f7c5c;
+        --color-control: #6e6252;
+        --color-text-1: #16130e;
+        --color-text-2: #453d31;
+        --color-text-3: #66594a;
+        --color-text-disabled: #9c9389;
+        --color-brand-50: #fff6e8;
+        --color-brand-100: #fdebc8;
+        --color-brand-500: #f5a300;
+        --color-brand-600: #16130e;
+        --color-brand-700: #0d0b08;
+        --color-brand-800: #050403;
+        --color-data-amber: #b97e04;
+        --color-success-strong: #0e5a36;
+        --color-success-fill: #e9f7ee;
+        --color-success-text: #0e5a36;
+        --color-warning-strong: #b54708;
+        --color-warning-fill: #fffaeb;
+        --color-warning-text: #93370d;
+        --color-error-strong: #b42318;
+        --color-error-strong-hover: #9a1b12;
+        --color-error-strong-pressed: #7a271a;
+        --color-error-fill: #fef3f2;
+        --color-error-text: #912018;
+        --color-error: #b42318;
+        --color-danger: #b42318;
+        --color-info-strong: #2f5d75;
+        --color-info-fill: #e8f0f3;
+        --color-info-text: #23485e;
+        --color-action: #16130e;
+        --color-action-hover: #0d0b08;
+        --color-action-pressed: #050403;
+        --color-on-action: #ffffff;
+        --color-link: #0d0b08;
+        --color-focus: #16130e;
+        --color-danger-fill: #b42318;
+        --color-danger-hover: #9a1b12;
+        --color-danger-pressed: #7a271a;
+        --shadow-e1: 0 1px 2px rgb(22 19 14 / 0.08), 0 1px 3px rgb(22 19 14 / 0.06);
+        --shadow-e2: 0 8px 24px -6px rgb(22 19 14 / 0.12), 0 2px 6px rgb(22 19 14 / 0.06);
+        --shadow-e3: 0 32px 64px -24px rgb(22 19 14 / 0.28), 0 12px 24px -12px rgb(22 19 14 / 0.14);
+    }
+
+    html.landing-light-lock .logo-auto .logo-for-light {
+        display: inline;
+    }
+
+    html.landing-light-lock .logo-auto .logo-for-dark {
+        display: none;
+    }
+
+    html.landing-light-lock .form-select,
+    html.landing-light-lock .ui-scope select:not(.form-input) {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2366594a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    }
 }
 
 @layer base {
@@ -135,14 +441,15 @@
 
     /*
      | Focus ring (redesign-spec.md Section 7.7): a 2px outline at
-     | 2px offset in brand-600 on light surfaces, rendered for
-     | :focus-visible on every interactive element without
-     | exception. On ink surfaces the ring is accent-400; on the
-     | brand-600 primary button itself it is brand-800 so it stays
-     | visible against the fill.
+     | 2px offset in the focus role token on light surfaces,
+     | rendered for :focus-visible on every interactive element
+     | without exception. On ink surfaces the ring is accent-400;
+     | on the primary button itself the ring sits in the 2px
+     | offset gap against the ground, so the one focus token
+     | reads on every fill (dark-mode-spec.md C-01, C-03).
      */
     :focus-visible {
-        outline: 2px solid var(--color-brand-600);
+        outline: 2px solid var(--color-focus);
         outline-offset: 2px;
     }
 
@@ -384,7 +691,7 @@
     }
 
     .btn-primary {
-        @apply bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:bg-surface-2 disabled:text-text-disabled;
+        @apply bg-action text-on-action hover:bg-action-hover active:bg-action-pressed disabled:bg-surface-2 disabled:text-text-disabled;
         box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
     }
 
@@ -393,7 +700,7 @@
     }
 
     .btn-primary:focus-visible {
-        outline-color: var(--color-brand-800);
+        outline-color: var(--color-focus);
     }
 
     .btn-secondary {
@@ -401,11 +708,11 @@
     }
 
     .btn-ghost {
-        @apply bg-transparent text-brand-700 hover:bg-brand-50 active:bg-brand-100 disabled:bg-transparent disabled:text-text-disabled;
+        @apply bg-transparent text-text-1 hover:bg-brand-50 active:bg-brand-100 disabled:bg-transparent disabled:text-text-disabled;
     }
 
     .btn-danger {
-        @apply bg-error-strong text-white hover:bg-error-strong-hover active:bg-error-strong-pressed disabled:bg-surface-2 disabled:text-text-disabled;
+        @apply bg-danger-fill text-white hover:bg-danger-hover active:bg-danger-pressed disabled:bg-surface-2 disabled:text-text-disabled;
     }
 
     .btn-danger-ghost {
@@ -464,7 +771,7 @@
     }
 
     .btn-primary.is-loading:disabled {
-        @apply bg-brand-600 text-white;
+        @apply bg-action text-on-action;
         box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
     }
 
@@ -473,11 +780,11 @@
     }
 
     .btn-ghost.is-loading:disabled {
-        @apply bg-transparent text-brand-700;
+        @apply bg-transparent text-text-1;
     }
 
     .btn-danger.is-loading:disabled {
-        @apply bg-error-strong text-white;
+        @apply bg-danger-fill text-white;
     }
 
     .btn-danger-ghost.is-loading:disabled {
@@ -511,7 +818,7 @@
     }
 
     .form-input:focus {
-        border-color: var(--color-brand-600);
+        border-color: var(--color-focus);
         box-shadow: 0 0 0 3px var(--color-brand-100);
     }
 
@@ -585,7 +892,7 @@
     }
 
     .otp-box:focus {
-        border-color: var(--color-brand-600);
+        border-color: var(--color-focus);
         box-shadow: 0 0 0 3px var(--color-brand-100);
     }
 
@@ -621,7 +928,7 @@
     }
 
     .switch:checked {
-        background: var(--color-brand-600);
+        background: var(--color-action);
     }
 
     .switch:checked::after {
@@ -666,7 +973,7 @@
     .ui-scope input:not([type='checkbox']):not([type='radio']):not(.form-input):focus,
     .ui-scope select:not(.form-input):focus,
     .ui-scope textarea:not(.form-input):focus {
-        border-color: var(--color-brand-600);
+        border-color: var(--color-focus);
         box-shadow: 0 0 0 3px var(--color-brand-100);
     }
 
@@ -687,11 +994,11 @@
         width: 18px;
         height: 18px;
         border-radius: 5px;
-        accent-color: var(--color-brand-600);
+        accent-color: var(--color-action);
     }
 
     .ui-scope button[type='submit']:not(.btn) {
-        @apply inline-flex items-center justify-center gap-2 bg-brand-600 px-5 text-white hover:bg-brand-700 active:bg-brand-800 disabled:bg-surface-2 disabled:text-text-disabled;
+        @apply inline-flex items-center justify-center gap-2 bg-action px-5 text-on-action hover:bg-action-hover active:bg-action-pressed disabled:bg-surface-2 disabled:text-text-disabled;
         min-height: 48px;
         border-radius: var(--radius-md);
         font-size: 15px;
@@ -758,27 +1065,38 @@
         line-height: 22px;
     }
 
+    /* 08f (contrast audit F-9): every banner gains a 3px left
+       bar in its family's strong color. The status fills sit
+       1.03 to 1.09 from the page ground, so the tint alone
+       whispers; the bar (success-strong 8.29, warning-strong
+       and error-strong and info-strong all 6:1 or better on
+       white) is the edge cue that survives, the reference-class
+       pattern of leading with the edge, not the wash. */
     .banner-success,
     .status-success {
         @apply bg-success-fill text-success-text;
+        border-left: 3px solid var(--color-success-strong);
     }
 
     .banner-error,
     .status-error,
     .errors {
         @apply bg-error-fill text-error-text;
+        border-left: 3px solid var(--color-error-strong);
     }
 
     .banner-warning,
     .status-warning,
     .gate {
         @apply bg-warning-fill text-warning-text;
-        border: 1px solid rgb(181 71 8 / 0.35);
+        border: 1px solid color-mix(in srgb, var(--color-warning-strong) 35%, transparent);
+        border-left: 3px solid var(--color-warning-strong);
     }
 
     .banner-info,
     .status-info {
         @apply bg-info-fill text-info-text;
+        border-left: 3px solid var(--color-info-strong);
     }
 
     .status {
@@ -809,8 +1127,16 @@
         padding: 24px;
     }
 
+    /* 08f (contrast audit F-6): the well gains a line-strong
+       border. On the refer flow's step 1 the well IS the SMS
+       consent panel, the legally load-bearing block, and it sat
+       borderless at 1.08 against the white card; the border
+       measures 4.03 against that card. The same edge now
+       separates every well (consent panels in both flows, the
+       backup-code and provisioning blocks). */
     .well {
         @apply bg-surface-1;
+        border: 1px solid var(--color-line-strong);
         border-radius: var(--radius-lg);
         padding: 16px;
     }
@@ -906,8 +1232,12 @@
         text-align: left;
     }
 
+    /* 08f (contrast audit F-8): the header tone moves from
+       text-3 to text-2. text-3 at this 12px caption size
+       breaches the CC-08 floor (text-3 is restricted to 14px
+       and up); CC-08 stays as written and the usages move. */
     .tbl th {
-        @apply bg-surface-1 text-text-3;
+        @apply bg-surface-1 text-text-2;
         padding: 12px 16px;
         font-size: 12px;
         line-height: 16px;
@@ -1086,7 +1416,7 @@
     }
 
     .progress-fill {
-        @apply bg-brand-600;
+        @apply bg-action;
         height: 100%;
         border-radius: 9999px;
     }
@@ -1099,13 +1429,18 @@
     }
 
     .segment-on {
-        @apply bg-brand-600;
+        @apply bg-action;
     }
 
-    /* The eyebrow pill (Section 10.1): brand-50 ground, brand-700
-       eyebrow text, for the hero and panel eyebrows. */
+    /* The eyebrow pill (Section 10.1): brand-50 ground, link-role
+       eyebrow text, for the hero and panel eyebrows. 08f
+       (contrast audit F-7): brand-50 sits 1.01 to 1.03 from the
+       grounds, so the pill shape was a smudge until read; it
+       gains a 1px line-strong border (4.03 on white, 3.74 on
+       cream after the 08f deepening). */
     .eyebrow-pill {
-        @apply inline-flex items-center bg-brand-50 text-brand-700;
+        @apply inline-flex items-center bg-brand-50 text-link;
+        border: 1px solid var(--color-line-strong);
         border-radius: 9999px;
         padding: 6px 12px;
         font-size: 12px;
@@ -1137,8 +1472,11 @@
         flex: none;
     }
 
+    /* 08f (contrast audit F-8): the window-bar caption is 12px,
+       below the CC-08 floor for text-3; it moves to text-2 with
+       the table headers. */
     .window-url {
-        @apply bg-surface-0 text-text-3;
+        @apply bg-surface-0 text-text-2;
         min-width: 0;
         margin-inline: auto;
         border-radius: 9999px;
@@ -1184,7 +1522,7 @@
     /* Skip link (Section 7.7): first focusable element on the
        dashboard and marketing layouts, top of the z-index scale. */
     .skip-link {
-        @apply sr-only z-[80] rounded-md bg-brand-600 px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2;
+        @apply sr-only z-[80] rounded-md bg-action px-4 py-2 font-semibold text-on-action focus:not-sr-only focus:fixed focus:top-2 focus:left-2;
     }
 }
 
@@ -1253,6 +1591,270 @@
     line-height: 24px;
 }
 
+/* The hero animation stage (owner spec, 2026-10-24; copy
+   inventory Amendment 13). One composed scene, one 7.2s CSS
+   timeline, looping: scan (0-31%), the phone's share screen
+   (26-34% crossfade), the link travelling to the friends
+   (30-72%), the friends arriving and the storefront lighting
+   (54-92%), the owner's closing line (74-97%), then every
+   element settles back into the opening composition by 100%,
+   so the loop point is a dissolve, never a jump. Base styles
+   are the opening composition; under prefers-reduced-motion
+   the animation is off and the overrides at the end of this
+   block compose the whole loop statically (share screen up,
+   bubbles on their paths, friends at the door, badge shown,
+   closing line visible). All fills are design tokens, so the
+   dark scheme follows the token swap. The stage pauses while
+   off screen via the .hs-paused class (IntersectionObserver
+   script in home.blade.php). */
+.mkt-hero-stage {
+    margin-top: 56px;
+}
+
+.hero-stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface-1);
+    box-shadow: var(--shadow-e1);
+}
+
+.hero-scene {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.hero-stage-line {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    max-width: calc(100% - 24px);
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: var(--color-action);
+    color: var(--color-on-action);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 22px;
+    letter-spacing: -0.01em;
+    text-align: center;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate(-50%, 8px);
+}
+
+@media (min-width: 1024px) {
+    .hero-stage-line {
+        bottom: 20px;
+        font-size: 17px;
+        line-height: 24px;
+    }
+}
+
+.hero-stage .hs-anim {
+    animation-duration: 7.2s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+.hero-stage.hs-paused .hs-anim {
+    animation-play-state: paused;
+}
+
+.hs-scanline {
+    opacity: 0;
+    animation-name: hs-scan;
+}
+
+@keyframes hs-scan {
+    0% { opacity: 0; transform: translateY(0); }
+    4% { opacity: 1; }
+    13% { opacity: 1; transform: translateY(102px); }
+    21% { opacity: 1; transform: translateY(4px); }
+    27% { opacity: 1; transform: translateY(56px); }
+    31%, 100% { opacity: 0; transform: translateY(56px); }
+}
+
+.hs-corners {
+    opacity: 0;
+    animation-name: hs-corners;
+}
+
+@keyframes hs-corners {
+    0% { opacity: 0; }
+    5% { opacity: 0.9; }
+    11% { opacity: 0.35; }
+    17% { opacity: 0.9; }
+    23% { opacity: 0.35; }
+    28% { opacity: 0.9; }
+    33%, 100% { opacity: 0; }
+}
+
+.hs-chip {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: hs-chip;
+}
+
+@keyframes hs-chip {
+    0%, 27% { opacity: 0; transform: scale(0.6); }
+    35% { opacity: 1; transform: scale(1); }
+    88% { opacity: 1; transform: scale(1); }
+    95%, 100% { opacity: 0; transform: scale(1); }
+}
+
+.hs-screen-scan {
+    animation-name: hs-screen-scan;
+}
+
+@keyframes hs-screen-scan {
+    0%, 26% { opacity: 1; }
+    34%, 92% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+.hs-screen-share {
+    opacity: 0;
+    animation-name: hs-screen-share;
+}
+
+@keyframes hs-screen-share {
+    0%, 26% { opacity: 0; }
+    34%, 92% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.hs-bubble-1 {
+    opacity: 0;
+    transform: translate(492px, 296px);
+    animation-name: hs-bubble-1;
+}
+
+@keyframes hs-bubble-1 {
+    0%, 30% { opacity: 0; transform: translate(352px, 258px) scale(0.55); }
+    42% { opacity: 1; transform: translate(492px, 296px) scale(1); }
+    56% { opacity: 1; transform: translate(498px, 290px) scale(1); }
+    64%, 100% { opacity: 0; transform: translate(498px, 290px) scale(1); }
+}
+
+.hs-bubble-2 {
+    opacity: 0;
+    transform: translate(554px, 312px);
+    animation-name: hs-bubble-2;
+}
+
+@keyframes hs-bubble-2 {
+    0%, 40% { opacity: 0; transform: translate(360px, 302px) scale(0.55); }
+    52% { opacity: 1; transform: translate(554px, 312px) scale(1); }
+    64% { opacity: 1; transform: translate(560px, 306px) scale(1); }
+    72%, 100% { opacity: 0; transform: translate(560px, 306px) scale(1); }
+}
+
+.hs-dot-1 {
+    opacity: 0.15;
+    animation-name: hs-dot-1;
+}
+
+@keyframes hs-dot-1 {
+    0%, 40% { opacity: 0.15; }
+    47%, 88% { opacity: 1; }
+    94%, 100% { opacity: 0.15; }
+}
+
+.hs-dot-2 {
+    opacity: 0.15;
+    animation-name: hs-dot-2;
+}
+
+@keyframes hs-dot-2 {
+    0%, 50% { opacity: 0.15; }
+    57%, 88% { opacity: 1; }
+    94%, 100% { opacity: 0.15; }
+}
+
+.hs-friend-1 {
+    transform: translate(-118px, 1px);
+    animation-name: hs-friend-1;
+}
+
+@keyframes hs-friend-1 {
+    0%, 54% { opacity: 1; transform: translate(-118px, 1px); }
+    72% { opacity: 1; transform: translate(0, 0); }
+    90% { opacity: 1; transform: translate(0, 0); }
+    95% { opacity: 0; transform: translate(0, 0); }
+    97% { opacity: 0; transform: translate(-118px, 1px); }
+    100% { opacity: 1; transform: translate(-118px, 1px); }
+}
+
+.hs-friend-2 {
+    transform: translate(-66px, 6px);
+    animation-name: hs-friend-2;
+}
+
+@keyframes hs-friend-2 {
+    0%, 57% { opacity: 1; transform: translate(-66px, 6px); }
+    75% { opacity: 1; transform: translate(0, 0); }
+    90% { opacity: 1; transform: translate(0, 0); }
+    95% { opacity: 0; transform: translate(0, 0); }
+    97% { opacity: 0; transform: translate(-66px, 6px); }
+    100% { opacity: 1; transform: translate(-66px, 6px); }
+}
+
+.hs-glow {
+    opacity: 0;
+    animation-name: hs-glow;
+}
+
+@keyframes hs-glow {
+    0%, 60% { opacity: 0; }
+    70%, 84% { opacity: 0.22; }
+    92%, 100% { opacity: 0; }
+}
+
+.hs-badge {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: hs-badge;
+}
+
+@keyframes hs-badge {
+    0%, 68% { opacity: 0; transform: scale(0.5); }
+    75% { opacity: 1; transform: scale(1.08); }
+    79%, 88% { opacity: 1; transform: scale(1); }
+    94%, 100% { opacity: 0; transform: scale(1); }
+}
+
+.hero-stage-line {
+    animation-name: hs-line;
+}
+
+@keyframes hs-line {
+    0%, 74% { opacity: 0; transform: translate(-50%, 8px); }
+    82%, 90% { opacity: 1; transform: translate(-50%, 0); }
+    97%, 100% { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-stage .hs-anim,
+    .hero-stage .hero-stage-line {
+        animation: none;
+    }
+
+    .hs-screen-scan { opacity: 0; }
+    .hs-screen-share { opacity: 1; }
+    .hs-chip { opacity: 1; }
+    .hs-glow { opacity: 0.18; }
+    .hs-bubble-1, .hs-bubble-2 { opacity: 1; }
+    .hs-friend-1, .hs-friend-2 { opacity: 1; transform: none; }
+    .hs-dot-1, .hs-dot-2 { opacity: 1; }
+    .hs-badge { opacity: 1; }
+    .hero-stage-line { opacity: 1; transform: translate(-50%, 0); }
+}
+
 /* The home hero (MT-08, H-02, H-04, M-02; release 08b D-1):
    the display size wraps the headline to three lines instead
    of four; the top padding and the product visual margin
@@ -1278,18 +1880,20 @@
         letter-spacing: -0.025em;
     }
 
+    /* Release 08e (owner phone check): the header-to-eyebrow
+       gap is this padding (the sticky header is in flow at
+       scroll 0). 8px read as no spacing at all on the owner's
+       phone; the floor is now 24px at the standard phone
+       heights, proven by the named check HERO-TOP-GAP
+       (hidden_files/redesign/08e/measure.mjs). */
     .mkt-hero-shell {
-        padding-top: 8px;
+        padding-top: 24px;
     }
 
-    .mkt-hero-window {
-        margin-top: 40px;
-    }
-
-    /* F1/F2 (release 08b): the phone-form hero visual sits
-       closer under the trust row than the desktop window did,
-       part of the shortened first-visit stack. */
-    .mkt-hero-phone {
+    /* Hero animation (2026-10-24): the stage sits closer
+       under the trust row on mobile, the step the phone-form
+       visual took in release 08b (F1/F2). */
+    .mkt-hero-stage {
         margin-top: 32px;
     }
 
@@ -1323,8 +1927,23 @@
        clears the consent bar. Taller phones keep the standard
        scale (P-01's five-line lede budget is measured there). */
     @media (max-height: 720px) {
+        /* Release 08e: the short zone keeps a 16px header-to-
+           eyebrow floor (it was 0: the pill touched the nav on
+           the owner's phone). The 16px is paid back inside this
+           same stack, margins only, per the R-1 rule: title
+           margin 16 to 12, lede margin 8 to 4, actions margin
+           12 to 8, trust margin 8 to 4, so the R-1 clearance at
+           375x667 does not move. Named checks HERO-TOP-GAP and
+           R1-CLEARANCE (hidden_files/redesign/08e/measure.mjs)
+           hold both floors.
+           Copy release (2026-10-24): the PROSE-GAP floor lifts
+           the lede margin 4px to 12px in this zone, paid back
+           inside the same stack so the stack height and the
+           R-1 clearance do not move: title margin 12 to 8 and
+           phone margin 8 to 4 (the lede itself is also shorter
+           now, three sentences, which only adds clearance). */
         .mkt-hero-shell {
-            padding-top: 0;
+            padding-top: 16px;
         }
 
         .mkt-hero .mkt-hero-title {
@@ -1333,21 +1952,25 @@
         }
 
         .mkt-hero .mkt-hero-lede {
-            margin-top: 8px;
+            margin-top: 12px;
             font-size: 17px;
             line-height: 26px;
         }
 
         .mkt-hero .mkt-hero-actions {
-            margin-top: 12px;
+            margin-top: 8px;
         }
 
         .mkt-hero .mkt-hero-trust {
-            margin-top: 8px;
+            margin-top: 4px;
         }
 
-        .mkt-hero-phone {
-            margin-top: 8px;
+        .mkt-hero-stage {
+            /* Copy release: 8 to 4, part of the PROSE-GAP
+               payback itemized at this zone's head; carried
+               over to the animation stage (2026-10-24), which
+               now occupies the visual slot. */
+            margin-top: 4px;
         }
 
         /* R-1 (release 08d): three independent reads of release
@@ -1364,7 +1987,11 @@
            375x667, with the taller phones outside this media
            query and unchanged. */
         .mkt-hero .mkt-hero-title {
-            margin-top: 16px;
+            /* 08e: 16 to 12, part of the header-gap payback
+               itemized at this zone's head. Copy release:
+               12 to 8, part of the PROSE-GAP payback itemized
+               at the same place. */
+            margin-top: 8px;
         }
 
         .consent-card .consent-inner {
@@ -1564,5 +2191,240 @@
         height: 14vh;
         margin-top: 0 !important;
         padding: 0 18mm !important;
+    }
+}
+
+/* ------------------------------------------------------------------
+   How-it-works scroll story (HIW-C, owner decision 2026-10-24:
+   Variant C's step-by-step story, ported to the token system).
+   Markup: partials/how-it-works-story.blade.php, driven by the
+   inline script in marketing/home. Behavior contract, same as the
+   hero block above: the base styles below are the composed static
+   state (every beat visible, strip complete). The hiding rules
+   exist only under .hiw-live, a class the script adds only when
+   the reveal observer can actually run; the scene micro-animations
+   key off .hiw-in, which the script's fallback path also applies,
+   and the reduced-motion block at the end composes the terminal
+   state. The strip docks under the sticky site header (h-16).
+   ------------------------------------------------------------------ */
+.hiw-story {
+    position: relative;
+}
+
+.hiw-progress {
+    position: sticky;
+    top: 64px;
+    z-index: 10;
+    background: var(--color-surface-1);
+    border-bottom: 1px solid var(--color-line);
+    padding: 12px 0 10px;
+}
+
+.hiw-plabels {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-3);
+}
+
+.hiw-plabel {
+    flex: 1;
+    text-align: center;
+    transition: color 0.3s;
+}
+
+.hiw-plabel.on {
+    color: var(--color-text-1);
+}
+
+@media (max-width: 820px) {
+    .hiw-plabel {
+        font-size: 0.68rem;
+    }
+}
+
+.hiw-track {
+    height: 6px;
+    background: var(--color-surface-2);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.hiw-fill {
+    height: 100%;
+    background: var(--color-brand-500);
+    border-radius: 99px;
+    transition: width 0.25s ease;
+}
+
+.hiw-beat {
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    padding: 44px 0;
+    border-bottom: 1px solid var(--color-line);
+}
+
+.hiw-beat-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 26px;
+    align-items: center;
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .hiw-beat {
+        min-height: 92svh;
+        padding: 56px 0;
+    }
+
+    .hiw-beat-grid {
+        grid-template-columns: 1fr 1.15fr;
+        gap: 48px;
+    }
+}
+
+.hiw-num {
+    font-size: clamp(4rem, 10vw, 7rem);
+    font-weight: 700;
+    color: var(--color-brand-500);
+    line-height: 0.9;
+    opacity: 0.9;
+}
+
+@media (prefers-color-scheme: dark) {
+    .hiw-num {
+        color: var(--color-accent-400);
+    }
+}
+
+.hiw-scene {
+    background: var(--color-surface-0);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-e3);
+    padding: 18px;
+}
+
+.hiw-scene svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* Reveal: enhancement only, gated by the script (see header). */
+.hiw-live .hiw-anim {
+    opacity: 0;
+    transform: translateY(36px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.hiw-live .hiw-beat.hiw-in .hiw-anim {
+    opacity: 1;
+    transform: none;
+}
+
+.hiw-live .hiw-anim.hiw-d1 {
+    transition-delay: 0.1s;
+}
+
+/* Scene micro-animation, runs once its beat is revealed. */
+.hiw-scanline {
+    opacity: 0;
+}
+
+.hiw-beat.hiw-in .hiw-scanline {
+    animation: hiw-sweep 2.2s ease-in-out infinite;
+}
+
+@keyframes hiw-sweep {
+    0% { transform: translateY(0); opacity: 0; }
+    12% { opacity: 0.9; }
+    88% { opacity: 0.9; }
+    100% { transform: translateY(118px); opacity: 0; }
+}
+
+.hiw-fdot {
+    opacity: 0.25;
+    transition: opacity 0.5s ease;
+}
+
+.hiw-beat.hiw-in .hiw-fdot {
+    opacity: 1;
+}
+
+.hiw-beat.hiw-in .hiw-fd1 { transition-delay: 0.3s; }
+.hiw-beat.hiw-in .hiw-fd2 { transition-delay: 0.7s; }
+.hiw-beat.hiw-in .hiw-fd3 { transition-delay: 1.1s; }
+
+.hiw-share-path {
+    stroke-dasharray: 6 7;
+}
+
+.hiw-beat.hiw-in .hiw-share-path {
+    animation: hiw-dash 1.4s linear infinite;
+}
+
+@keyframes hiw-dash {
+    to { stroke-dashoffset: -26; }
+}
+
+.hiw-check-pop {
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+.hiw-beat.hiw-in .hiw-check-pop {
+    animation: hiw-pop 0.6s ease 0.5s both;
+}
+
+@keyframes hiw-pop {
+    from { transform: scale(0.4); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.hiw-tally {
+    opacity: 0.18;
+    transition: opacity 0.4s ease;
+}
+
+.hiw-beat.hiw-in .hiw-tally {
+    opacity: 1;
+}
+
+.hiw-beat.hiw-in .hiw-tc1 { transition-delay: 0.15s; }
+.hiw-beat.hiw-in .hiw-tc2 { transition-delay: 0.35s; }
+.hiw-beat.hiw-in .hiw-tc3 { transition-delay: 0.55s; }
+.hiw-beat.hiw-in .hiw-tc4 { transition-delay: 0.75s; }
+.hiw-beat.hiw-in .hiw-tc5 { transition-delay: 0.95s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .hiw-live .hiw-anim {
+        opacity: 1;
+        transform: none;
+    }
+
+    .hiw-story .hiw-beat.hiw-in .hiw-scanline,
+    .hiw-story .hiw-beat.hiw-in .hiw-share-path,
+    .hiw-story .hiw-beat.hiw-in .hiw-check-pop {
+        animation: none;
+    }
+
+    .hiw-story .hiw-anim,
+    .hiw-story .hiw-fdot,
+    .hiw-story .hiw-tally,
+    .hiw-story .hiw-plabel,
+    .hiw-story .hiw-fill {
+        transition: none;
+    }
+
+    .hiw-fdot,
+    .hiw-tally,
+    .hiw-scanline {
+        opacity: 1;
     }
 }

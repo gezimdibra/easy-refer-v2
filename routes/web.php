@@ -16,7 +16,9 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\ReferController;
 use App\Http\Controllers\StaffRedemptionController;
+use App\Http\Controllers\SquareWebhookController;
 use App\Http\Controllers\TwilioWebhookController;
+use App\Http\Controllers\Owner\BillingCardController;
 use App\Http\Controllers\Owner\DashboardController;
 use App\Http\Controllers\Owner\EmailChangeController;
 use App\Http\Controllers\Owner\QrPageController;
@@ -66,6 +68,9 @@ Route::post('/redeem/{token}/confirm', [StaffRedemptionController::class, 'confi
 
 // Twilio callbacks (signature-verified in the controller).
 Route::post('/webhooks/twilio/status', TwilioWebhookController::class)->name('webhooks.twilio.status');
+
+// Square callbacks (signature-verified in the controller, spec Section 9.4).
+Route::post('/webhooks/square', SquareWebhookController::class)->name('webhooks.square');
 
 // Crawler files (landing-page-spec.md Section 7): generated from
 // the route table and the app URL config, correct at both mounts.
@@ -251,6 +256,17 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
     Route::post('auth/settings/limits', [SettingsController::class, 'updateLimits'])
         ->middleware('origin.check')
         ->name('settings.limits.update');
+    Route::get('auth/settings/billing', [SettingsController::class, 'billing'])->name('settings.billing');
+    Route::get('auth/settings/billing/{record}', [SettingsController::class, 'statement'])->name('settings.billing.statement');
+    Route::post('auth/settings/billing/card', [BillingCardController::class, 'store'])
+        ->middleware('origin.check')
+        ->name('settings.billing.card.store');
+    Route::post('auth/settings/billing/card/replace', [BillingCardController::class, 'replace'])
+        ->middleware(['origin.check', 'step-up'])
+        ->name('settings.billing.card.replace');
+    Route::post('auth/settings/billing/card/remove', [BillingCardController::class, 'remove'])
+        ->middleware(['origin.check', 'step-up'])
+        ->name('settings.billing.card.remove');
     Route::get('auth/settings/account', [SettingsController::class, 'account'])->name('settings.account');
     Route::post('auth/settings/checklist/reset', [SettingsController::class, 'resetChecklist'])
         ->middleware('origin.check')

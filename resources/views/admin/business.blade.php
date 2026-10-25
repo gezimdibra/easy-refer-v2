@@ -6,7 +6,7 @@
 @section('notices_banner_keys', 'suspend')
 
 @section('content')
-    <p><a class="font-semibold text-brand-700 hover:underline" href="{{ route('admin.businesses') }}">Back to businesses</a></p>
+    <p><a class="font-semibold text-link hover:underline" href="{{ route('admin.businesses') }}">Back to businesses</a></p>
 
     <div class="card mt-3">
         <h1 class="text-2xl font-bold">{{ $business->name }}</h1>

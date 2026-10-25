@@ -6,7 +6,7 @@
     {{-- Customer detail (design Section 3.4): this business's view
          of one membership. Nothing from any other business is
          reachable from here (Section 7.3). --}}
-    <nav aria-label="Breadcrumb" class="type-caption flex min-h-12 items-center gap-1 text-text-3">
+    <nav aria-label="Breadcrumb" class="type-caption flex min-h-12 items-center gap-1 text-text-2">
         <a class="text-text-2 hover:text-text-1" href="{{ route('customers.index') }}">Back to customers</a>
         <span aria-hidden="true"> / </span>
         <span aria-current="page" class="text-text-1">{{ $membership->customer->first_name }} {{ $membership->customer->last_name }}</span>
@@ -49,7 +49,7 @@
                 <tbody>
                     @foreach ($referralsMade as $referral)
                         <tr>
-                            <td><a class="font-semibold text-brand-700 hover:underline" href="{{ route('referrals.show', $referral) }}">{{ $referral->referredCustomer->first_name }}</a></td>
+                            <td><a class="font-semibold text-link hover:underline" href="{{ route('referrals.show', $referral) }}">{{ $referral->referredCustomer->first_name }}</a></td>
                             <td>{{ $referral->created_at->format('M j, Y') }}</td>
                             <td><span class="pill {{ \App\Support\ReferralStatus::present($referral)['pill'] }}">{{ \App\Support\ReferralStatus::present($referral)['label'] }}</span></td>
                         </tr>

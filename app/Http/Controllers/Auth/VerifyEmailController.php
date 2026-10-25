@@ -30,6 +30,17 @@ class VerifyEmailController extends Controller
             // E4 email_verified (spec Section 16), server-side.
             app(\App\Services\Attribution\AttributionService::class)
                 ->record('E4', $user->business);
+
+            // Post-verification routing (spec Sections 9.6 and
+            // 4.1; billing UI build unit BU-5): an owner whose
+            // business has not started billing routes once, at
+            // this transition, to the billing page's setup state.
+            // The detour lives only in this branch, so every
+            // later visit, including a repeat click on the link,
+            // lands on the dashboard as before.
+            if ($user->business?->billing_status === 'none') {
+                return redirect()->intended(route('settings.billing'));
+            }
         }
 
         return redirect()->intended(route('dashboard').'?verified=1');

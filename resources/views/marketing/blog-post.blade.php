@@ -14,7 +14,7 @@
                 <p class="mt-4 text-base text-text-2">{{ $paragraph }}</p>
             @endforeach
 
-            <p class="mt-10"><a class="font-semibold text-brand-700 underline" href="{{ route('blog') }}">Back to the blog</a></p>
+            <p class="mt-10"><a class="font-semibold text-link underline" href="{{ route('blog') }}">Back to the blog</a></p>
         </article>
     </section>
 @endsection

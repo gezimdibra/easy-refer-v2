@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
     <title>@yield('title', config('app.name'))</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
@@ -24,7 +27,7 @@
     <div class="flex min-h-screen">
         <div class="flex w-full flex-col px-5 py-8 sm:px-8 lg:w-[520px] lg:flex-none lg:px-10">
             <p class="flex justify-center lg:justify-start">
-                <a href="{{ route('home') }}" aria-label="Easy Refer home"><x-logo :size="32" /></a>
+                <a href="{{ route('home') }}" aria-label="Easy Refer home"><x-logo variant="auto" :size="32" /></a>
             </p>
 
             <main id="main" class="ui-scope auth-scope mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-10">
@@ -59,7 +62,7 @@
 
         <aside aria-hidden="true" class="on-dark hidden flex-1 bg-ink-950 lg:block" style="padding: 64px">
             <div class="flex h-full flex-col justify-center">
-                <div class="window" style="border-color: rgb(255 255 255 / 0.12)">
+                <div class="window border-on-dark-line">
                     <div class="window-bar" aria-hidden="true">
                         <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
                         <span class="window-url">easy-refer.com/auth</span>
@@ -68,7 +71,7 @@
                     <img src="{{ asset('images/dashboard-overview-1080.jpg') }}" width="1080" height="810" alt="" class="block w-full">
                 </div>
 
-                <div class="mt-12 grid grid-cols-3 gap-6 border-y py-8" style="border-color: rgb(255 255 255 / 0.12)">
+                <div class="mt-12 grid grid-cols-3 gap-6 border-y border-on-dark-line py-8">
                     <div>
                         <p class="type-stat text-white">{{ config('claims.new_customers_per_year') }}</p>
                         <p class="type-caption mt-2 text-dark-muted">new customers per year on average</p>

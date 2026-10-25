@@ -136,6 +136,14 @@ class ReferController extends Controller
             return back()->withErrors(['phone' => 'Enter a valid US phone number.'])->withInput();
         }
 
+        // The step-1 consent panel is a real agreement, not a
+        // decoration (round-2 audit F02): without it the flow
+        // does not advance and no code is requested, because the
+        // code and the reward texts both ride on this consent.
+        if (! $request->boolean('consent')) {
+            return back()->withErrors(['consent' => 'Please agree to the texts so we can send your code and your reward updates.'])->withInput();
+        }
+
         if ($flow === null) {
             [$flow, $newToken] = $this->flows->start([]);
         }

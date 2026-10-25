@@ -30,7 +30,7 @@
             @foreach ($filters as $key => $label)
                 <li role="presentation">
                     <a role="tab" aria-selected="{{ $filter === $key ? 'true' : 'false' }}" href="{{ route('referrals.index', ['filter' => $key]) }}"
-                        @if ($filter === $key) class="inline-flex min-h-[48px] items-center rounded-full bg-brand-50 px-4 text-[15px] font-semibold text-brand-700" @else class="inline-flex min-h-[48px] items-center rounded-full px-4 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" @endif>{{ $label }} ({{ $counts[$key] }})</a>
+                        @if ($filter === $key) class="inline-flex min-h-[48px] items-center rounded-full border border-line-strong bg-brand-50 px-4 text-[15px] font-semibold text-link" @else class="inline-flex min-h-[48px] items-center rounded-full px-4 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" @endif>{{ $label }} ({{ $counts[$key] }})</a>
                 </li>
             @endforeach
         </ul>
@@ -63,9 +63,9 @@
                         @php($status = \App\Support\ReferralStatus::present($referral))
                         <tr>
                             <td>
-                                <a class="card-link font-semibold text-brand-700 hover:underline" href="{{ route('referrals.show', $referral) }}">{{ $referral->referredCustomer->first_name }}</a>
+                                <a class="card-link font-semibold text-link hover:underline" href="{{ route('referrals.show', $referral) }}">{{ $referral->referredCustomer->first_name }}</a>
                                 @if ($referral->hold)
-                                    <span class="block text-sm text-text-2">Held for review: {{ implode(' ', \App\Support\HoldReasons::sentences($referral->hold_rules ?? [], $business)) }} <a class="relative z-10 inline-flex min-h-12 items-center font-semibold text-brand-700 hover:underline" href="{{ route('reviews') }}">Open the review queue</a></span>
+                                    <span class="block text-sm text-text-2">Held for review: {{ implode(' ', \App\Support\HoldReasons::sentences($referral->hold_rules ?? [], $business)) }} <a class="relative z-10 inline-flex min-h-12 items-center font-semibold text-link hover:underline" href="{{ route('reviews') }}">Open the review queue</a></span>
                                 @endif
                             </td>
                             <td data-label="Referred by">{{ $referral->referrerMembership->customer->first_name }}</td>

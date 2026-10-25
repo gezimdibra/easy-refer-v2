@@ -15,7 +15,7 @@
          receipt the staff phone showed at the counter. --}}
     @if ($state === 'ready')
         <div class="flex items-center gap-3">
-            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-hidden="true"><span style="font-size: 18px; font-weight: 650">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($business->name, 0, 1)) }}</span></span>
+            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-brand-50 text-text-1" aria-hidden="true"><span style="font-size: 18px; font-weight: 650">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($business->name, 0, 1)) }}</span></span>
             <span>
                 <span class="type-title-4 block text-text-1">{{ $business->name }}</span>
                 <span class="type-caption block text-text-2">{{ $business->street }}, {{ $business->city }}</span>

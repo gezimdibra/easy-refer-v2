@@ -40,16 +40,16 @@
                             <div style="padding-top: 24px">
 
                                 <h1 class="em-text" style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 650; letter-spacing: -0.02em; color: #16130e">Welcome to Easy Refer</h1>
-                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your referral program for {{ $business->name }} is set up, on the Pay Per Visit plan: you pay $2 only when a referred friend actually visits your store and redeems. There is no monthly fee, your first 5 verified visits are free, and you never pay more than $99 in a month. Nothing is charged today.</p>
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your referral program for {{ $business->name }} is set up, on the Pay Per Visit plan: you pay $2 only when a referred friend actually visits your store and redeems. There is no monthly fee, your first 5 visits are free, and you never pay more than $99 in a month. Nothing is charged today.</p>
                                 @if ($verified)
-                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your email address is verified, so your code is ready to go out.</p>
+                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your email address is confirmed, so your code is ready to go out.</p>
                                     @include('emails.partials.button', ['url' => $actionUrl, 'label' => $actionLabel])
                                     <p class="em-text" style="margin: 24px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Set your two rewards, then print your poster and tent card from the QR page and put them out. Everything runs from <a href="{{ $dashboardUrl }}" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
                                 @else
                                     <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">One step left before your code works: verify this email address.</p>
                                     @include('emails.partials.button', ['url' => $actionUrl, 'label' => $actionLabel])
                                     <p class="em-muted" style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Or open this link: <a href="{{ $actionUrl }}" style="color: #0d0b08; text-decoration: underline">{{ $actionUrl }}</a></p>
-                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Once verified, set your two rewards, then print your poster and tent card from the QR page and put them out. Everything runs from <a href="{{ $dashboardUrl }}" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
+                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Once your email is confirmed, set your two rewards, then print your poster and tent card from the QR page and put them out. Everything runs from <a href="{{ $dashboardUrl }}" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
                                 @endif
                                 <p class="em-muted" style="margin: 16px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Questions? The <a href="{{ $faqUrl }}" style="color: #0d0b08; text-decoration: underline">FAQ page</a> is a good place to start.</p>
 

@@ -299,3 +299,50 @@ img {
 .break-all {
     word-break: break-all;
 }
+
+/* Dark mode (dark-mode-spec.md C-21): the system notification
+   shell follows the mail client's color scheme. Registered mail
+   values only: ink grounds, cream text, dark-muted secondary,
+   the well one step up, and the header rule re-struck in amber.
+   Custom mail templates carry their own dark handling; this
+   block covers the vendor shell alone. */
+
+@media (prefers-color-scheme: dark) {
+    body,
+    .wrapper,
+    .body {
+        background-color: #16130E !important;
+        color: #FAF6EF !important;
+    }
+
+    .inner-body {
+        background-color: #16130E !important;
+        border-color: #453D31 !important;
+    }
+
+    .header a,
+    h1,
+    h2,
+    h3 {
+        color: #FAF6EF !important;
+    }
+
+    .content-cell,
+    .table td,
+    .panel-content p {
+        color: #FAF6EF !important;
+    }
+
+    .footer p,
+    .footer a {
+        color: #B4A88F !important;
+    }
+
+    .panel-content {
+        background-color: #29231A !important;
+    }
+
+    .header-rule {
+        border-top-color: #F5A300 !important;
+    }
+}

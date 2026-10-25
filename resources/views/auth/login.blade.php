@@ -9,7 +9,7 @@
          (2026-10-24): an eyebrow is a short label, so the line is
          shortened from the full sentence the builder set in all
          caps (guardian G-5); the meaning is unchanged. --}}
-    <p class="type-eyebrow text-brand-700">Your one-stop referral platform</p>
+    <p class="type-eyebrow text-link">Your one-stop referral platform</p>
 
     {{-- AUTH-IN-01: heading and subheading. --}}
     <h1 class="type-display-xs mt-3 text-text-1">Welcome back</h1>
@@ -32,16 +32,16 @@
 
         <div class="mt-5 flex items-center justify-between gap-4">
             <label class="flex min-h-[48px] items-center gap-2.5 text-[15px] text-text-1">
-                <input type="checkbox" name="remember" class="h-[18px] w-[18px] accent-brand-600" style="border-radius: 5px"> Remember me
+                <input type="checkbox" name="remember" class="h-[18px] w-[18px] accent-action" style="border-radius: 5px"> Remember me
             </label>
-            <a class="inline-flex min-h-11 items-center font-medium text-brand-700 underline decoration-brand-100 underline-offset-[3px] hover:decoration-brand-700" href="{{ route('password.request') }}">Forgot password?</a>
+            <a class="inline-flex min-h-11 items-center font-medium text-link underline decoration-brand-100 underline-offset-[3px] hover:decoration-brand-700" href="{{ route('password.request') }}">Forgot password?</a>
         </div>
 
         @if (config('services.turnstile.site_key'))
             {{-- Required only when the account aggregate defense has
                  locked the account (spec Section 8.3); the server
                  verifies the token on that path. --}}
-            <div class="cf-turnstile mt-4" data-sitekey="{{ config('services.turnstile.site_key') }}"></div>
+            <div class="cf-turnstile mt-4" data-sitekey="{{ config('services.turnstile.site_key') }}" data-theme="auto"></div>
             <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         @endif
 

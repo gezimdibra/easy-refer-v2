@@ -5,36 +5,38 @@
     (redesign-spec.md Section 10.1 item 10): two columns, text left
     and the form in a radius-xl card at 32px padding, with the
     email input and submit joined on one outline.
+    Copy release (2026-10-24, Amendment 11): the body line takes
+    the slim-down wording and the PROSE-GAP mt-4 floor. On home
+    the kit no longer stands as its own section (O-3): home
+    passes $band and the kit renders inside the closing band, so
+    the page ends on one ask cluster, not two adjacent asks. The
+    #starter-kit id survives in both modes (the sticky bar's
+    suppression zone watches it). The form itself lives in
+    partials/starter-kit-form so it exists exactly once.
 --}}
-<section id="starter-kit" class="bg-surface-0">
-    <div class="shell section-pad grid items-start gap-10 lg:grid-cols-2">
-        <div>
-            <h2 class="type-title-2 text-text-1">Get the free Referral Program Starter Kit</h2>
-            <p class="type-body mt-3 max-w-[68ch] text-text-2">We will email the kit and a short follow-up series. Unsubscribe any time.</p>
-        </div>
-        <div class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
-            @if (session('lead_status'))
-                <p class="banner banner-success" role="status">{{ session('lead_status') }}</p>
-            @else
-                <form method="POST" action="{{ route('leads.starter-kit') }}" data-loading>
-                    @csrf
-                    <input type="hidden" name="source" value="{{ $source ?? 'home' }}">
-
-                    <label class="form-label" for="lead-email-{{ $source ?? 'home' }}">Email address</label>
-                    <div class="joined">
-                        <input class="form-input" id="lead-email-{{ $source ?? 'home' }}" name="email" type="email" autocomplete="email" value="{{ old('email') }}" required
-                            @if ($errors->has('email')) aria-invalid="true" aria-describedby="lead-email-error" @endif>
-                        <button type="submit" class="btn btn-secondary">Send me the kit</button>
-                    </div>
-                    @error('email')
-                        <p class="form-error" id="lead-email-error">{{ $message }}</p>
-                    @enderror
-                    @if (config('services.turnstile.site_key'))
-                        <div class="cf-turnstile mt-3" data-sitekey="{{ config('services.turnstile.site_key') }}"></div>
-                        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-                    @endif
-                </form>
-            @endif
+{{-- 08f (contrast audit F-10): the section ground is a
+     parameter so each page's rhythm assignment can place the
+     kit on the ground its neighbours are not using: the
+     verticals pass the cream ground. (Home no longer uses the
+     standalone section; see the header note.) --}}
+@if ($band ?? false)
+    <div id="starter-kit" class="mx-auto mt-16 max-w-[720px] border-t border-on-dark-line pt-16 text-center">
+        <h2 class="type-title-2 text-white">Get the free Referral Program Starter Kit</h2>
+        <p class="type-body mx-auto mt-4 max-w-[68ch] text-dark-muted">We email you the kit and a few short tips. Unsubscribe any time.</p>
+        <div class="mx-auto mt-8 max-w-[560px] rounded-xl border border-line bg-surface-0 text-left shadow-e1" style="padding: 32px">
+            @include('partials.starter-kit-form', ['source' => $source ?? 'home'])
         </div>
     </div>
-</section>
+@else
+    <section id="starter-kit" class="{{ $ground ?? 'bg-surface-0' }}">
+        <div class="shell section-pad grid items-start gap-10 lg:grid-cols-2">
+            <div>
+                <h2 class="type-title-2 text-text-1">Get the free Referral Program Starter Kit</h2>
+                <p class="type-body mt-4 max-w-[68ch] text-text-2">We email you the kit and a few short tips. Unsubscribe any time.</p>
+            </div>
+            <div class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
+                @include('partials.starter-kit-form', ['source' => $source ?? 'home'])
+            </div>
+        </div>
+    </section>
+@endif

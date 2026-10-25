@@ -47,6 +47,22 @@ class Plan extends Model
     }
 
     /**
+     * The price one verified visit carries under this plan, which
+     * is the figure billing surfaces state as the per-visit price.
+     * Each price column means exactly one thing: per_referral_cents
+     * is the per-visit price of the per-referral model, and
+     * price_cents is the subscription model's period price, never
+     * a per-visit figure. A subscription plan therefore has no
+     * per-visit price (null), and no surface may fall back to
+     * formatting price_cents as one (the FLOWS-F1 "$0.00 per visit"
+     * defect came from exactly that read).
+     */
+    public function perVisitPriceCents(): ?int
+    {
+        return $this->model === 'per_referral' ? $this->per_referral_cents : null;
+    }
+
+    /**
      * The single plan shown at launch (OD-1). Inactive seed rows
      * render nowhere.
      */

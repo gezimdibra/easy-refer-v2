@@ -15,7 +15,7 @@
         }
     </style>
 </head>
-<body class="bg-surface-1 text-text-1">
+<body class="bg-surface-1 text-text-1 theme-light-lock">
     {{-- The printed poster (redesign-spec.md Section 8.5): the
          brand travels with the code. Top row: the lockup and the
          business name. Headline: the friend reward, the one

@@ -56,7 +56,7 @@
         <div class="card mt-5">
             <div class="flex items-center gap-3">
                 <img src="{{ route('owner.qr.image') }}" alt="" width="44" height="44" class="shrink-0 rounded-lg border border-line">
-                <a class="inline-flex min-h-12 items-center font-semibold text-brand-700 hover:underline" href="{{ route('owner.qr') }}">Print your QR code</a>
+                <a class="inline-flex min-h-12 items-center font-semibold text-link hover:underline" href="{{ route('owner.qr') }}">Print your QR code</a>
             </div>
             @include('partials.dashboard-qr-rows')
         </div>
@@ -69,7 +69,7 @@
                     {{-- The first-enrollment transition (design
                          6.4.1 item 8): the card's headline and
                          Primary move to the customers until the
-                         first verified visit lands. --}}
+                         first visit counts. --}}
                     <h2 class="type-title-3 text-text-1">Your first customer just joined</h2>
                     <p class="type-body-sm mt-1 text-text-2">Posters at the register get scanned. Posters in a drawer do not.</p>
                     <a class="btn btn-primary mt-3" href="{{ route('customers.index') }}">See your customers</a>
@@ -213,9 +213,9 @@
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <h2 class="type-title-3 text-text-1">Cumulative referred customers</h2>
                 <p class="flex gap-1">
-                    <a href="{{ route('dashboard', ['range' => '7']) }}" @if ($chartRange === '7') aria-current="true" class="btn btn-ghost btn-sm bg-surface-2" @else class="btn btn-ghost btn-sm" @endif>7 days</a>
-                    <a href="{{ route('dashboard', ['range' => '30']) }}" @if ($chartRange === '30') aria-current="true" class="btn btn-ghost btn-sm bg-surface-2" @else class="btn btn-ghost btn-sm" @endif>30 days</a>
-                    <a href="{{ route('dashboard', ['range' => 'all']) }}" @if ($chartRange === 'all') aria-current="true" class="btn btn-ghost btn-sm bg-surface-2" @else class="btn btn-ghost btn-sm" @endif>All time</a>
+                    <a href="{{ route('dashboard', ['range' => '7']) }}" @if ($chartRange === '7') aria-current="true" class="btn btn-ghost btn-sm border border-line-strong bg-surface-3" @else class="btn btn-ghost btn-sm" @endif>7 days</a>
+                    <a href="{{ route('dashboard', ['range' => '30']) }}" @if ($chartRange === '30') aria-current="true" class="btn btn-ghost btn-sm border border-line-strong bg-surface-3" @else class="btn btn-ghost btn-sm" @endif>30 days</a>
+                    <a href="{{ route('dashboard', ['range' => 'all']) }}" @if ($chartRange === 'all') aria-current="true" class="btn btn-ghost btn-sm border border-line-strong bg-surface-3" @else class="btn btn-ghost btn-sm" @endif>All time</a>
                 </p>
             </div>
             @if ($chartTotal > 0)
@@ -229,7 +229,7 @@
                     })->implode(' ');
                 @endphp
                 <svg viewBox="0 0 720 190" class="mt-3 w-full" role="img" aria-label="Cumulative referred customers: {{ $chartTotal }} total">
-                    <polyline points="{{ $points }}" fill="none" stroke="currentColor" stroke-width="2.5" class="text-brand-500" />
+                    <polyline points="{{ $points }}" fill="none" stroke="currentColor" stroke-width="2.5" class="text-data-amber" />
                 </svg>
                 <p class="flex justify-between text-sm text-text-2">
                     <span>{{ $chart[0]['label'] }}</span>
@@ -237,7 +237,7 @@
                     <span>{{ $chart[count($chart) - 1]['label'] }}</span>
                 </p>
                 <details class="mt-2">
-                    <summary class="flex min-h-12 cursor-pointer items-center font-semibold text-brand-700">View as table</summary>
+                    <summary class="flex min-h-12 cursor-pointer items-center font-semibold text-link">View as table</summary>
                     <div class="mt-3 overflow-x-auto"><table class="tbl">
                         <thead>
                             <tr class="border-b border-line">
@@ -293,21 +293,22 @@
         <h2 class="type-title-3 text-text-1">What Easy Refer brought you</h2>
         @if ($value['verified_visits'] > 0)
             <ul class="mt-2 space-y-1 text-base">
-                <li>{{ $value['verified_visits'] }} verified {{ $value['verified_visits'] === 1 ? 'visit' : 'visits' }} this month</li>
+                <li>{{ $value['verified_visits'] }} {{ $value['verified_visits'] === 1 ? 'visit' : 'visits' }} counted this month</li>
                 <li>About {{ '$'.number_format($value['estimated_sales_cents'] / 100, 2) }} in first-visit sales (estimate)</li>
                 <li>Fees so far this month: {{ '$'.number_format($value['fees_cents'] / 100, 2) }}</li>
             </ul>
             @if ($valueAllTime['verified_visits'] > $value['verified_visits'])
-                <p class="mt-2 text-base">All time: {{ $valueAllTime['verified_visits'] }} verified visits, about {{ '$'.number_format($valueAllTime['estimated_sales_cents'] / 100, 2) }} in first-visit sales (estimate)</p>
+                <p class="mt-2 text-base">All time: {{ $valueAllTime['verified_visits'] }} visits counted, about {{ '$'.number_format($valueAllTime['estimated_sales_cents'] / 100, 2) }} in first-visit sales (estimate)</p>
             @endif
         @else
-            <p class="type-body-sm mt-1 text-text-2">After your first verified visit, this panel shows what Easy Refer brought you, in visits and in estimated sales.</p>
+            <p class="type-body-sm mt-1 text-text-2">After your first visit counts, this panel shows what Easy Refer brought you, in visits and in estimated sales.</p>
         @endif
         @if ((int) $business->average_ticket_cents > 0)
-            <p class="mt-2 text-text-2">Estimates use your average ticket of {{ '$'.number_format((int) $business->average_ticket_cents / 100, 2) }}. Update it any time in <a class="font-semibold text-brand-700 hover:underline" href="{{ route('settings.value') }}">Settings</a>.</p>
+            <p class="mt-2 text-text-2">Estimates use your average ticket of {{ '$'.number_format((int) $business->average_ticket_cents / 100, 2) }}. Update it any time in <a class="font-semibold text-link hover:underline" href="{{ route('settings.value') }}">Settings</a>.</p>
         @else
-            <p class="mt-2 text-text-2">Estimates use your average ticket. Update it any time in <a class="font-semibold text-brand-700 hover:underline" href="{{ route('settings.value') }}">Settings</a>.</p>
+            <p class="mt-2 text-text-2">Estimates use your average ticket. Update it any time in <a class="font-semibold text-link hover:underline" href="{{ route('settings.value') }}">Settings</a>.</p>
         @endif
+        <p class="mt-2 text-text-2"><a class="font-semibold text-link hover:underline" href="{{ route('settings.billing') }}">Billing details</a></p>
     </div>
 
 @endsection

@@ -19,12 +19,23 @@ use Tests\TestCase;
  * full-stack POST in this suite says anything about CSRF. What can
  * be proven, and is proven here, is the strongest evidence that
  * exists short of a browser: the framework middleware registered in
- * the web group, with zero exemptions anywhere in the application,
- * rejects a state-changing request carrying a missing, wrong, or
- * foreign-session token when it actually runs. The tests execute
- * the middleware directly with the app env temporarily switched out
- * of "testing" (the one switch that disables it) and restore the env
- * afterwards.
+ * the web group rejects a state-changing request carrying a
+ * missing, wrong, or foreign-session token when it actually runs.
+ * The tests execute the middleware directly with the app env
+ * temporarily switched out of "testing" (the one switch that
+ * disables it) and restore the env afterwards.
+ *
+ * One deliberate exemption exists, and it is pinned below: the
+ * provider webhook prefix (webhooks/*). Square and Twilio
+ * deliveries carry no CSRF token and are authenticated by their
+ * own signature schemes instead; an out-of-harness production
+ * probe (BU-8, 2026-10-24) proved that with zero exemptions every
+ * real delivery was rejected 419 before signature verification
+ * could run. The earlier pin ("no validateCsrfTokens anywhere")
+ * encoded the assumption that no legitimate tokenless POST
+ * exists; the probe disproved it, so the pin now fixes the exact
+ * exemption list instead. Any second exemption, or any change to
+ * this one, fails the pin on purpose.
  */
 class CsrfTest extends TestCase
 {
@@ -80,11 +91,35 @@ class CsrfTest extends TestCase
         );
     }
 
-    public function test_the_application_declares_no_csrf_exemptions(): void
+    public function test_the_only_csrf_exemption_is_the_webhook_prefix(): void
     {
         $bootstrap = (string) file_get_contents(base_path('bootstrap/app.php'));
 
-        $this->assertStringNotContainsString('validateCsrfTokens', $bootstrap);
+        // Exactly one exemption call may exist in the bootstrap:
+        // a second call, in any formatting, breaks the pin.
+        $this->assertSame(
+            1,
+            substr_count($bootstrap, 'validateCsrfTokens'),
+            'Exactly one validateCsrfTokens call may be declared'
+        );
+
+        // Its except list is pinned verbatim: the provider webhook
+        // prefix and nothing else. Square (webhooks.square) and
+        // Twilio (webhooks.twilio.status) both register under
+        // webhooks/*; every other route in the application stays
+        // token-checked.
+        $this->assertSame(
+            1,
+            preg_match('/validateCsrfTokens\s*\(\s*except\s*:\s*\[(?<list>.*?)\]\s*\)/s', $bootstrap, $matches),
+            'The exemption must be declared as validateCsrfTokens(except: [...])'
+        );
+        preg_match_all('/\'([^\']+)\'/', $matches['list'], $entries);
+        $this->assertSame(['webhooks/*'], $entries[1]);
+
+        // No route-level bypass may widen the exemption from the
+        // other side.
+        $routes = (string) file_get_contents(base_path('routes/web.php'));
+        $this->assertStringNotContainsString('withoutMiddleware', $routes);
     }
 
     public function test_a_missing_token_is_rejected(): void

@@ -12,11 +12,12 @@
             'settings.notifications' => 'Notifications',
             'settings.limits' => 'Referral limits',
             'security' => 'Security',
+            'settings.billing' => 'Billing',
             'settings.account' => 'Account',
         ] as $routeName => $label)
             <li class="flex-none lg:flex-auto">
                 <a href="{{ route($routeName) }}"
-                    @if (request()->routeIs($routeName)) aria-current="page" class="flex min-h-[48px] items-center rounded-md bg-brand-50 px-3 text-[15px] font-semibold whitespace-nowrap text-brand-700" @else class="flex min-h-[48px] items-center rounded-md px-3 text-[15px] font-medium whitespace-nowrap text-text-2 hover:bg-surface-1 hover:text-text-1" @endif>{{ $label }}</a>
+                    @if (request()->routeIs($routeName)) aria-current="page" class="flex min-h-[48px] items-center rounded-md border border-line-strong bg-brand-50 px-3 text-[15px] font-semibold whitespace-nowrap text-link" @else class="flex min-h-[48px] items-center rounded-md px-3 text-[15px] font-medium whitespace-nowrap text-text-2 hover:bg-surface-1 hover:text-text-1" @endif>{{ $label }}</a>
             </li>
         @endforeach
     </ul>

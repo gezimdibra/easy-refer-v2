@@ -7,7 +7,7 @@
 @section('content')
     <section class="shell section-pad">
         <div class="mx-auto max-w-[640px] text-center">
-            <p class="type-eyebrow text-brand-700">Error 500</p>
+            <p class="type-eyebrow text-link">Error 500</p>
             <h1 class="type-display-sm mt-3 text-text-1">Something went wrong</h1>
             <p class="type-lede mt-4 text-text-2">Something went wrong on our side while loading this page. Please try again in a few minutes.</p>
             <div class="mt-8 flex flex-wrap justify-center gap-3">
