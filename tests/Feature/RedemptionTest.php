@@ -150,6 +150,40 @@ class RedemptionTest extends TestCase
         $this->assertSame(1, ReferralEvent::query()->where('event_type', 'redemption')->count());
     }
 
+    public function test_double_submit_loser_lands_on_the_already_redeemed_screen(): void
+    {
+        // T5-F1: two tabs of one session submit the same nonce at
+        // once. The winning press completes; the losing press was
+        // already in flight, so its spent nonce is not an
+        // expired-screen error, and its landing is the same
+        // already-redeemed state a fresh scan shows, never the
+        // winner's success flash (the tabs share the session).
+        $business = World::business();
+        [, $token] = $this->pendingReferral($business);
+
+        $nonce = $this->staffNonce($token);
+        $this->post(route('redeem.confirm', ['token' => $token]), ['nonce' => $nonce])
+            ->assertRedirect(route('redeem.show', ['token' => $token]));
+
+        // The winner's own landing is the success flood.
+        $this->get(route('redeem.show', ['token' => $token]))
+            ->assertOk()
+            ->assertSee('Show this screen if anyone asks.');
+
+        $this->post(route('redeem.confirm', ['token' => $token]), ['nonce' => $nonce])
+            ->assertRedirect(route('redeem.show', ['token' => $token]))
+            ->assertSessionMissing('staff_error');
+
+        $this->get(route('redeem.show', ['token' => $token]))
+            ->assertOk()
+            ->assertSee('Already redeemed')
+            ->assertDontSee('Show this screen if anyone asks.');
+
+        $this->assertSame(1, BillingEvent::count());
+        $this->assertSame(1, Reward::count());
+        $this->assertSame(1, ReferralEvent::query()->where('event_type', 'redemption')->count());
+    }
+
     public function test_stale_instance_cannot_redeem_twice(): void
     {
         // The service re-reads state under the row lock, so a caller
@@ -373,12 +407,14 @@ class RedemptionTest extends TestCase
 
     public function test_vesting_configuration_rejects_out_of_range_values(): void
     {
-        // BILL-43: the configured hold must sit inside 7 to 14
-        // days; an out-of-range configuration falls back to the
-        // 14-day default at mint time, and in-range values apply.
+        // BILL-43: the business's configured hold must sit inside
+        // 7 to 14 days; an out-of-range value falls back to the
+        // 14-day config default at mint time, and in-range values
+        // apply. (GAP 2 moved the value to the per-business
+        // setting; the range discipline is unchanged.)
         foreach ([30 => 14, 3 => 14, 7 => 7, 10 => 10] as $configured => $expected) {
-            config(['referrals.vesting_days_default' => $configured]);
             $business = World::business();
+            $business->forceFill(['reward_vesting_days' => $configured])->save();
             [$referral, ] = $this->pendingReferral($business);
 
             app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');

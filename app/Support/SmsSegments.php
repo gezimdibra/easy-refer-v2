@@ -32,6 +32,17 @@ final class SmsSegments
     }
 
     /**
+     * The encoding a body bills under: GSM-7 when every character
+     * is in the GSM tables, Unicode otherwise. The campaign
+     * estimate names it because one emoji flips the whole body
+     * to UCS-2 segment math.
+     */
+    public static function encoding(string $body): string
+    {
+        return self::gsmUnits($body) !== null ? 'GSM-7' : 'Unicode';
+    }
+
+    /**
      * GSM-7 unit count, or null when the body carries any character
      * outside the GSM-7 basic and extension tables (forcing UCS-2).
      */

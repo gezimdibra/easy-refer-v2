@@ -15,7 +15,11 @@
 
     <h2 class="type-title-3 mt-8 text-text-1">Needs review</h2>
 
-    @forelse ($heldReferrals as $referral)
+    {{-- The empty state belongs to the whole queue (held
+         referrals AND held rewards together, T5-F3): it renders
+         only when both are empty, so it can never sit above a
+         held item awaiting Release/Deny. --}}
+    @foreach ($heldReferrals as $referral)
         <div class="panel mt-4">
             <p class="type-title-4 text-text-1">{{ $referral->referredCustomer->first_name }}, <span class="font-normal text-text-2">referred by {{ $referral->referrerMembership->customer->first_name }}</span></p>
             @foreach (\App\Support\HoldReasons::sentences($referral->hold_rules, $business) as $sentence)
@@ -36,13 +40,7 @@
                 </x-confirm-modal>
             </div>
         </div>
-    @empty
-        <div class="mt-4 flex flex-col items-center rounded-lg border-[1.5px] border-dashed border-line-strong px-6 py-10 text-center">
-            <span class="medallion"><x-icon name="clipboard-check" :size="24" /></span>
-            <p class="type-title-3 mt-4 text-text-1">Nothing is waiting for review.</p>
-            <p class="type-body-sm mt-1 text-text-2">Held items will appear here with the reason.</p>
-        </div>
-    @endforelse
+    @endforeach
 
     @foreach ($heldRewards as $reward)
         <div class="panel mt-4">
@@ -66,6 +64,14 @@
             </div>
         </div>
     @endforeach
+
+    @if ($heldReferrals->isEmpty() && $heldRewards->isEmpty())
+        <div class="mt-4 flex flex-col items-center rounded-lg border-[1.5px] border-dashed border-line-strong px-6 py-10 text-center">
+            <span class="medallion"><x-icon name="clipboard-check" :size="24" /></span>
+            <p class="type-title-3 mt-4 text-text-1">Nothing is waiting for review.</p>
+            <p class="type-body-sm mt-1 text-text-2">Held items will appear here with the reason.</p>
+        </div>
+    @endif
 
     <h2 class="type-title-3 mt-10 text-text-1">Redeemed without a staff account</h2>
     <p class="type-body-sm mt-1 max-w-[68ch] text-text-2">These redemptions completed at the counter without a signed-in staff member. That is normal when staff use their own phones.</p>

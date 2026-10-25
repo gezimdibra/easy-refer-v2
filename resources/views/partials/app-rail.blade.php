@@ -13,6 +13,7 @@
         ['customers.index', 'customers.*', 'users', 'Customers'],
         ['referrals.index', 'referrals.*', 'share-2', 'Referrals'],
         ['rewards.index', 'rewards.*', 'gift', 'Rewards'],
+        ['campaigns.index', 'campaigns.*', 'message-circle', 'Campaigns'],
         ['reviews', 'reviews*', 'clipboard-check', 'Review'],
         ['owner.qr', 'owner.qr', 'qr-code', 'QR Code'],
         ['settings', 'settings*', 'settings', 'Settings'],

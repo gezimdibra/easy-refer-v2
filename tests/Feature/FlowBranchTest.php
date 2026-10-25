@@ -61,6 +61,29 @@ class FlowBranchTest extends TestCase
         ])->assertRedirect(route('refer.verify')));
     }
 
+    public function test_inactive_code_page_offers_the_homepage_exit(): void
+    {
+        // T4-F2: the invalid-code page was a bare wall; its
+        // sibling error pages (bad friend/reward links) offer the
+        // homepage exit, and this page now matches them.
+        $this->get(route('refer.landing', ['token' => 'not-a-real-code']))
+            ->assertNotFound()
+            ->assertSee('This code is not active')
+            ->assertSee('Go to the homepage')
+            ->assertSee('href="'.route('home').'"', false);
+    }
+
+    public function test_unknown_token_404_carries_the_standard_page_title(): void
+    {
+        // T6-F2: the does-not-resolve family answers the designed
+        // 404, but its tab title was plain "Easy Refer" while every
+        // standard error page titles itself "Page not found |
+        // Easy Refer". Same treatment here.
+        $this->get(route('refer.landing', ['token' => 'not-a-real-code']))
+            ->assertNotFound()
+            ->assertSee('<title>Page not found | Easy Refer</title>', false);
+    }
+
     public function test_resend_honors_the_cooldown_then_sends_a_fresh_code(): void
     {
         $business = World::business();
@@ -112,11 +135,65 @@ class FlowBranchTest extends TestCase
         $this->post(route('refer.verify.change'))
             ->assertRedirect(route('refer.landing', ['token' => $qrToken]));
 
-        // No pending remains: the code screen bounces home.
-        $this->get(route('refer.verify'))->assertRedirect(route('home'));
-        $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('home'));
-        $this->post(route('refer.verify.resend'))->assertRedirect(route('home'));
-        $this->post(route('refer.verify.change'))->assertRedirect(route('home'));
+        // No pending remains: the flow steps bounce back to this
+        // flow's start (T4-F4), never silently to the homepage.
+        $this->get(route('refer.verify'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+        $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+        $this->post(route('refer.verify.resend'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+        $this->post(route('refer.verify.change'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+    }
+
+    public function test_flow_steps_without_a_session_explain_themselves_on_the_homepage(): void
+    {
+        // T4-F4, the no-context leg: a fresh visitor opening a
+        // bookmarked step lands on the homepage WITH the reason,
+        // rendered, not a silent redirect.
+        $this->get(route('refer.verify'))
+            ->assertRedirect(route('home'))
+            ->assertSessionHas('status', 'That step is not open anymore. If a business gave you a code or a link, use it to start again.');
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('That step is not open anymore. If a business gave you a code or a link, use it to start again.');
+
+        $this->get(route('refer.share'))
+            ->assertRedirect(route('home'))
+            ->assertSessionHas('status', 'That step is not open anymore. If a business gave you a code or a link, use it to start again.');
+    }
+
+    public function test_flow_step_bounce_explains_itself_on_the_business_landing(): void
+    {
+        $business = World::business();
+        [, $qrToken] = World::qr($business);
+        $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
+
+        $this->get(route('refer.verify'))
+            ->assertRedirect(route('refer.landing', ['token' => $qrToken]))
+            ->assertSessionHas('status', 'That step is not open anymore. Start again here: enter your phone number and we will text you a fresh code.');
+
+        $this->get(route('refer.landing', ['token' => $qrToken]))
+            ->assertOk()
+            ->assertSee('That step is not open anymore. Start again here: enter your phone number and we will text you a fresh code.');
+    }
+
+    public function test_wrong_number_escape_keeps_the_typed_details_and_consent(): void
+    {
+        // T4-F3: changing the number used to wipe the whole form.
+        // The name, the number itself (editable), and the consent
+        // tick all survive; only the pending code is cleared.
+        $business = World::business();
+        [, $qrToken] = World::qr($business);
+        $this->beginEnrollment($business, $qrToken);
+
+        $this->post(route('refer.verify.change'))
+            ->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+
+        $page = $this->get(route('refer.landing', ['token' => $qrToken]));
+        $page->assertOk();
+        $page->assertSee('value="Pat"', false);
+        $page->assertSee('value="Lee"', false);
+        $page->assertSee('value="+1 (212) 555-0111"', false);
+        $page->assertSee('accent-action" checked', false);
     }
 
     public function test_qr_image_endpoints_serve_svg(): void

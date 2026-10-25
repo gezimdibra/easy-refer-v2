@@ -134,15 +134,18 @@ class RedemptionService
             // text, defaulting to the friend's per OD-2).
             $anomalies = $this->risk->redemptionAnomalies($business, $referrerMembership);
             $claimToken = OpaqueToken::generate();
-            // OD-3: the vesting hold is the reward_vesting_days
-            // configuration (default 14, permitted range 7 to 14).
-            // A value outside the range falls back to the default
-            // rather than minting an out-of-range reward (BILL-43).
-            $configuredVesting = (int) config('referrals.vesting_days_default');
+            // OD-3: the vesting hold is the business's own
+            // reward_vesting_days setting (GAP 2; default 14,
+            // permitted range 7 to 14). A hand-edited or legacy
+            // value outside the range falls back to the config
+            // default rather than minting an out-of-range reward
+            // (BILL-43). The stamp happens here, at mint, so a
+            // later settings change never moves this reward.
+            $configuredVesting = (int) $business->reward_vesting_days;
             $vestingDays = $configuredVesting >= (int) config('referrals.vesting_days_min')
                 && $configuredVesting <= (int) config('referrals.vesting_days_max')
                 ? $configuredVesting
-                : 14;
+                : (int) config('referrals.vesting_days_default');
 
             $reward = Reward::create([
                 'business_id' => $business->id,

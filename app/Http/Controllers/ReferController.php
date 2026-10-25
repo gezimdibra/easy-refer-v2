@@ -196,7 +196,7 @@ class ReferController extends Controller
         $pending = $flow !== null ? $this->flows->get($flow, 'pending') : null;
 
         if ($pending === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
 
         return response()->view('flow.verify', [
@@ -214,7 +214,7 @@ class ReferController extends Controller
         $pending = $flow !== null ? $this->flows->get($flow, 'pending') : null;
 
         if ($pending === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
 
         if (! $request->filled('code')) {
@@ -262,11 +262,18 @@ class ReferController extends Controller
         if ($outcome !== 'approved') {
             // A denied check and a wrong code are indistinguishable
             // by design (SMS-08). The message carries the remaining
-            // count, concretely (Section 4.4 rule 5, F-15).
+            // count, concretely (Section 4.4 rule 5, F-15); at zero
+            // it also says what to do next (T4-F5): the next submit
+            // ends the attempt, and Resend starts a fresh code with
+            // a fresh budget.
             $triesLeft = max(0, (int) config('referrals.verify.checks_per_pending') - $checks);
 
+            $message = $triesLeft === 0
+                ? 'That code did not match. That was the last try for this code. Tap Resend code to get a fresh one.'
+                : 'That code did not match. You have '.$triesLeft.' '.($triesLeft === 1 ? 'try' : 'tries').' left.';
+
             return redirect()->route('refer.verify')
-                ->with('verify_error', 'That code did not match. You have '.$triesLeft.' '.($triesLeft === 1 ? 'try' : 'tries').' left.');
+                ->with('verify_error', $message);
         }
 
         $this->flows->forget($flow, 'pending');
@@ -354,7 +361,7 @@ class ReferController extends Controller
         $pending = $flow !== null ? $this->flows->get($flow, 'pending') : null;
 
         if ($pending === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
 
         $business = Business::query()->findOrFail($pending['business_id']);
@@ -397,8 +404,21 @@ class ReferController extends Controller
         }
 
         if ($pending === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
+
+        // Only the pending code dies here (T4-F3): the details the
+        // customer typed ride back to the form as its draft, the
+        // same shape startVerification saves, so changing one
+        // digit never means retyping everything or re-consenting.
+        $this->flows->put($flow, ['draft' => [
+            'business_id' => $pending['business_id'],
+            'first_name' => $pending['first_name'] ?? '',
+            'last_name' => $pending['last_name'] ?? '',
+            'phone' => PhoneNumber::formatForDisplay($pending['phone_e164']),
+            'email' => $pending['email'] ?? '',
+            'consent' => (bool) ($pending['consent'] ?? false),
+        ]]);
 
         return redirect()->route($pending['return']['route'], $pending['return']['params']);
     }
@@ -409,13 +429,13 @@ class ReferController extends Controller
         $verified = $flow !== null ? $this->flows->get($flow, 'verified') : null;
 
         if ($verified === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
 
         $membership = Membership::query()->with(['business', 'customer'])->find($verified['membership_id']);
 
         if ($membership === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
 
         $business = $membership->business;
@@ -444,13 +464,13 @@ class ReferController extends Controller
         $verified = $flow !== null ? $this->flows->get($flow, 'verified') : null;
 
         if ($verified === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
 
         $membership = Membership::query()->find($verified['membership_id']);
 
         if ($membership === null) {
-            return redirect()->route('home');
+            return $this->flowBounce($request, $flow);
         }
 
         return response(QrImage::svg(route('refer.friend', ['token' => $membership->plainShareToken()])), 200, [
@@ -644,6 +664,32 @@ class ReferController extends Controller
     private function flowFor(Request $request): array
     {
         return [$this->flows->fromRequest($request), null];
+    }
+
+    /**
+     * Where a customer lands when they open a flow step with
+     * nothing behind it (T4-F4): the start of the flow they were
+     * in, when this session knows the business, with a plain
+     * explanation either way. The old answer was a silent redirect
+     * to the marketing homepage, a page pitched at business
+     * owners, which left a customer who reopened a bookmarked
+     * step with no idea what happened.
+     */
+    private function flowBounce(Request $request, ?FlowSession $flow): RedirectResponse
+    {
+        $businessId = $flow !== null
+            ? (int) ($this->flows->get($flow, 'qr_business_id') ?? $this->flows->get($flow, 'scan_business_id') ?? 0)
+            : 0;
+        $business = $businessId > 0 ? Business::query()->find($businessId) : null;
+        $token = $business?->activeQrCode()?->plainToken();
+
+        if ($business !== null && $token !== null) {
+            return redirect()->route('refer.landing', ['token' => $token])
+                ->with('status', 'That step is not open anymore. Start again here: enter your phone number and we will text you a fresh code.');
+        }
+
+        return redirect()->route('home')
+            ->with('status', 'That step is not open anymore. If a business gave you a code or a link, use it to start again.');
     }
 
     /**

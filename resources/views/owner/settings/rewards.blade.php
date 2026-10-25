@@ -61,6 +61,13 @@
         @error('redemption_window_days') <p class="form-error" id="redemption_window_days-error">{{ $message }}</p> @enderror
         <p class="form-help">How many days a friend has to visit before the referral expires.</p>
 
+        <label for="reward_vesting_days">Referrer reward wait (days)</label>
+        <input id="reward_vesting_days" name="reward_vesting_days" type="number" min="{{ $vestingMin }}" max="{{ $vestingMax }}" value="{{ old('reward_vesting_days', $business->reward_vesting_days) }}" required
+            aria-invalid="{{ $errors->has('reward_vesting_days') ? 'true' : 'false' }}"
+            @if ($errors->has('reward_vesting_days')) aria-describedby="reward_vesting_days-error" @endif>
+        @error('reward_vesting_days') <p class="form-error" id="reward_vesting_days-error">{{ $message }}</p> @enderror
+        <p class="form-help">How many days a customer waits before a reward they earned by referring a friend is ready to use. A longer wait gives you time to undo a visit if a payment is refunded. Applies to new rewards only.</p>
+
         <p class="mt-4"><button type="submit" class="btn btn-primary">Save changes</button></p>
     </form>
         </div>

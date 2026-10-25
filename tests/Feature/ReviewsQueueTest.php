@@ -133,6 +133,39 @@ class ReviewsQueueTest extends TestCase
         $this->assertSame(Reward::STATE_DENIED, $reward->fresh()->state);
     }
 
+    public function test_empty_state_never_sits_above_a_held_reward(): void
+    {
+        // T5-F3: the "Nothing is waiting for review" panel was the
+        // held-REFERRAL loop's empty branch, so with no held
+        // referrals but one held reward it printed directly above
+        // that reward's Release/Deny panel. The empty state now
+        // belongs to the whole Needs review queue.
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [$membership] = World::membership($business, $referrer);
+        $friend = World::customer('+12125550777', 'Fri', 'End');
+        [$referral] = World::referral($membership, $friend, ['state' => Referral::STATE_REDEEMED, 'redeemed_at' => now()]);
+        World::reward($membership, $referral, [
+            'state' => Reward::STATE_AVAILABLE,
+            'hold' => true, 'hold_rules' => ['redemption_burst'], 'held_at' => now(),
+            'notification_state' => 'queued',
+        ]);
+
+        $owner = World::owner($business);
+
+        $this->actingAs($owner)->get(route('reviews'))
+            ->assertOk()
+            ->assertSee("Reg's reward:", false)
+            ->assertSee('Release')
+            ->assertDontSee('Nothing is waiting for review.');
+
+        // And with a genuinely empty queue the panel still shows.
+        $empty = World::business();
+        $this->actingAs(World::owner($empty))->get(route('reviews'))
+            ->assertOk()
+            ->assertSee('Nothing is waiting for review.');
+    }
+
     public function test_another_business_cannot_see_or_touch_the_queue(): void
     {
         $business = World::business();

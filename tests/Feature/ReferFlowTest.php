@@ -223,6 +223,32 @@ class ReferFlowTest extends TestCase
         $this->assertSame(0, Customer::count());
     }
 
+    public function test_the_last_wrong_code_says_what_to_do_next(): void
+    {
+        // T4-F5: at 0 tries left the countdown alone left the
+        // customer guessing; the message now names the way out
+        // (Resend gets a fresh code and a fresh try budget).
+        $business = World::business();
+        [, $qrToken] = World::qr($business);
+
+        $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
+        $this->carryFlowCookie($this->post(route('refer.enroll', ['token' => $qrToken]), [
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111', 'consent' => '1',
+        ])->assertRedirect(route('refer.verify')));
+
+        for ($i = 0; $i < 4; $i++) {
+            $this->post(route('refer.verify.check'), ['code' => '000000'])
+                ->assertRedirect(route('refer.verify'));
+        }
+        $this->get(route('refer.verify'))->assertSee('You have 1 try left.');
+
+        $this->post(route('refer.verify.check'), ['code' => '000000'])
+            ->assertRedirect(route('refer.verify'));
+        $this->get(route('refer.verify'))
+            ->assertSee('That was the last try for this code. Tap Resend code to get a fresh one.')
+            ->assertDontSee('You have 0 tries left.');
+    }
+
     public function test_landline_falls_back_to_a_voice_call(): void
     {
         $business = World::business();
@@ -268,10 +294,10 @@ class ReferFlowTest extends TestCase
         ])->assertSessionHasErrors('consent');
 
         // No code was requested from the provider, nothing is
-        // pending, and the verify step bounces home instead of
-        // showing the code form.
+        // pending, and the verify step bounces back to this
+        // business's start (T4-F4) instead of showing the code form.
         $this->assertSame([], $this->verify->starts);
-        $this->get(route('refer.verify'))->assertRedirect(route('home'));
+        $this->get(route('refer.verify'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
         $this->assertSame(0, Customer::count());
         $this->assertSame(0, Membership::count());
     }

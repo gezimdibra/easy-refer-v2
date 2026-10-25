@@ -66,9 +66,34 @@ class PasswordChangeTest extends TestCase
                 'password' => 'a new long phrase 123',
                 'password_confirmation' => 'a new long phrase 123',
             ])
-            ->assertSessionHasErrors('current_password');
+            ->assertSessionHasErrors('current_password', null, 'password');
 
         $this->assertTrue(Hash::check(UserFactory::PASSWORD, $user->fresh()->password));
+    }
+
+    public function test_wrong_current_password_error_renders_once_under_its_own_form(): void
+    {
+        // T1-F2: the error was keyed current_password in the shared
+        // default bag, and the two-factor panel on the same page
+        // carries a current_password field too, so one submit
+        // printed the message under both panels. Each form now has
+        // its own error bag.
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->put(route('security.password'), [
+                'current_password' => 'not the current password',
+                'password' => 'a new long phrase 123',
+                'password_confirmation' => 'a new long phrase 123',
+            ])
+            ->assertSessionHasErrors('current_password', null, 'password');
+
+        $page = $this->actingAs($user)->get(route('security'))->assertOk();
+        $this->assertSame(
+            1,
+            substr_count($page->getContent(), 'The provided password is incorrect.'),
+            'The wrong-current-password message must render exactly once, under the change-password form.'
+        );
     }
 
     public function test_reusing_the_current_password_is_rejected(): void
@@ -81,7 +106,7 @@ class PasswordChangeTest extends TestCase
                 'password' => UserFactory::PASSWORD,
                 'password_confirmation' => UserFactory::PASSWORD,
             ])
-            ->assertSessionHasErrors('password');
+            ->assertSessionHasErrors('password', null, 'password');
     }
 
     public function test_successful_change_kills_other_sessions_and_notifies(): void

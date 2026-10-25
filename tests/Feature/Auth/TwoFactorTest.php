@@ -75,10 +75,30 @@ class TwoFactorTest extends TestCase
 
         $this->actingAs($user)->post(route('security.two-factor.start'), [
             'current_password' => 'not-the-password',
-        ])->assertSessionHasErrors('current_password');
+        ])->assertSessionHasErrors('current_password', null, 'two_factor');
 
         $this->assertNull($user->fresh()->two_factor_secret);
         $this->assertFalse($user->fresh()->hasTwoFactorEnabled());
+    }
+
+    public function test_two_factor_panel_error_renders_once_under_its_own_form(): void
+    {
+        // T1-F2: a wrong current password on the two-factor start
+        // form must print its error once, under the two-factor
+        // panel only (its own error bag), not also under the
+        // change-password panel above it.
+        $user = $this->ownerA();
+
+        $this->actingAs($user)->post(route('security.two-factor.start'), [
+            'current_password' => 'not-the-password',
+        ])->assertSessionHasErrors('current_password', null, 'two_factor');
+
+        $page = $this->actingAs($user)->get(route('security'))->assertOk();
+        $this->assertSame(
+            1,
+            substr_count($page->getContent(), 'The provided password is incorrect.'),
+            'The two-factor panel error must render exactly once.'
+        );
     }
 
     public function test_enrollment_stores_an_encrypted_secret_and_stays_inactive_until_confirmed(): void
@@ -330,7 +350,7 @@ class TwoFactorTest extends TestCase
         $this->actingAs($user)->withSession(['auth.two_factor_passed' => true])
             ->post(route('security.two-factor.disable'), [
                 'current_password' => 'not-the-password',
-            ])->assertSessionHasErrors('current_password');
+            ])->assertSessionHasErrors('current_password', null, 'two_factor');
 
         $this->assertTrue($user->fresh()->hasTwoFactorEnabled());
     }

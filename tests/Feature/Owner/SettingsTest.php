@@ -75,12 +75,72 @@ class SettingsTest extends TestCase
             'friend_reward_text' => 'Free pastry with your first coffee',
             'referrer_reward_text' => '',
             'redemption_window_days' => 45,
+            'reward_vesting_days' => 14,
         ])->assertSessionHas('status', 'Rewards saved.');
 
         $fresh = $business->fresh();
         $this->assertSame('Free pastry with your first coffee', $fresh->friend_reward_text);
         $this->assertNull($fresh->referrer_reward_text);
         $this->assertSame(45, $fresh->redemption_window_days);
+    }
+
+    // GAP 2 (OD-3): the per-business vesting-hold setting
+    // (small-gaps-design.md Section 2.6).
+
+    public function test_rewards_save_vesting_days_round_trips_and_audits(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+
+        $this->actingAs($owner)->post(route('settings.rewards.update'), [
+            'friend_reward_text' => 'Free pastry with your first coffee',
+            'referrer_reward_text' => '',
+            'redemption_window_days' => 30,
+            'reward_vesting_days' => 10,
+        ])->assertSessionHas('status', 'Rewards saved.');
+
+        $this->assertSame(10, $business->fresh()->reward_vesting_days);
+
+        $audit = AuditLog::query()->where('action', 'business.reward_texts_updated')->latest('id')->firstOrFail();
+        $this->assertSame(10, $audit->metadata['reward_vesting_days']);
+
+        $this->actingAs($owner)->get(route('settings.rewards'))
+            ->assertOk()
+            ->assertSee('name="reward_vesting_days" type="number" min="7" max="14" value="10"', false);
+    }
+
+    public function test_vesting_days_bounds_are_enforced(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        $payload = [
+            'friend_reward_text' => 'Free pastry with your first coffee',
+            'referrer_reward_text' => '',
+            'redemption_window_days' => 30,
+        ];
+
+        $this->actingAs($owner)->post(route('settings.rewards.update'), $payload + ['reward_vesting_days' => 6])
+            ->assertSessionHasErrors(['reward_vesting_days' => 'Enter a whole number of days, at least 7.']);
+        $this->actingAs($owner)->post(route('settings.rewards.update'), $payload + ['reward_vesting_days' => 15])
+            ->assertSessionHasErrors(['reward_vesting_days' => 'Enter a whole number of days, at most 14.']);
+        $this->actingAs($owner)->post(route('settings.rewards.update'), $payload + ['reward_vesting_days' => 'ten'])
+            ->assertSessionHasErrors(['reward_vesting_days' => 'Enter a whole number of days.']);
+        $this->actingAs($owner)->post(route('settings.rewards.update'), $payload)
+            ->assertSessionHasErrors(['reward_vesting_days' => 'Enter a whole number of days.']);
+
+        foreach ([7, 14] as $days) {
+            $this->actingAs($owner)->post(route('settings.rewards.update'), $payload + ['reward_vesting_days' => $days])
+                ->assertSessionHas('status', 'Rewards saved.');
+            $this->assertSame($days, $business->fresh()->reward_vesting_days);
+        }
+    }
+
+    public function test_vesting_days_default_is_14_for_a_new_business(): void
+    {
+        $business = World::business();
+
+        $this->assertSame(14, $business->fresh()->reward_vesting_days);
+        $this->assertSame((int) config('referrals.vesting_days_default'), $business->fresh()->reward_vesting_days);
     }
 
     public function test_value_save_converts_dollars_to_cents(): void

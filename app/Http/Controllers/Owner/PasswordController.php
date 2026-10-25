@@ -26,7 +26,11 @@ class PasswordController extends Controller
 {
     public function update(Request $request, RememberMeService $remember, StepUpService $stepUp): RedirectResponse
     {
-        $request->validate([
+        // Errors go to this form's own bag (T1-F2): the security
+        // page hosts several forms with a current_password field,
+        // and the shared default bag printed this form's errors
+        // under every one of them.
+        $request->validateWithBag('password', [
             'current_password' => ['required', 'string'],
             'password' => ['required', 'confirmed', PasswordPolicy::rule()],
         ]);
@@ -39,13 +43,13 @@ class PasswordController extends Controller
         if (! $stepUp->verifyPassword($user, (string) $request->input('current_password'))) {
             throw ValidationException::withMessages([
                 'current_password' => trans('auth.password'),
-            ]);
+            ])->errorBag('password');
         }
 
         if (password_verify((string) $request->input('password'), $user->password)) {
             throw ValidationException::withMessages([
                 'password' => 'The new password must be different from your current password.',
-            ]);
+            ])->errorBag('password');
         }
 
         $user->forceFill([

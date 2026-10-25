@@ -84,8 +84,7 @@ class DashboardController extends Controller
         // completed means state redeemed only; pending is its own
         // number and is never merged into any total; new customers
         // is the trailing 5-day window; promotional messages sent
-        // is delivered campaign recipients (campaigns ship in a
-        // later sprint, so the definition reads zero until then).
+        // is delivered campaign recipients.
         $counters = [
             'completed_total' => Referral::query()
                 ->where('business_id', $business->id)

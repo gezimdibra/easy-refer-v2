@@ -31,6 +31,9 @@
         @if ($consentChangedAt !== null)
             <p class="mt-1 text-text-2">Consent last changed: {{ $consentChangedAt->format('M j, Y') }}</p>
         @endif
+        <p class="mt-3">
+            <a class="btn btn-secondary" href="{{ route('customers.edit', $membership) }}">Edit details</a>
+        </p>
     </div>
 
     <div class="panel mt-4">

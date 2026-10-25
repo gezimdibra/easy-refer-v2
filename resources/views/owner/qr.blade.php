@@ -45,7 +45,12 @@
                         <img src="{{ $imageUrl }}" alt="" class="h-full w-full">
                     </span>
                     <span class="type-body flex-1 text-text-1">{{ $label }}</span>
-                    <a class="btn btn-secondary" href="{{ route('owner.qr.poster', $variant) }}"><x-icon name="download" :size="20" /> Download</a>
+                    {{-- T2-F5: these open the poster print page, so
+                         they say so (and open it in print mode),
+                         matching the Print counter poster action
+                         below; "Download" promised a file that
+                         never came. --}}
+                    <a class="btn btn-secondary" href="{{ route('owner.qr.poster', ['variant' => $variant, 'print' => 1]) }}"><x-icon name="printer" :size="20" /> Print poster</a>
                 </li>
             @endforeach
         </ul>

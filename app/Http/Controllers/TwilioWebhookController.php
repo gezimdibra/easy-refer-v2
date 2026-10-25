@@ -69,6 +69,37 @@ class TwilioWebhookController extends Controller
                 if ($state !== $message->delivery_state) {
                     $message->forceFill(['delivery_state' => $state])->save();
                 }
+
+                // Campaign sends advance their recipient row with
+                // the same mapping (spec Section 10.3): the raw
+                // provider error code is stored on failure and
+                // only ever displayed mapped to plain words.
+                if ($message->purpose === 'campaign') {
+                    $recipient = \App\Models\SmsCampaignRecipient::query()
+                        ->where('sms_message_id', $message->id)
+                        ->orWhere('twilio_message_sid', $sid)
+                        ->first();
+
+                    if ($recipient !== null) {
+                        $recipientState = match ($status) {
+                            'delivered' => \App\Models\SmsCampaignRecipient::STATE_DELIVERED,
+                            'undelivered', 'failed' => \App\Models\SmsCampaignRecipient::STATE_FAILED,
+                            default => $recipient->delivery_state,
+                        };
+
+                        if ($recipientState !== $recipient->delivery_state) {
+                            $recipient->forceFill([
+                                'delivery_state' => $recipientState,
+                                'provider_error_code' => $recipientState === \App\Models\SmsCampaignRecipient::STATE_FAILED
+                                    ? ($request->input('ErrorCode') ?: $recipient->provider_error_code)
+                                    : $recipient->provider_error_code,
+                            ])->save();
+                        }
+
+                        app(\App\Services\Campaigns\CampaignSender::class)
+                            ->finalizeIfComplete($recipient->campaign);
+                    }
+                }
             }
         }
 

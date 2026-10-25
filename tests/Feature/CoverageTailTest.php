@@ -48,19 +48,21 @@ class CoverageTailTest extends TestCase
         }
     }
 
-    public function test_verify_screens_with_a_flow_but_no_pending_go_home(): void
+    public function test_verify_screens_with_a_flow_but_no_pending_return_to_the_flow_start(): void
     {
+        // T4-F4: the session knows the business, so the bounce
+        // goes to that business's refer entry, with the reason.
         $business = World::business();
         [, $qrToken] = World::qr($business);
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
 
-        $this->get(route('refer.verify'))->assertRedirect(route('home'));
-        $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('home'));
-        $this->post(route('refer.verify.resend'))->assertRedirect(route('home'));
-        $this->post(route('refer.verify.change'))->assertRedirect(route('home'));
+        $this->get(route('refer.verify'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+        $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+        $this->post(route('refer.verify.resend'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+        $this->post(route('refer.verify.change'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
     }
 
-    public function test_share_page_after_the_membership_vanishes_goes_home(): void
+    public function test_share_page_after_the_membership_vanishes_returns_to_the_flow_start(): void
     {
         $business = World::business();
         [, $qrToken] = World::qr($business);
@@ -69,11 +71,11 @@ class CoverageTailTest extends TestCase
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
             'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
-        $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share'));
+        $this->carry($this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share')));
 
         Membership::query()->delete();
 
-        $this->get(route('refer.share'))->assertRedirect(route('home'));
+        $this->get(route('refer.share'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
     }
 
     public function test_share_qr_guards(): void
@@ -87,11 +89,11 @@ class CoverageTailTest extends TestCase
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
             'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
-        $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share'));
+        $this->carry($this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share')));
 
         Membership::query()->delete();
 
-        $this->get(route('refer.share.qr'))->assertRedirect(route('home'));
+        $this->get(route('refer.share.qr'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
     }
 
     public function test_malformed_and_unknown_share_and_qr_tokens(): void

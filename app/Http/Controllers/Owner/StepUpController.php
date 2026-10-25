@@ -48,7 +48,28 @@ class StepUpController extends Controller
 
         $return = $request->session()->pull('step_up.return', route('security'));
 
-        return redirect()->to(is_string($return) ? $return : route('security'))
+        return redirect()->to($this->localReturn($request, $return))
             ->with('status', 'Verified. You can complete that change now.');
+    }
+
+    /**
+     * The stored return target, re-validated at read time (T3-F3):
+     * a local path, or an absolute URL on this host, is honored;
+     * anything else (a foreign URL, a protocol-relative URL, a
+     * non-string) falls back to the security page.
+     */
+    private function localReturn(Request $request, mixed $return): string
+    {
+        if (! is_string($return) || $return === '') {
+            return route('security');
+        }
+
+        if (str_starts_with($return, '/') && ! str_starts_with($return, '//')) {
+            return $return;
+        }
+
+        $host = parse_url($return, PHP_URL_HOST);
+
+        return is_string($host) && $host === $request->getHost() ? $return : route('security');
     }
 }

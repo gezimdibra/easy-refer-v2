@@ -29,11 +29,11 @@
             @csrf
             @method('PUT')
 
-            <x-password-input name="current_password" label="Current password" autocomplete="current-password" required />
+            <x-password-input name="current_password" bag="password" label="Current password" autocomplete="current-password" required />
 
-            <x-password-input name="password" label="New password" autocomplete="new-password" required help="At least 12 characters." />
+            <x-password-input name="password" bag="password" label="New password" autocomplete="new-password" required help="At least 12 characters." />
 
-            <x-password-input name="password_confirmation" label="Confirm new password" autocomplete="new-password" required />
+            <x-password-input name="password_confirmation" bag="password" label="Confirm new password" autocomplete="new-password" required />
 
             <p class="mt-4"><button type="submit" class="btn btn-primary">Update password</button></p>
         </form>
@@ -113,7 +113,7 @@
             <form method="POST" action="{{ route('security.two-factor.disable') }}" class="mt-3" data-loading>
                 @csrf
 
-                <x-password-input name="current_password" id="two_factor_current_password" label="Current password (required to turn this off)" required />
+                <x-password-input name="current_password" bag="two_factor" id="two_factor_current_password" label="Current password (required to turn this off)" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-danger-ghost">Turn off two-factor authentication</button></p>
             </form>
@@ -123,7 +123,7 @@
             <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3" data-loading>
                 @csrf
 
-                <x-password-input name="current_password" id="two_factor_restart_password" label="Current password (to start over with a fresh secret)" required />
+                <x-password-input name="current_password" bag="two_factor" id="two_factor_restart_password" label="Current password (to start over with a fresh secret)" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-secondary">Start over</button></p>
             </form>
@@ -132,7 +132,7 @@
             <form method="POST" action="{{ route('security.two-factor.start') }}" class="mt-3" data-loading>
                 @csrf
 
-                <x-password-input name="current_password" id="two_factor_current_password" label="Current password (required to set this up)" required />
+                <x-password-input name="current_password" bag="two_factor" id="two_factor_current_password" label="Current password (required to set this up)" required />
 
                 <p class="mt-4"><button type="submit" class="btn btn-primary">Set up two-factor authentication</button></p>
             </form>

@@ -9,6 +9,15 @@
 @section('theme_lock', 'light')
 
 @section('content')
+    {{-- A flashed status (e.g. a customer bounced here from a
+         closed flow step, T4-F4) renders in the notices region;
+         with no flash this block renders nothing at all. --}}
+    @if (session('status'))
+        <div class="shell pt-6">
+            @include('partials.notices', ['summaryOnly' => true])
+        </div>
+    @endif
+
     {{-- Hero (redesign-spec.md Section 10.1 item 2): centered single
          column, eyebrow pill, display H1, lede, one primary and one
          secondary action, a check-icon microcopy row, then the

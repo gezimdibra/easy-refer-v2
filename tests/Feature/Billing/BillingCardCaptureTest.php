@@ -266,6 +266,36 @@ class BillingCardCaptureTest extends TestCase
         $this->assertSame(PaymentMethod::STATE_SUCCEEDED, $card->fresh()->state);
     }
 
+    public function test_remove_card_interrupted_by_step_up_returns_to_billing_and_completes(): void
+    {
+        // T3-F3: the challenge must hand the owner back to the
+        // page the change lives on, with the change still to
+        // complete there, never strand them on the Security page.
+        $business = World::business();
+        $owner = World::owner($business);
+        $card = $this->card($business);
+
+        $this->actingAs($owner)->from(route('settings.billing'))
+            ->post(route('settings.billing.card.remove'))
+            ->assertRedirect(route('security.step-up'));
+
+        // The interrupted POST changed nothing.
+        $this->assertSame(PaymentMethod::STATE_SUCCEEDED, $card->fresh()->state);
+
+        $this->actingAs($owner)
+            ->post(route('security.step-up.store'), ['password' => 'WorldPassword01!'])
+            ->assertRedirect(route('settings.billing'));
+
+        // Back on Billing inside the fresh window, the same press
+        // completes the removal with no second challenge.
+        $this->actingAs($owner)
+            ->post(route('settings.billing.card.remove'))
+            ->assertRedirect(route('settings.billing'));
+
+        $this->assertSame(PaymentMethod::STATE_REMOVED, $card->fresh()->state);
+        $this->assertSame(1, AuditLog::query()->where('action', 'billing.card_removed')->count());
+    }
+
     public function test_remove_with_step_up_removes_promotes_and_shows_bill09(): void
     {
         $business = World::business();

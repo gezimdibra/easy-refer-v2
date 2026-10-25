@@ -120,6 +120,7 @@ class OverviewTest extends TestCase
             'friend_reward_text' => '10 percent off your first visit',
             'referrer_reward_text' => '10 percent off your next visit',
             'redemption_window_days' => 30,
+            'reward_vesting_days' => 14,
         ])->assertSessionHas('status', 'Rewards saved.');
 
         $business->refresh();
@@ -167,7 +168,9 @@ class OverviewTest extends TestCase
             ->assertSee('Your QR code')
             ->assertSee('/refer/');
 
-        $this->actingAs($owner)->post(route('owner.qr.download'))->assertRedirect();
+        // T2-F3: the download now serves the file itself (200 with
+        // an attachment disposition), pinned in QrDownloadTest.
+        $this->actingAs($owner)->post(route('owner.qr.download'))->assertOk();
         $this->assertDatabaseHas('referral_events', ['business_id' => $business->id, 'event_type' => 'poster_downloaded']);
     }
 

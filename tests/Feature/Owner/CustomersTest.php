@@ -3,6 +3,7 @@
 namespace Tests\Feature\Owner;
 
 use App\Contracts\SmsGateway;
+use App\Models\AuditLog;
 use App\Models\ConsentEvent;
 use App\Models\Customer;
 use App\Models\Membership;
@@ -328,6 +329,176 @@ class CustomersTest extends TestCase
         $stored = SmsMessage::query()->where('purpose', 'share_link')->firstOrFail();
         $this->assertStringNotContainsString($plain, (string) $stored->rendered_body);
         $this->assertStringContainsString('[redacted]', (string) $stored->rendered_body);
+    }
+
+    // GAP 1 (A-080): name-only edit. The design's eight tests
+    // (small-gaps-design.md Section 1.6).
+
+    public function test_edit_page_renders_name_fields_and_readonly_phone(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        [$membership] = World::membership($business, World::customer('+12125550301', 'Ana', 'Ray'));
+
+        $response = $this->actingAs($owner)->get(route('customers.edit', $membership));
+
+        $response->assertOk();
+        $response->assertSee('value="Ana"', false);
+        $response->assertSee('value="Ray"', false);
+        // The number renders as text (the show page's formatter),
+        // never as an input.
+        $response->assertSee('+1 (212) 555-0301');
+        $response->assertDontSee('name="phone"', false);
+        $response->assertSee('Phone numbers can\'t be changed here', false);
+        $response->assertSee('Save changes');
+    }
+
+    public function test_owner_can_fix_a_customer_name_typo(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        [$membership] = World::membership($business, World::customer('+12125550302', 'Anaa', 'Ray'));
+
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => 'Ana',
+            'last_name' => 'Reyes',
+        ])->assertRedirect(route('customers.show', $membership))
+            ->assertSessionHas('status', 'Customer details saved.');
+
+        $customer = $membership->customer->fresh();
+        $this->assertSame('Ana', $customer->first_name);
+        $this->assertSame('Reyes', $customer->last_name);
+
+        $this->actingAs($owner)->get(route('customers.show', $membership))
+            ->assertSee('Ana Reyes');
+    }
+
+    public function test_name_edit_is_global_across_businesses(): void
+    {
+        // Design 1.5: the name lives on the person, so one store's
+        // typo fix renames the customer in every store's view.
+        $business = World::business();
+        $other = World::business();
+        $owner = World::owner($business);
+        $otherOwner = World::owner($other);
+        $customer = World::customer('+12125550303', 'Anaa', 'Ray');
+        [$membership] = World::membership($business, $customer);
+        [$otherMembership] = World::membership($other, $customer);
+
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => 'Ana',
+            'last_name' => 'Ray',
+        ])->assertRedirect();
+
+        $this->actingAs($otherOwner)->get(route('customers.show', $otherMembership))
+            ->assertSee('Ana Ray');
+    }
+
+    public function test_name_edit_leaves_consent_projection_untouched(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        [$membership] = World::membership($business, World::customer('+12125550304', 'Ana', 'Ray'));
+        $membership->forceFill([
+            'sms_consent' => true,
+            'consent_source' => 'customer_reply',
+            'consent_updated_at' => now()->subDays(3),
+        ])->save();
+        $consentUpdatedAt = $membership->fresh()->consent_updated_at;
+        $tokenHash = $membership->share_token_hash;
+        $eventCount = ConsentEvent::count();
+
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => 'Anna',
+            'last_name' => 'Ray',
+        ])->assertRedirect();
+
+        $fresh = $membership->fresh();
+        $this->assertTrue($fresh->sms_consent);
+        $this->assertSame('customer_reply', $fresh->consent_source);
+        $this->assertTrue($consentUpdatedAt->equalTo($fresh->consent_updated_at));
+        $this->assertSame($tokenHash, $fresh->share_token_hash);
+        $this->assertSame($eventCount, ConsentEvent::count());
+    }
+
+    public function test_name_edit_writes_one_audit_row_with_old_and_new(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        [$membership] = World::membership($business, World::customer('+12125550305', 'Anaa', 'Ray'));
+
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => 'Ana',
+            'last_name' => 'Ray',
+        ])->assertRedirect();
+
+        $rows = AuditLog::query()->where('action', 'customer.details_updated')->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame($membership->id, (int) $rows[0]->target_id);
+        $this->assertSame(['Anaa', 'Ana'], $rows[0]->metadata['first_name']);
+        $this->assertSame(['first_name'], $rows[0]->metadata['changed']);
+
+        // A no-op save writes no second row.
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => 'Ana',
+            'last_name' => 'Ray',
+        ])->assertRedirect(route('customers.show', $membership))
+            ->assertSessionHas('status', 'Customer details saved.');
+        $this->assertCount(1, AuditLog::query()->where('action', 'customer.details_updated')->get());
+    }
+
+    public function test_edit_requires_first_name_and_caps_length(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        [$membership] = World::membership($business, World::customer('+12125550306', 'Ana', 'Ray'));
+
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => '',
+            'last_name' => 'Ray',
+        ])->assertSessionHasErrors(['first_name' => 'Enter the customer name.']);
+
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => str_repeat('a', 101),
+        ])->assertSessionHasErrors(['first_name' => 'That entry is too long. Shorten it and try again.']);
+
+        $this->assertSame('Ana', $membership->customer->fresh()->first_name);
+    }
+
+    public function test_edit_is_scoped_to_the_business(): void
+    {
+        $business = World::business();
+        $other = World::business();
+        $owner = World::owner($business);
+        [$foreign] = World::membership($other, World::customer('+12125550307', 'Zed', 'Other'));
+        [$removed] = World::membership($business, World::customer('+12125550308', 'Gone', 'Girl'));
+        $removed->forceFill(['removed_at' => now()])->save();
+
+        $this->actingAs($owner)->get(route('customers.edit', $foreign))->assertNotFound();
+        $this->actingAs($owner)->put(route('customers.update', $foreign), [
+            'first_name' => 'Hacked',
+        ])->assertNotFound();
+        $this->actingAs($owner)->get(route('customers.edit', $removed))->assertNotFound();
+        $this->actingAs($owner)->put(route('customers.update', $removed), [
+            'first_name' => 'Back',
+        ])->assertNotFound();
+
+        $this->assertSame('Zed', $foreign->customer->fresh()->first_name);
+    }
+
+    public function test_phone_cannot_be_changed_through_update(): void
+    {
+        $business = World::business();
+        $owner = World::owner($business);
+        [$membership] = World::membership($business, World::customer('+12125550309', 'Ana', 'Ray'));
+
+        $this->actingAs($owner)->put(route('customers.update', $membership), [
+            'first_name' => 'Ana',
+            'last_name' => 'Ray',
+            'phone' => '2125559999',
+        ])->assertRedirect();
+
+        $this->assertSame('+12125550309', $membership->customer->fresh()->phone_e164);
     }
 
     private function postTwilioWebhook(array $params): void

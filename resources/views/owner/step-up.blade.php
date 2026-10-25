@@ -4,7 +4,7 @@
 
 @section('content')
     <h1 class="type-display-xs text-text-1">Confirm it is you</h1>
-    <p class="type-body mt-2 text-text-2">This change needs a fresh check before it can go ahead. Re-enter your password@if ($user->hasTwoFactorEnabled()), or enter a code from your authenticator app@endif.</p>
+    <p class="type-body mt-2 text-text-2">This change needs a fresh check before it can go ahead. @if ($user->hasTwoFactorEnabled())Re-enter your password, or enter a code from your authenticator app.@else Re-enter your password.@endif</p>
 
     <form class="mt-8" method="POST" action="{{ route('security.step-up.store') }}" data-loading>
         @csrf

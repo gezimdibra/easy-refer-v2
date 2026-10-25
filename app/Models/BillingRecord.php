@@ -16,6 +16,8 @@ class BillingRecord extends Model
 {
     public const KIND_PER_REFERRAL_BATCH = 'per_referral_batch';
 
+    public const KIND_CAMPAIGN_METERING = 'campaign_metering';
+
     public const STATE_PENDING = 'pending';
 
     public const STATE_SUCCEEDED = 'succeeded';

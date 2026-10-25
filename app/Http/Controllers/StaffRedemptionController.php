@@ -59,6 +59,19 @@ class StaffRedemptionController extends Controller
         // The per-render nonce: any POST consumes it, so a failed
         // attempt forces a fresh render with a fresh nonce.
         if (! $this->nonces->consume($subjectType, $model->id, $request->input('nonce'))) {
+            // The double-submit race loser (T5-F1): the nonce is
+            // spent because the winning press, already in flight
+            // from another tab of this session, completed this
+            // token. That is not an expired screen, and its
+            // landing is the same already-done state a fresh scan
+            // shows, so the winner's success flash (shared by the
+            // tabs' one session) must not leak into it either.
+            if ($this->alreadyCompleted($type, $model)) {
+                $this->forgetSuccessFlash($request, $token);
+
+                return redirect()->route('redeem.show', ['token' => $token]);
+            }
+
             return redirect()
                 ->route('redeem.show', ['token' => $token])
                 ->with('staff_error', 'For security, this screen had expired. Here is a fresh one.');
@@ -83,6 +96,15 @@ class StaffRedemptionController extends Controller
             $confirmedAt = $model->fresh()?->claimed_at;
         }
 
+        if (! $completed) {
+            // A press that finds the token already done (a valid
+            // nonce rendered before the winner completed) lands on
+            // the already-done state too (T5-F1): no stale success
+            // flash from the winning press may dress it up as this
+            // press's own completion.
+            $this->forgetSuccessFlash($request, $token);
+        }
+
         $redirect = redirect()->route('redeem.show', ['token' => $token]);
 
         if ($completed && $confirmedAt !== null) {
@@ -95,6 +117,34 @@ class StaffRedemptionController extends Controller
         }
 
         return $redirect;
+    }
+
+    /**
+     * Whether the token's transition already happened (the
+     * double-submit race's winning press, T5-F1).
+     */
+    private function alreadyCompleted(string $type, Referral|Reward $model): bool
+    {
+        $fresh = $model->fresh();
+
+        return $type === 'referral'
+            ? $fresh?->state === Referral::STATE_REDEEMED
+            : $fresh?->state === Reward::STATE_CLAIMED;
+    }
+
+    /**
+     * Drop this token's pending success flash, if one is in the
+     * session: in a shared-session race the flash belongs to the
+     * winning press, and the losing press's landing must render
+     * the already-done state, not the winner's flood (T5-F1).
+     */
+    private function forgetSuccessFlash(Request $request, string $token): void
+    {
+        $success = $request->session()->get('staff_success');
+
+        if (is_array($success) && ($success['token'] ?? null) === $token) {
+            $request->session()->forget('staff_success');
+        }
     }
 
     /**

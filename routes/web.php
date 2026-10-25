@@ -19,6 +19,7 @@ use App\Http\Controllers\StaffRedemptionController;
 use App\Http\Controllers\SquareWebhookController;
 use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\Owner\BillingCardController;
+use App\Http\Controllers\Owner\CampaignsController;
 use App\Http\Controllers\Owner\DashboardController;
 use App\Http\Controllers\Owner\EmailChangeController;
 use App\Http\Controllers\Owner\QrPageController;
@@ -214,6 +215,10 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
     Route::post('auth/customers', [CustomersController::class, 'store'])
         ->middleware('origin.check')
         ->name('customers.store');
+    Route::get('auth/customers/{membership}/edit', [CustomersController::class, 'edit'])->name('customers.edit');
+    Route::put('auth/customers/{membership}', [CustomersController::class, 'update'])
+        ->middleware('origin.check')
+        ->name('customers.update');
     Route::get('auth/customers/{membership}', [CustomersController::class, 'show'])->name('customers.show');
     Route::delete('auth/customers/{membership}', [CustomersController::class, 'destroy'])
         ->middleware('origin.check')
@@ -227,6 +232,29 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
     Route::post('auth/rewards/{reward}/resend', [RewardsController::class, 'resend'])
         ->middleware('origin.check')
         ->name('rewards.resend');
+
+    // Bulk SMS campaigns (spec Section 10.3): compose saves a
+    // draft, the confirm screen is the only send path, and the
+    // send recomputes the audience server-side. Compose is
+    // defined before the {campaign} routes so it never binds
+    // as an id.
+    Route::get('auth/campaigns', [CampaignsController::class, 'index'])->name('campaigns.index');
+    Route::get('auth/campaigns/compose', [CampaignsController::class, 'create'])->name('campaigns.create');
+    Route::post('auth/campaigns/estimate', [CampaignsController::class, 'estimate'])
+        ->middleware('throttle:60,1')
+        ->name('campaigns.estimate');
+    Route::post('auth/campaigns', [CampaignsController::class, 'store'])
+        ->middleware('origin.check')
+        ->name('campaigns.store');
+    Route::get('auth/campaigns/{campaign}/confirm', [CampaignsController::class, 'confirm'])->name('campaigns.confirm');
+    Route::post('auth/campaigns/{campaign}/send', [CampaignsController::class, 'send'])
+        ->middleware('origin.check')
+        ->name('campaigns.send');
+    Route::get('auth/campaigns/{campaign}', [CampaignsController::class, 'show'])->name('campaigns.show');
+    Route::get('auth/campaigns/{campaign}/status', [CampaignsController::class, 'status'])->name('campaigns.status');
+    Route::delete('auth/campaigns/{campaign}', [CampaignsController::class, 'destroy'])
+        ->middleware('origin.check')
+        ->name('campaigns.destroy');
 
     // Settings (spec Section 5.5): an index of separate pages, one
     // job each. The Security page above is the Settings security

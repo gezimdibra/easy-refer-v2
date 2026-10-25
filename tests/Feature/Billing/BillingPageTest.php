@@ -95,6 +95,37 @@ class BillingPageTest extends TestCase
         $response->assertSee('No charges yet. Your first charge comes after your 5 free visits.');
     }
 
+    public function test_no_card_panel_reflects_exhausted_free_visits(): void
+    {
+        // T3-F5: an established business whose free visits are
+        // gone must not be told its first 5 visits are free or
+        // that adding a card turns its QR code on (it never went
+        // off).
+        $business = World::business(['free_visits_remaining' => 0]);
+        $owner = World::owner($business);
+
+        $response = $this->actingAs($owner)->get(route('settings.billing'));
+
+        $response->assertOk();
+        $response->assertDontSee('Add a card to turn on your QR code');
+        $response->assertDontSee('Your first 5 visits are free');
+        $response->assertSee('Add a card to restart monthly charges');
+        $response->assertSee('Your 5 free visits are used up. Nothing is charged when you add your card.');
+    }
+
+    public function test_no_card_panel_counts_the_free_visits_still_left(): void
+    {
+        $business = World::business(['free_visits_remaining' => 2]);
+        $owner = World::owner($business);
+
+        $response = $this->actingAs($owner)->get(route('settings.billing'));
+
+        $response->assertOk();
+        $response->assertDontSee('Add a card to turn on your QR code');
+        $response->assertDontSee('Your first 5 visits are free');
+        $response->assertSee('You have 2 of your 5 free visits left. Nothing is charged when you add your card.');
+    }
+
     public function test_plan_block_states_the_configured_per_visit_price(): void
     {
         $business = World::business(['billing_status' => 'none']);

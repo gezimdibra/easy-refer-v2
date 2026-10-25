@@ -21,11 +21,14 @@ class TwoFactorController extends Controller
 {
     public function start(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
-        $request->validate([
+        // This form's own error bag (T1-F2), shared by the disable
+        // form below: both live in the two-factor panel of the
+        // security page, apart from the change-password form.
+        $request->validateWithBag('two_factor', [
             'current_password' => ['required', 'string'],
         ]);
 
-        $twoFactor->startEnrollment($request->user(), (string) $request->input('current_password'));
+        $twoFactor->startEnrollment($request->user(), (string) $request->input('current_password'), 'two_factor');
 
         // Privilege change: the session ID rotates (spec Section 8.4).
         $request->session()->regenerate();
@@ -77,11 +80,11 @@ class TwoFactorController extends Controller
 
     public function disable(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
-        $request->validate([
+        $request->validateWithBag('two_factor', [
             'current_password' => ['required', 'string'],
         ]);
 
-        $twoFactor->disable($request->user(), (string) $request->input('current_password'));
+        $twoFactor->disable($request->user(), (string) $request->input('current_password'), 'two_factor');
 
         $request->session()->forget('auth.two_factor_passed');
         $request->session()->regenerate();

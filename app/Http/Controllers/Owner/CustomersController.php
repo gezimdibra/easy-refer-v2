@@ -262,6 +262,78 @@ class CustomersController extends Controller
     }
 
     /**
+     * Edit a customer's name (A-080, small-gaps design Section
+     * 1.3): the name only. The phone is the person's identity key,
+     * not an attribute (design 1.4): it renders read-only here and
+     * update() never reads a phone field, so no submitted value
+     * can re-key the person, move their consent provenance, or
+     * re-point their sign-in codes.
+     */
+    public function edit(Request $request, Membership $membership): View
+    {
+        $business = $request->user()->business;
+        abort_unless($membership->business_id === $business->id && $membership->removed_at === null, 404);
+
+        $membership->load('customer');
+
+        return view('owner.customers.edit', [
+            'business' => $business,
+            'membership' => $membership,
+        ]);
+    }
+
+    public function update(Request $request, Membership $membership): RedirectResponse
+    {
+        $business = $request->user()->business;
+        abort_unless($membership->business_id === $business->id && $membership->removed_at === null, 404);
+
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
+        ], [
+            'first_name.required' => 'Enter the customer name.',
+            'max' => 'That entry is too long. Shorten it and try again.',
+        ]);
+
+        $customer = $membership->customer;
+        $first = $data['first_name'];
+        $last = $data['last_name'] ?? '';
+
+        // The write is to the person's one global name (design
+        // 1.5), and only on a real change: a no-op save redirects
+        // with the same status and writes no audit row, so the
+        // trail records changes, not clicks. Consent state, the
+        // share token, and the ConsentEvent log are never touched:
+        // a name fix is not a consent event.
+        $changed = [];
+        $metadata = [];
+
+        if ($first !== $customer->first_name) {
+            $changed[] = 'first_name';
+            $metadata['first_name'] = [$customer->first_name, $first];
+        }
+
+        if ($last !== $customer->last_name) {
+            $changed[] = 'last_name';
+            $metadata['last_name'] = [$customer->last_name, $last];
+        }
+
+        if ($changed !== []) {
+            $customer->forceFill([
+                'first_name' => $first,
+                'last_name' => $last,
+            ])->save();
+
+            AuditLog::write('customer.details_updated', $request->user(),
+                ['changed' => $changed] + $metadata, $business, $membership);
+        }
+
+        return redirect()
+            ->route('customers.show', $membership)
+            ->with('status', 'Customer details saved.');
+    }
+
+    /**
      * Remove from this store (design Section 3.4): ends this
      * store's connection and revokes the share link; the person's
      * record and this store's history stay saved (the membership

@@ -44,18 +44,25 @@ class RewardsController extends Controller
 
         $base = Reward::query()->where('business_id', $business->id);
 
+        // The filters are presented as a partition of All, so
+        // they are counted as one (T5-F2): a held reward lives
+        // only under Held, whatever its state. The state buckets
+        // therefore exclude held rows, in the counts and in the
+        // lists alike. (A held reward's state can still flip to
+        // available on read when its vesting date passes; the
+        // hold, not the state, decides its tab.)
         $counts = [
             'all' => (clone $base)->count(),
-            'pending_vesting' => (clone $base)->where('state', Reward::STATE_PENDING_VESTING)->count(),
-            'available' => (clone $base)->where('state', Reward::STATE_AVAILABLE)->count(),
-            'claimed' => (clone $base)->where('state', Reward::STATE_CLAIMED)->count(),
+            'pending_vesting' => (clone $base)->where('state', Reward::STATE_PENDING_VESTING)->where('hold', false)->count(),
+            'available' => (clone $base)->where('state', Reward::STATE_AVAILABLE)->where('hold', false)->count(),
+            'claimed' => (clone $base)->where('state', Reward::STATE_CLAIMED)->where('hold', false)->count(),
             'held' => (clone $base)->where('hold', true)->count(),
         ];
 
         $rewards = $base
             ->with(['membership.customer', 'referral.referredCustomer'])
             ->when($filter === 'held', fn ($query) => $query->where('hold', true))
-            ->when(in_array($filter, ['pending_vesting', 'available', 'claimed'], true), fn ($query) => $query->where('state', $filter))
+            ->when(in_array($filter, ['pending_vesting', 'available', 'claimed'], true), fn ($query) => $query->where('state', $filter)->where('hold', false))
             ->orderByDesc('created_at')
             ->paginate(25)
             ->withQueryString();

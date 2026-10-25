@@ -1,6 +1,9 @@
 @extends('layouts.flow')
 
-@section('title', 'Easy Refer')
+{{-- T6-F2: the does-not-resolve family answers 404, so it takes
+     the standard error pages' title; the flow's own 200 states
+     keep the plain brand title. --}}
+@section('title', in_array($state, ['inactive_qr', 'not_active', 'bad_link'], true) ? 'Page not found | Easy Refer' : 'Easy Refer')
 @section('flow_label', 'Referral')
 
 @section('content')
@@ -13,9 +16,11 @@
     @if ($state === 'inactive_qr')
         <h1 class="type-display-xs">This code is not active</h1>
         <p class="mt-2 text-text-2">Please ask the business for help, or check that you scanned the whole code.</p>
+        <a class="btn btn-flow btn-primary w-full mt-5" href="{{ route('home') }}">Go to the homepage</a>
     @elseif ($state === 'not_active')
         <h1 class="type-display-xs">This code is not active</h1>
         <p class="mt-2 text-text-2">Please ask the business for help, or check that you scanned the whole code.</p>
+        <a class="btn btn-flow btn-primary w-full mt-5" href="{{ route('home') }}">Go to the homepage</a>
     @elseif ($state === 'bad_link')
         <h1 class="type-display-xs">Something is not right with that link</h1>
         <p class="mt-2 text-text-2">Ask the business or your friend for a new one.</p>

@@ -32,6 +32,9 @@
             <li>Visits charged: {{ $charged }}</li>
             <li>Free visits used: {{ $freeUsed }}</li>
             <li>Visits past the monthly cap, recorded free: {{ $overCap }}</li>
+            @if (($textCampaignsCents ?? 0) > 0)
+                <li>Text campaigns: {{ '$'.number_format($textCampaignsCents / 100, 2) }}</li>
+            @endif
         </ul>
         <p class="mt-3 text-text-1">What those visits were worth (estimate): {{ '$'.number_format($estimatedSalesCents / 100, 2) }}</p>
         <p class="type-body-sm mt-4 text-text-2">Amounts are in US dollars. Charges are handled by Square.</p>

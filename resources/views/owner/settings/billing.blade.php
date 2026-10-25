@@ -70,8 +70,23 @@
         @elseif ($pendingCard !== null)
             <p class="mt-2 text-text-1">We are still confirming your card with Square. This page will update on its own. Please do not add the card again.</p>
         @else
-            <p class="mt-2 font-semibold text-text-1">Add a card to turn on your QR code</p>
-            <p class="type-body-sm mt-1 text-text-2">Your first {{ $freeTotal }} visits are free. Nothing is charged when you add your card.</p>
+            {{-- The no-card panel speaks to the business's actual
+                 state (T3-F5): the turn-on-your-QR-code framing is
+                 only true before the first visit; once visits have
+                 used some or all of the free allowance, the QR code
+                 already works and the honest ask is the card that
+                 restarts monthly charges, with the real free count. --}}
+            @if ($business->free_visits_remaining >= $freeTotal)
+                <p class="mt-2 font-semibold text-text-1">Add a card to turn on your QR code</p>
+                <p class="type-body-sm mt-1 text-text-2">Your first {{ $freeTotal }} visits are free. Nothing is charged when you add your card.</p>
+            @else
+                <p class="mt-2 font-semibold text-text-1">Add a card to restart monthly charges</p>
+                @if ($business->free_visits_remaining > 0)
+                    <p class="type-body-sm mt-1 text-text-2">You have {{ $business->free_visits_remaining }} of your {{ $freeTotal }} free visits left. Nothing is charged when you add your card.</p>
+                @else
+                    <p class="type-body-sm mt-1 text-text-2">Your {{ $freeTotal }} free visits are used up. Nothing is charged when you add your card.</p>
+                @endif
+            @endif
             <div id="card-form" data-billing-card-form class="mt-4"></div>
             @include('owner.settings.partials.billing-card-form', [
                 'action' => route('settings.billing.card.store'),

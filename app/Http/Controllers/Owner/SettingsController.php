@@ -115,6 +115,8 @@ class SettingsController extends Controller
             'business' => $request->user()->business,
             'packs' => \App\Support\StarterPacks::forType($request->user()->business->business_type),
             'prefill' => $prefill,
+            'vestingMin' => (int) config('referrals.vesting_days_min'),
+            'vestingMax' => (int) config('referrals.vesting_days_max'),
         ]);
     }
 
@@ -127,15 +129,27 @@ class SettingsController extends Controller
      */
     public function updateRewards(Request $request): RedirectResponse
     {
+        // The vesting bounds are the platform's OD-3 contract,
+        // pulled from config at validation time (the updateLimits
+        // pattern), and interpolated into rules and messages so a
+        // future bounds change cannot strand the copy (GAP 2).
+        $vestingMin = (int) config('referrals.vesting_days_min');
+        $vestingMax = (int) config('referrals.vesting_days_max');
+
         $data = $request->validate([
             'friend_reward_text' => ['required', 'string', 'max:120'],
             'referrer_reward_text' => ['nullable', 'string', 'max:120'],
             'redemption_window_days' => ['required', 'integer', 'min:1', 'max:365'],
+            'reward_vesting_days' => ['required', 'integer', "min:{$vestingMin}", "max:{$vestingMax}"],
         ], [
             'friend_reward_text.required' => 'Write the friend reward.',
             'max' => 'That entry is too long. Shorten it and try again.',
             'redemption_window_days.min' => 'Enter a whole number of days, at least 1.',
             'redemption_window_days.max' => 'Enter a whole number of days, at most 365.',
+            'reward_vesting_days.min' => "Enter a whole number of days, at least {$vestingMin}.",
+            'reward_vesting_days.max' => "Enter a whole number of days, at most {$vestingMax}.",
+            'reward_vesting_days.integer' => 'Enter a whole number of days.',
+            'reward_vesting_days.required' => 'Enter a whole number of days.',
         ]);
 
         $business = $request->user()->business;
@@ -144,10 +158,12 @@ class SettingsController extends Controller
             'friend_reward_text' => $data['friend_reward_text'],
             'referrer_reward_text' => $data['referrer_reward_text'] ?? null,
             'redemption_window_days' => (int) $data['redemption_window_days'],
+            'reward_vesting_days' => (int) $data['reward_vesting_days'],
         ])->save();
 
         AuditLog::write('business.reward_texts_updated', $request->user(), [
             'redemption_window_days' => (int) $data['redemption_window_days'],
+            'reward_vesting_days' => (int) $data['reward_vesting_days'],
         ], $business);
 
         return back()->with('status', 'Rewards saved.');
@@ -361,7 +377,7 @@ class SettingsController extends Controller
         $business = $request->user()->business;
 
         if ($record->business_id !== $business->id
-            || $record->kind !== BillingRecord::KIND_PER_REFERRAL_BATCH
+            || ! in_array($record->kind, [BillingRecord::KIND_PER_REFERRAL_BATCH, BillingRecord::KIND_CAMPAIGN_METERING], true)
             || $record->state !== BillingRecord::STATE_SUCCEEDED) {
             abort(404);
         }
@@ -371,6 +387,13 @@ class SettingsController extends Controller
             ->groupBy('coverage')
             ->pluck('total', 'coverage');
 
+        // STMT-02's Text campaigns line: the recipient rows this
+        // record claimed, on a batch and on a campaign-metering
+        // record alike.
+        $textCampaignsCents = (int) \App\Models\SmsCampaignRecipient::query()
+            ->where('billing_record_id', $record->id)
+            ->sum('amount_cents');
+
         $estimate = $valuation->forMonth($business, Carbon::parse($record->period_start));
 
         return view('owner.settings.billing-statement', [
@@ -379,6 +402,7 @@ class SettingsController extends Controller
             'charged' => (int) ($counts['billable'] ?? 0),
             'freeUsed' => (int) ($counts['free_credit'] ?? 0),
             'overCap' => (int) ($counts['over_cap'] ?? 0),
+            'textCampaignsCents' => $textCampaignsCents,
             'estimatedSalesCents' => $estimate['estimated_sales_cents'],
         ]);
     }

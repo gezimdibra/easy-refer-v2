@@ -51,6 +51,30 @@ final class MessageCopy
     }
 
     /**
+     * SMS-04, the campaign STOP suffix: a body that does not end
+     * with "." gets ". Reply STOP to opt out."; a body that does
+     * gets " Reply STOP to opt out.", so the rendered text never
+     * doubles the period.
+     */
+    public static function campaignSuffix(string $ownerBody): string
+    {
+        return str_ends_with($ownerBody, '.')
+            ? ' Reply STOP to opt out.'
+            : '. Reply STOP to opt out.';
+    }
+
+    /**
+     * The campaign body as sent (spec Section 10.3): the system
+     * prepends "{BusinessName}: " (threat G-10: the A2P samples
+     * are filed with the prefix), then the owner's text, then the
+     * SMS-04 suffix. One identical body goes to every recipient.
+     */
+    public static function campaign(Business $business, string $ownerBody): string
+    {
+        return "{$business->name}: {$ownerBody}".self::campaignSuffix($ownerBody);
+    }
+
+    /**
      * ALERT-03, the first-visit owner alert SMS variant.
      */
     public static function firstVisitAlert(Business $business, string $dashboardUrl): string

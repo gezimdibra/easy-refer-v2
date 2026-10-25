@@ -326,7 +326,8 @@ class SecurityFixTest extends TestCase
     {
         // Defensive: the verified marker references a membership
         // deleted mid-flow (owner cleanup, say). Both share
-        // surfaces redirect home instead of erroring.
+        // surfaces bounce back to the flow's start (T4-F4) instead
+        // of erroring.
         $business = World::business();
         [, $qrToken] = World::qr($business);
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
@@ -337,8 +338,8 @@ class SecurityFixTest extends TestCase
 
         \App\Models\Membership::query()->delete();
 
-        $this->get(route('refer.share'))->assertRedirect(route('home'));
-        $this->get(route('refer.share.qr'))->assertRedirect(route('home'));
+        $this->get(route('refer.share'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
+        $this->get(route('refer.share.qr'))->assertRedirect(route('refer.landing', ['token' => $qrToken]));
     }
 
     public function test_attribution_payload_is_bounded_to_column_width(): void

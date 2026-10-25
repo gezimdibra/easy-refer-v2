@@ -133,17 +133,18 @@ class VestingPinsTest extends TestCase
     }
 
     /**
-     * BILL-43 at the mint: the configured hold (7 or 14) lands on
-     * available_at exactly; configurations outside the range fall
-     * back to the 14-day default rather than minting an
-     * out-of-range reward.
+     * BILL-43 at the mint: the business's configured hold (7 or
+     * 14) lands on available_at exactly; a business value outside
+     * the range falls back to the config default (14) rather than
+     * minting an out-of-range reward. (GAP 2 moved the source of
+     * the value from the platform config to the per-business
+     * setting; the range discipline is unchanged.)
      */
     public function test_mint_hold_length_follows_configuration_within_the_range(): void
     {
         foreach ([7 => 7, 14 => 14, 6 => 14, 15 => 14, 20 => 14] as $configured => $expectedDays) {
-            config(['referrals.vesting_days_default' => $configured]);
-
             [$business, $membership] = $this->world();
+            $business->forceFill(['reward_vesting_days' => $configured])->save();
             $friend = World::customer('+1212555013'.$configured, 'Fri', 'End');
             [$referral] = World::referral($membership, $friend);
 
@@ -158,6 +159,77 @@ class VestingPinsTest extends TestCase
                 120,
                 "configured {$configured} days must mint a {$expectedDays}-day hold",
             );
+        }
+    }
+
+    /**
+     * GAP 2 (design 2.6 test 4): two businesses mint at their own
+     * setting on the same day.
+     */
+    public function test_mint_uses_the_business_vesting_days(): void
+    {
+        foreach ([7, 14] as $days) {
+            [$business, $membership] = $this->world();
+            $business->forceFill(['reward_vesting_days' => $days])->save();
+            $friend = World::customer('+1212555015'.$days, 'Fri', 'End');
+            [$referral] = World::referral($membership, $friend);
+
+            app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');
+
+            $reward = Reward::query()->where('referral_id', $referral->id)->firstOrFail();
+            $delta = abs($reward->available_at->unix() - $referral->fresh()->redeemed_at->unix());
+            $this->assertEqualsWithDelta($days * 86400, $delta, 120);
+        }
+    }
+
+    /**
+     * GAP 2 (design 2.6 test 6): the grandfathering rule. A
+     * settings change never moves a reward already minted, in
+     * either direction; the next mint uses the new value.
+     */
+    public function test_changing_vesting_days_does_not_move_existing_rewards(): void
+    {
+        [$business, $membership] = $this->world();
+        $business->forceFill(['reward_vesting_days' => 14])->save();
+        $friend = World::customer('+12125550161', 'Fri', 'End');
+        [$referral] = World::referral($membership, $friend);
+        app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');
+        $reward = Reward::query()->where('referral_id', $referral->id)->firstOrFail();
+        $stamped = $reward->available_at->toIso8601String();
+
+        $business->forceFill(['reward_vesting_days' => 7])->save();
+        $this->assertSame($stamped, $reward->fresh()->available_at->toIso8601String());
+
+        $friend2 = World::customer('+12125550162', 'Fri', 'End');
+        [$referral2] = World::referral($membership, $friend2);
+        app(RedemptionService::class)->redeemReferral($referral2, null, '127.0.0.1');
+        $reward2 = Reward::query()->where('referral_id', $referral2->id)->firstOrFail();
+        $delta = abs($reward2->available_at->unix() - $referral2->fresh()->redeemed_at->unix());
+        $this->assertEqualsWithDelta(7 * 86400, $delta, 120);
+    }
+
+    /**
+     * GAP 2 (design 2.6 test 7): the setting governs REFERRER
+     * rewards only. The friend's welcome reward is the redemption
+     * itself (no separate vesting row exists for it), and it
+     * completes immediately at any setting value.
+     */
+    public function test_friend_reward_is_not_vested_by_this_setting(): void
+    {
+        foreach ([7, 14] as $days) {
+            [$business, $membership] = $this->world();
+            $business->forceFill(['reward_vesting_days' => $days])->save();
+            $friend = World::customer('+1212555017'.$days, 'Fri', 'End');
+            [$referral] = World::referral($membership, $friend);
+
+            $result = app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');
+
+            $this->assertSame('redeemed', $result['outcome']);
+            $this->assertNotNull($referral->fresh()->redeemed_at);
+            // The only reward minted is the referrer's; nothing
+            // friend-side waits on the setting.
+            $this->assertSame(1, Reward::query()->where('business_id', $business->id)->count());
+            $this->assertSame($membership->id, Reward::query()->where('referral_id', $referral->id)->firstOrFail()->membership_id);
         }
     }
 }

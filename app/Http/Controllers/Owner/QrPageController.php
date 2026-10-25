@@ -46,14 +46,23 @@ class QrPageController extends Controller
         ]);
     }
 
-    public function download(Request $request): RedirectResponse
+    public function download(Request $request): Response
     {
         $business = $request->user()->business;
+        $qr = $this->liveCode($business);
 
         ReferralEvent::record('poster_downloaded', 'owner', $business);
         AuditLog::write('qr.poster_downloaded', $request->user(), [], $business);
 
-        return redirect()->route('owner.qr.image');
+        // T2-F3: the button promises a download, so the file is
+        // served as an attachment. (It used to redirect to the
+        // inline image route, and the browser just displayed the
+        // bare SVG.) The image route itself stays inline: the
+        // page's <img> tags display from it.
+        return response(QrImage::svg(route('refer.landing', ['token' => $qr->plainToken()])), 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Content-Disposition' => 'attachment; filename="easy-refer-qr-code.svg"',
+        ]);
     }
 
     /**

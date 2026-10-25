@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\MarketingSmsGateway;
 use App\Contracts\PhoneLookupGateway;
 use App\Contracts\PhoneVerificationGateway;
 use App\Contracts\SmsGateway;
@@ -11,9 +12,11 @@ use App\Services\Square\NullSquareCustomerGateway;
 use App\Services\Square\NullSquarePaymentsGateway;
 use App\Services\Square\SdkSquareCustomerGateway;
 use App\Services\Square\SdkSquarePaymentsGateway;
+use App\Services\Twilio\NullMarketingSmsGateway;
 use App\Services\Twilio\NullPhoneLookupGateway;
 use App\Services\Twilio\NullPhoneVerificationGateway;
 use App\Services\Twilio\NullSmsGateway;
+use App\Services\Twilio\TwilioMarketingSmsGateway;
 use App\Services\Twilio\TwilioPhoneLookupGateway;
 use App\Services\Twilio\TwilioPhoneVerificationGateway;
 use App\Services\Twilio\TwilioSmsGateway;
@@ -70,6 +73,18 @@ class AppServiceProvider extends ServiceProvider
             return $this->twilioConfigured() && ! empty(config('services.twilio.messaging_service_sid'))
                 ? $app->make(TwilioSmsGateway::class)
                 : $app->make(NullSmsGateway::class);
+        });
+
+        // Spec Section 10.3, the parallel switch for the
+        // marketing pool: the real gateway binds only when the
+        // account key set AND the marketing messaging service are
+        // configured; otherwise the null gateway keeps campaign
+        // surfaces closed-but-graceful and the pools can never be
+        // crossed.
+        $this->app->bind(MarketingSmsGateway::class, function ($app) {
+            return $this->twilioConfigured() && ! empty(config('services.twilio.marketing_messaging_service_sid'))
+                ? $app->make(TwilioMarketingSmsGateway::class)
+                : $app->make(NullMarketingSmsGateway::class);
         });
 
         $this->app->bind(PhoneLookupGateway::class, function ($app) {

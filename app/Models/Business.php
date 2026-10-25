@@ -47,6 +47,7 @@ class Business extends Model
         'friend_reward_text',
         'referrer_reward_text',
         'redemption_window_days',
+        'reward_vesting_days',
         'daily_referral_cap',
         'monthly_referral_cap',
         'square_customer_id',
@@ -82,6 +83,7 @@ class Business extends Model
         return [
             'email_verified_at' => 'datetime',
             'redemption_window_days' => 'integer',
+            'reward_vesting_days' => 'integer',
             'daily_referral_cap' => 'integer',
             'monthly_referral_cap' => 'integer',
             'free_visits_remaining' => 'integer',
@@ -161,6 +163,21 @@ class Business extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    /**
+     * An instant as the business's wall clock reads it (T2-F4):
+     * owner-facing event times render in the business's timezone,
+     * never bare UTC. A missing or unrecognized stored zone falls
+     * back to the app timezone rather than failing the render.
+     */
+    public function localTime(\Illuminate\Support\Carbon $when): \Illuminate\Support\Carbon
+    {
+        $zone = is_string($this->timezone) && in_array($this->timezone, timezone_identifiers_list(), true)
+            ? $this->timezone
+            : (string) config('app.timezone');
+
+        return $when->copy()->setTimezone($zone);
     }
 
     /**

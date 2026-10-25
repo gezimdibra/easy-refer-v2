@@ -17,7 +17,7 @@
 
     <div class="panel mt-4">
         <h1 class="type-title-2 text-text-1">Referral detail</h1>
-        <p class="mt-1 text-text-2">{{ $referral->referredCustomer->first_name }}, referred by {{ $referral->referrerMembership->customer->first_name }} · Started {{ $referral->created_at->format('M j, Y') }}</p>
+        <p class="mt-1 text-text-2">{{ $referral->referredCustomer->first_name }}, referred by {{ $referral->referrerMembership->customer->first_name }} · Started {{ $business->localTime($referral->created_at)->format('M j, Y') }}</p>
         <p class="mt-2">
             <span class="pill {{ \App\Support\ReferralStatus::present($referral)['pill'] }}">{{ \App\Support\ReferralStatus::present($referral)['label'] }}</span>
             @if ($referral->reward !== null)
@@ -59,7 +59,7 @@
                     <li class="relative">
                         <span class="absolute top-0 -left-8 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-surface-2 text-text-3"><x-icon name="info" :size="16" /></span>
                         <span class="type-body-sm block font-semibold text-text-1">{{ \App\Support\ReferralTimeline::label($event->event_type) }}</span>
-                        <span class="type-caption block text-text-3">{{ $event->created_at->format('M j, Y, g:i A') }}</span>
+                        <span class="type-caption block text-text-3">{{ $business->localTime($event->created_at)->format('M j, Y, g:i A') }}</span>
                     </li>
                 @endforeach
             </ol>

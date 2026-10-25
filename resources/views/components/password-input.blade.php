@@ -6,6 +6,7 @@
     'required' => false,
     'help' => null,
     'describedby' => null,
+    'bag' => null,
 ])
 
 {{--
@@ -20,7 +21,10 @@
     the "{id}-error" element, wired through aria-describedby
     with the optional help text at "{id}-help", and the input
     takes the shared .form-input error styling through
-    aria-invalid, exactly as the hand-written fields did.
+    aria-invalid, exactly as the hand-written fields did. A field
+    whose form keeps its own error bag names it through the bag
+    prop, so its errors never print under a sibling form that
+    happens to carry a field of the same name (T1-F2).
 
     Usage:
         <x-password-input name="password" label="Password"
@@ -36,7 +40,11 @@
 --}}
 @php
     $id = $id ?? $name;
-    $hasError = $errors->has($name);
+    // A field on a page hosting several forms can name its form's
+    // error bag (T1-F2); its errors then read from that bag only,
+    // never the shared default bag the sibling forms also read.
+    $fieldErrors = $bag ? $errors->getBag($bag) : $errors;
+    $hasError = $fieldErrors->has($name);
     $describedBy = collect([$help ? $id.'-help' : null, $describedby, $hasError ? $id.'-error' : null])->filter()->implode(' ');
 @endphp
 <div class="field" x-data="{ show: false }">
@@ -64,7 +72,7 @@
     @if ($help)
         <p class="form-help" id="{{ $id }}-help">{{ $help }}</p>
     @endif
-    @error($name)
-        <p class="form-error" id="{{ $id }}-error">{{ $message }}</p>
-    @enderror
+    @if ($fieldErrors->has($name))
+        <p class="form-error" id="{{ $id }}-error">{{ $fieldErrors->first($name) }}</p>
+    @endif
 </div>

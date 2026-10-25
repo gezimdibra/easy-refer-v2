@@ -36,6 +36,7 @@ final class AuditActionLabel
         'business.reward_texts_updated' => 'Reward texts updated',
         'business.velocity_limits_updated' => 'Referral limits updated',
         'customer.added' => 'Customer added',
+        'customer.details_updated' => 'Customer details updated',
         'customer.removed_from_store' => 'Customer removed',
         'owner.account_unlocked' => 'Account unlocked',
         'owner.all_sessions_revoked' => 'All sessions signed out',

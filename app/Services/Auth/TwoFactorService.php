@@ -27,9 +27,9 @@ class TwoFactorService
      * caller can present the provisioning material. An unconfirmed
      * secret activates nothing.
      */
-    public function startEnrollment(User $user, string $currentPassword): string
+    public function startEnrollment(User $user, string $currentPassword, string $errorBag = 'default'): string
     {
-        $this->assertCurrentPassword($user, $currentPassword);
+        $this->assertCurrentPassword($user, $currentPassword, $errorBag);
 
         $secret = Totp::generateSecret();
 
@@ -135,9 +135,9 @@ class TwoFactorService
      * Turn two-factor off, behind the same fresh password check as
      * enrollment. Every trace of the enrollment is cleared.
      */
-    public function disable(User $user, string $currentPassword): void
+    public function disable(User $user, string $currentPassword, string $errorBag = 'default'): void
     {
-        $this->assertCurrentPassword($user, $currentPassword);
+        $this->assertCurrentPassword($user, $currentPassword, $errorBag);
 
         $user->forceFill([
             'two_factor_secret' => null,
@@ -255,12 +255,15 @@ class TwoFactorService
             .'&algorithm=SHA1&digits=6&period=30';
     }
 
-    private function assertCurrentPassword(User $user, string $currentPassword): void
+    private function assertCurrentPassword(User $user, string $currentPassword, string $errorBag = 'default'): void
     {
         if (! password_verify($currentPassword, $user->password)) {
+            // The caller names the error bag so the message renders
+            // only under the form that was submitted (T1-F2): the
+            // security page hosts several current_password fields.
             throw ValidationException::withMessages([
                 'current_password' => trans('auth.password'),
-            ]);
+            ])->errorBag($errorBag);
         }
     }
 

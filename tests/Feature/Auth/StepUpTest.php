@@ -145,6 +145,73 @@ class StepUpTest extends TestCase
             ->assertSee('Confirm it is you');
     }
 
+    public function test_step_up_page_shows_plain_password_copy_without_two_factor(): void
+    {
+        // T3-F2: the challenge intro is owner-facing copy; no
+        // Blade directive text may reach the rendered page.
+        $response = $this->actingAs($this->ownerA())->get(route('security.step-up'));
+
+        $response->assertOk();
+        $response->assertSee('Re-enter your password.');
+        $response->assertDontSee('@if');
+        $response->assertDontSee('@endif');
+        $response->assertDontSee('hasTwoFactorEnabled');
+        $response->assertDontSee('authenticator app');
+    }
+
+    public function test_step_up_page_shows_authenticator_copy_with_two_factor(): void
+    {
+        $user = $this->ownerA();
+
+        app(TwoFactorService::class)->startEnrollment($user, TwoBusinessFixtureSeeder::A_PASSWORD);
+        $user->refresh();
+        app(TwoFactorService::class)->confirmEnrollment($user, Totp::code((string) $user->two_factor_secret), TwoBusinessFixtureSeeder::A_PASSWORD);
+
+        $response = $this->actingAs($user->fresh())
+            ->withSession(['auth.two_factor_passed' => true])
+            ->get(route('security.step-up'));
+
+        $response->assertOk();
+        $response->assertSee('Re-enter your password, or enter a code from your authenticator app.');
+        $response->assertDontSee('@if');
+        $response->assertDontSee('@endif');
+        $response->assertDontSee('hasTwoFactorEnabled');
+    }
+
+    public function test_step_up_return_never_honors_a_foreign_session_value(): void
+    {
+        // T3-F3 allowlist, defense in depth: whatever lands in
+        // the session, the challenge only ever returns the owner
+        // to a local path or a same-host page; anything else
+        // falls back to the security page.
+        $user = $this->ownerA();
+
+        foreach (['https://evil.example/phish', '//evil.example/phish'] as $foreign) {
+            $this->actingAs($user)
+                ->withSession(['step_up.return' => $foreign])
+                ->post(route('security.step-up.store'), ['password' => TwoBusinessFixtureSeeder::A_PASSWORD])
+                ->assertRedirect(route('security'));
+        }
+
+        $this->actingAs($user)
+            ->withSession(['step_up.return' => '/auth/settings/billing'])
+            ->post(route('security.step-up.store'), ['password' => TwoBusinessFixtureSeeder::A_PASSWORD])
+            ->assertRedirect(route('settings.billing'));
+    }
+
+    public function test_step_up_return_ignores_the_challenge_page_itself(): void
+    {
+        $user = $this->ownerA();
+
+        $this->actingAs($user)->from(route('security.step-up'))
+            ->post(route('security.email'), ['new_email' => 'new.a@example.test'])
+            ->assertRedirect(route('security.step-up'));
+
+        $this->actingAs($user)
+            ->post(route('security.step-up.store'), ['password' => TwoBusinessFixtureSeeder::A_PASSWORD])
+            ->assertRedirect(route('security'));
+    }
+
     public function test_an_empty_step_up_submission_fails_verification(): void
     {
         $user = $this->ownerA();
