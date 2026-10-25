@@ -2246,6 +2246,18 @@
     }
 }
 
+/* Phone widths: the equal-quarter cells are too narrow for the two
+   long labels and they wrap to two lines (Gate 3 mobile F-3). Let
+   the labels take their natural width on one line instead; the row
+   still spreads them across the strip via space-between. */
+@media (max-width: 560px) {
+    .hiw-plabel {
+        flex: 0 1 auto;
+        white-space: nowrap;
+        font-size: 0.64rem;
+    }
+}
+
 .hiw-track {
     height: 6px;
     background: var(--color-surface-2);
@@ -2277,9 +2289,13 @@
 }
 
 @media (min-width: 1024px) {
+    /* Desktop beats are content-height with generous padding, not a
+       full viewport each (owner, 2026-10-24: a whole page per step
+       is too much spacing on desktop). Mobile keeps its full-screen
+       beats untouched. */
     .hiw-beat {
-        min-height: 92svh;
-        padding: 56px 0;
+        min-height: 76svh;
+        padding: 72px 0;
     }
 
     .hiw-beat-grid {

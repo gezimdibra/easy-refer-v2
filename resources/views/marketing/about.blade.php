@@ -94,8 +94,8 @@
                 <p class="mt-1 text-sm text-text-2">Successful Referrals</p>
             </div>
             <div>
-                <p class="type-stat text-text-1">{{ config('claims.customer_satisfaction') }}</p>
-                <p class="mt-1 text-sm text-text-2">Customer Satisfaction</p>
+                <p class="type-stat text-text-1">{{ config('claims.first_visits_free') }}</p>
+                <p class="mt-1 text-sm text-text-2">visits free</p>
             </div>
         </div>
     </section>

@@ -106,8 +106,10 @@ class MarketingTest extends TestCase
         $response->assertSee('higher purchase amount');
         $response->assertSee('2x');
         $response->assertSee('customer retention');
-        $response->assertSee('93%');
-        $response->assertSee('satisfaction');
+        $response->assertSee('First 5');
+        $response->assertSee('visits free');
+        $response->assertDontSee('93%');
+        $response->assertDontSee('satisfaction');
 
         // The proof band itself carries exactly the four approved
         // stats with their approved labels. The price figure is
@@ -123,7 +125,7 @@ class MarketingTest extends TestCase
         // span ends at the stories heading.
         $band = substr($html, $bandStart, strpos($html, 'Success stories') - $bandStart);
         $this->assertSame(4, substr_count($band, 'type-stat'));
-        foreach (['400+', 'new customers per year on average', '30%', 'higher purchase amount', '2x', 'customer retention', '93%', 'satisfaction'] as $stat) {
+        foreach (['400+', 'new customers per year on average', '30%', 'higher purchase amount', '2x', 'customer retention', 'First 5', 'visits free'] as $stat) {
             $this->assertStringContainsString($stat, $band);
         }
         $this->assertStringNotContainsString('$2', $band);
@@ -355,8 +357,10 @@ class MarketingTest extends TestCase
         $response->assertSee('Businesses Empowered');
         $response->assertSee('80+');
         $response->assertSee('Successful Referrals');
-        $response->assertSee('93%');
-        $response->assertSee('Customer Satisfaction');
+        $response->assertSee('First 5');
+        $response->assertSee('visits free');
+        $response->assertDontSee('93%');
+        $response->assertDontSee('Customer Satisfaction');
         $response->assertDontSee('Trusted by');
     }
 

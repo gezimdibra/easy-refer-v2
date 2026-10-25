@@ -251,8 +251,8 @@
                         <p class="type-caption mt-2 text-text-2">customer retention</p>
                     </div>
                     <div class="px-2 text-center lg:border-l lg:border-line">
-                        <p class="type-stat text-text-1">{{ config('claims.customer_satisfaction') }}</p>
-                        <p class="type-caption mt-2 text-text-2">satisfaction</p>
+                        <p class="type-stat text-text-1">{{ config('claims.first_visits_free') }}</p>
+                        <p class="type-caption mt-2 text-text-2">visits free</p>
                     </div>
                 </div>
             </div>
@@ -668,25 +668,38 @@
             }
             story.classList.add('hiw-live');
             setProgress(0);
-            var seen = {};
-            var count = 0;
+            // Reveal observer: one-shot, unchanged. A beat is
+            // marked in the first time it is meaningfully in view
+            // and stays revealed.
             var io = new IntersectionObserver(function (entries) {
                 entries.forEach(function (entry) {
                     if (!entry.isIntersecting) {
                         return;
                     }
                     entry.target.classList.add('hiw-in');
-                    var key = entry.target.getAttribute('data-beat');
-                    if (!seen[key]) {
-                        seen[key] = true;
-                        count++;
-                        setProgress(count);
-                    }
                     io.unobserve(entry.target);
                 });
             }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
             for (var j = 0; j < beats.length; j++) {
                 io.observe(beats[j]);
+            }
+            // Progress observer: the strip tracks the CURRENT beat
+            // in both directions. A thin band at the viewport
+            // center is watched for every beat and never
+            // unobserved; whichever beat crosses the band sets the
+            // progress, so scrolling back up walks the strip back
+            // down (owner catch 2026-10-24: the old seen-count
+            // only ever grew, leaving the strip full at beat 1).
+            var pio = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (!entry.isIntersecting) {
+                        return;
+                    }
+                    setProgress(parseInt(entry.target.getAttribute('data-beat'), 10));
+                });
+            }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+            for (var k = 0; k < beats.length; k++) {
+                pio.observe(beats[k]);
             }
         })();
     </script>

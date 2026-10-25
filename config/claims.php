@@ -24,7 +24,7 @@ return [
     'retention_rate' => '2x',
     'businesses' => '400+',
     'successful_referrals' => '80+',
-    'customer_satisfaction' => '93%',
+    'first_visits_free' => 'First 5',
     'founded' => 'Founded in 2023',
 
 ];
