@@ -91,7 +91,7 @@ class ReferFlowTest extends TestCase
             // The fixture reward already says "your first visit",
             // so the suffix is not appended and the phrase appears
             // exactly once.
-            ->assertSee('Get $10 off your first visit')
+            ->assertSee('$10 off your first visit')
             ->assertDontSee('on your first visit on your first visit')
             ->assertSee('Enter your phone, get your own link, share it with a friend')
             ->assertSee('First name')
@@ -105,23 +105,29 @@ class ReferFlowTest extends TestCase
     {
         // A reward naming the first visit in its own words (the
         // barber case the audit captured, F-2): the suffix stays
-        // off, so the headline is the reward alone after "Get".
+        // off, so the headline is the reward alone (release 35:
+        // no generated "Get" prefix).
         $barber = World::business(['friend_reward_text' => '$10 off your first cut']);
         [, $barberToken] = World::qr($barber);
 
         $this->get(route('refer.landing', ['token' => $barberToken]))
             ->assertOk()
-            ->assertSee('Get $10 off your first cut')
+            ->assertSee('$10 off your first cut')
             ->assertDontSee('first cut on your first visit');
 
-        // A reward with no first-visit wording gets the suffix,
-        // so the friend still learns the reward is for visit one.
+        // Amendment 58 [REF-POSTER-04]: the QR landing headline
+        // is the poster's give/get headline now (promise echo),
+        // so a reward with no first-visit wording no longer
+        // gains the suffix ON THIS PAGE — the suffix composer
+        // still governs the friend-side pages, pinned there.
+        // World defaults make this business SPLIT (referrer
+        // "$10 off"), so the landing carries the split form.
         $upgrade = World::business(['friend_reward_text' => 'A free upgrade']);
         [, $upgradeToken] = World::qr($upgrade);
 
         $this->get(route('refer.landing', ['token' => $upgradeToken]))
             ->assertOk()
-            ->assertSee('Get A free upgrade on your first visit');
+            ->assertSee('Give a friend A free upgrade. Get $10 off when they visit.', false);
     }
 
     public function test_qr_landing_for_unknown_or_revoked_code_is_the_generic_page(): void
@@ -143,17 +149,30 @@ class ReferFlowTest extends TestCase
             ->assertDontSee($business->name);
     }
 
-    public function test_qr_landing_while_billing_is_off_shows_the_not_active_page_without_the_name(): void
+    public function test_qr_landing_while_billing_is_off_shows_the_not_active_page_naming_the_business(): void
     {
         // Section 9.9 setup mode: until a card is on file the public
-        // flow is off, and the page does not even name the business.
-        $business = World::business(['billing_status' => 'none']);
+        // flow is off. FE-INACTIVE-01 (fresh-eyes fix train,
+        // 2026-10-25) reverses this pin's earlier no-name rule:
+        // all three cold auditors flagged that the page never
+        // named the business, leaving a customer who scanned a
+        // real code in a real shop unsure they were in the right
+        // place. The page now names the business (body line and
+        // title); the designed message, the 404, and the
+        // no-program-details rule stand — no reward text leaks.
+        // RE-DERIVED (activation redesign, 2026-10-30): a
+        // cardless business with billing 'none' is LIVE under
+        // the allowance gate; the not-active state here is
+        // reached through the reward leg (no friend reward
+        // text), which renders the same generic page.
+        $business = World::business(['billing_status' => 'none', 'friend_reward_text' => null]);
         [, $qrToken] = World::qr($business);
 
         $this->get(route('refer.landing', ['token' => $qrToken]))
             ->assertNotFound()
             ->assertSee('This code is not active')
-            ->assertDontSee($business->name)
+            ->assertSee($business->name)
+            ->assertSee('<title>'.$business->name.' | Easy Refer</title>', false)
             ->assertDontSee('$10 off');
     }
 
@@ -333,12 +352,190 @@ class ReferFlowTest extends TestCase
         $this->assertSame(1, Customer::count());
     }
 
+    public function test_friend_claim_without_consent_is_blocked_and_sends_no_code(): void
+    {
+        // U1 (launch-readiness F-1): the friend claim used to send
+        // the verification code and complete enrollment with the
+        // text-consent box unchecked, while enroll() hard-refused
+        // the identical box. The claim now mirrors the enroll gate
+        // (FIX-02): no consent, no code, no pending verification.
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [$membership, $shareToken] = World::membership($business, $referrer);
+
+        $this->carryFlowCookie($this->get(route('refer.friend', ['token' => $shareToken]))->assertOk());
+        $this->post(route('refer.friend.claim', ['token' => $shareToken]), [
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'send_link' => '1',
+        ])->assertSessionHasErrors([
+            'consent' => 'Please agree to the texts so we can send your code and your reward updates.',
+        ]);
+
+        // No code was requested from the provider, nothing is
+        // pending, and the verify step bounces instead of showing
+        // the code form.
+        $this->assertSame([], $this->verify->starts);
+        $this->get(route('refer.verify'))->assertRedirect(route('home'));
+        $this->assertSame(0, Referral::count());
+        $this->assertSame(1, Membership::count());
+    }
+
+    public function test_friend_claim_with_consent_advances_and_sends_one_code(): void
+    {
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [$membership, $shareToken] = World::membership($business, $referrer);
+
+        $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'consent' => '1',
+        ])->assertRedirect(route('refer.verify')));
+
+        $this->assertCount(1, $this->verify->starts);
+        $this->assertSame('+12125550212', $this->verify->starts[0]['phone']);
+    }
+
+    public function test_friend_claim_without_consent_renders_the_consent_error_at_the_consent_row(): void
+    {
+        // U1R (release 28 Gate 3 flows FAIL, leg G3.4(a)(1)): U1's
+        // gate refused the unchecked claim and sent no code, but
+        // the designed error rendered nowhere on the claim page:
+        // friend.blade.php had no @error('consent') render and no
+        // aria wiring on the checkbox, so the friend saw only the
+        // summary heading with nothing stated anywhere. The enroll
+        // sibling (landing.blade.php) renders the same error at its
+        // consent row; the claim page must reach parity: the
+        // verbatim error is stated at the consent row, wired to
+        // the checkbox. RT-3 (2026-10-27) extends the parity: the
+        // summary must also LIST the problem, per the pins below.
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [, $shareToken] = World::membership($business, $referrer);
+
+        $this->carryFlowCookie($this->get(route('refer.friend', ['token' => $shareToken]))->assertOk());
+        $this->post(route('refer.friend.claim', ['token' => $shareToken]), [
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'send_link' => '1',
+        ])->assertSessionHasErrors([
+            'consent' => 'Please agree to the texts so we can send your code and your reward updates.',
+        ]);
+        $this->assertSame([], $this->verify->starts);
+
+        $html = $this->get(route('refer.friend', ['token' => $shareToken]))->assertOk()->getContent();
+
+        // The summary counts the consent problem (its one item).
+        $this->assertStringContainsString('One thing to fix:', $html);
+        // The verbatim error renders at the consent row, in the
+        // sibling's exact element shape.
+        $this->assertMatchesRegularExpression(
+            '/<p class="form-error mt-2" id="consent-error">Please agree to the texts so we can send your code and your reward updates\.<\/p>/',
+            $html
+        );
+        // The checkbox is wired to that error, as the sibling does.
+        $this->assertMatchesRegularExpression(
+            '/<input type="checkbox"[^>]*name="consent"[^>]*aria-invalid="true"[^>]*aria-describedby="consent-error"/s',
+            $html
+        );
+        // RT-3 (owner correction, 2026-10-27): the summary also
+        // LISTS the problem, as an anchor to the consent field.
+        // The live claim form showed "One thing to fix:" with
+        // nothing after it; the named check is that the message
+        // text renders INSIDE the summary region, not only at
+        // the field below the fold.
+        $this->assertMatchesRegularExpression(
+            '/data-error-summary>(?:(?!<\/div>).)*Please agree to the texts so we can send your code and your reward updates\./s',
+            $html
+        );
+        $this->assertStringContainsString('<a class="underline" href="#consent">Please agree to the texts', $html);
+        // Stated exactly twice page-wide by design now: once in
+        // the summary list, once at the field.
+        $this->assertSame(2, substr_count($html, 'Please agree to the texts so we can send your code and your reward updates.'));
+    }
+
+    public function test_friend_claim_with_consent_shows_no_consent_error(): void
+    {
+        // U1R control for the render pin above, same assertion
+        // shape on the checked path: no consent error anywhere.
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [, $shareToken] = World::membership($business, $referrer);
+
+        $claim = $this->post(route('refer.friend.claim', ['token' => $shareToken]), [
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'consent' => '1',
+        ])->assertRedirect(route('refer.verify'))->assertSessionHasNoErrors();
+        $this->carryFlowCookie($claim);
+
+        $html = $this->get(route('refer.friend', ['token' => $shareToken]))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('consent-error', $html);
+        $this->assertStringNotContainsString('Please agree to the texts', $html);
+        $this->assertMatchesRegularExpression(
+            '/<input type="checkbox"[^>]*name="consent"[^>]*aria-invalid="false"/s',
+            $html
+        );
+    }
+
+    public function test_enrollment_without_consent_renders_the_consent_error_at_the_consent_row(): void
+    {
+        // U1R sibling parity guard: the enroll original's render,
+        // which the claim fix copies, stays exactly as shipped.
+        $business = World::business();
+        [, $qrToken] = World::qr($business);
+
+        $this->carryFlowCookie($this->get(route('refer.landing', ['token' => $qrToken]))->assertOk());
+        $this->post(route('refer.enroll', ['token' => $qrToken]), [
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+        ])->assertSessionHasErrors([
+            'consent' => 'Please agree to the texts so we can send your code and your reward updates.',
+        ]);
+
+        $html = $this->get(route('refer.landing', ['token' => $qrToken]))->assertOk()->getContent();
+
+        $this->assertStringContainsString('One thing to fix:', $html);
+        $this->assertMatchesRegularExpression(
+            '/<p class="form-error mt-2" id="consent-error">Please agree to the texts so we can send your code and your reward updates\.<\/p>/',
+            $html
+        );
+        // RT-3 parity with the claim form: the summary lists the
+        // problem too (anchor to the field), so the message is
+        // stated exactly twice by design.
+        $this->assertStringContainsString('<a class="underline" href="#consent">Please agree to the texts', $html);
+        $this->assertSame(2, substr_count($html, 'Please agree to the texts so we can send your code and your reward updates.'));
+    }
+
+    public function test_friend_claim_summary_lists_every_problem_not_just_the_count(): void
+    {
+        // RT-3, the multi-problem form of the named check: two
+        // problems render "2 things to fix:" AND both messages
+        // listed in the summary as anchors to their fields. (Two
+        // validation problems: the consent gate runs only after
+        // validation passes, so it never shares a summary with
+        // field errors.)
+        $business = World::business();
+        $referrer = World::customer('+12125550999', 'Reg', 'Ular');
+        [, $shareToken] = World::membership($business, $referrer);
+
+        $this->carryFlowCookie($this->get(route('refer.friend', ['token' => $shareToken]))->assertOk());
+        $this->post(route('refer.friend.claim', ['token' => $shareToken]), [
+            'last_name' => 'Kim', 'phone' => '',
+        ])->assertSessionHasErrors(['first_name', 'phone']);
+
+        $html = $this->get(route('refer.friend', ['token' => $shareToken]))->assertOk()->getContent();
+
+        $this->assertStringContainsString('2 things to fix:', $html);
+        $this->assertStringContainsString('<a class="underline" href="#first_name">Enter your first name.</a>', $html);
+        $this->assertMatchesRegularExpression(
+            '/<a class="underline" href="#phone">[^<]+<\/a>/',
+            $html
+        );
+    }
+
     public function test_friend_claim_creates_the_referral_and_lands_on_the_redemption_page(): void
     {
         $business = World::business();
         [, $qrToken] = World::qr($business);
         $this->enrollCustomer($business, $qrToken);
         $membership = Membership::query()->firstOrFail();
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $membership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
 
         $this->flushSessionAndCookies();
         $friendPage = $this->get(route('refer.friend', ['token' => $membership->plainShareToken()]));
@@ -350,7 +547,7 @@ class ReferFlowTest extends TestCase
             ->assertDontSee('+12125550111');
 
         $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $membership->plainShareToken()]), [
-            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212',
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         $response = $this->post(route('refer.verify.check'), ['code' => '123456']);
@@ -359,8 +556,10 @@ class ReferFlowTest extends TestCase
 
         $this->get(route('refer.redeem.page', ['token' => $referral->redeem_token_encrypted]))
             ->assertOk()
-            ->assertSee('Show this at '.$business->name)
-            ->assertSee('Good until '.$referral->expires_at->format('F j, Y'));
+            // R4-U2: the show screen's headline is the prize, in the
+            // poster's composed sentence; the instruction H1 retired.
+            ->assertSee($business->friendRewardHeadline())
+            ->assertSee('Good until '.$business->localTime($referral->expires_at)->format('F j, Y'));
     }
 
     public function test_self_referral_by_phone_earns_nothing(): void
@@ -370,15 +569,19 @@ class ReferFlowTest extends TestCase
         $this->enrollCustomer($business, $qrToken);
         $membership = Membership::query()->firstOrFail();
         $this->flushSessionAndCookies();
+        $this->verify->starts = [];
 
-        $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $membership->plainShareToken()]), [
+        // SELF-01: the refusal now lands at the claim step
+        // itself, the second the number is entered; the number
+        // never reaches verification. (The completion backstop
+        // is covered by SelfReferralEarlyRefusalTest.)
+        $this->post(route('refer.friend.claim', ['token' => $membership->plainShareToken()]), [
             'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
-        ])->assertRedirect(route('refer.verify')));
+        ])->assertSessionHasErrors([
+            'phone' => 'You cannot refer yourself. Please share your link with a friend instead.',
+        ]);
 
-        $this->post(route('refer.verify.check'), ['code' => '123456'])
-            ->assertOk()
-            ->assertSee('You cannot refer yourself');
-
+        $this->assertSame([], $this->verify->starts);
         $this->assertSame(0, Referral::count());
     }
 
@@ -387,16 +590,22 @@ class ReferFlowTest extends TestCase
         $business = World::business();
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership, $shareToken] = World::membership($business, $referrer);
+        $this->verify->starts = [];
 
+        // U9 (persona F-4): the business's-own-number stop now
+        // fires at the claim form itself, beside SELF-01, with
+        // the flow/self owner_phone page's designed words as the
+        // field error. No code is sent to the business's phone.
+        // (The completion backstop is covered in
+        // SelfReferralEarlyRefusalTest.)
         $ownerPhone = substr(World::owner($business)->phone_e164, 2);
-        $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Boss', 'last_name' => 'Man', 'phone' => $ownerPhone,
-        ])->assertRedirect(route('refer.verify')));
+        $this->post(route('refer.friend.claim', ['token' => $shareToken]), [
+            'first_name' => 'Boss', 'last_name' => 'Man', 'phone' => $ownerPhone, 'consent' => '1',
+        ])->assertSessionHasErrors([
+            'phone' => "That is the business's own number. This number belongs to {$business->name}, so no reward can be earned with it. Please use the customer's own mobile number.",
+        ]);
 
-        $this->post(route('refer.verify.check'), ['code' => '123456'])
-            ->assertOk()
-            ->assertSee("That is the business's own number", false);
-
+        $this->assertSame([], $this->verify->starts);
         $this->assertSame(0, Referral::count());
         $this->assertSame(1, Membership::count());
     }
@@ -415,7 +624,7 @@ class ReferFlowTest extends TestCase
         // The friend arrives through the OTHER customer's link and
         // claims again: the same pending referral answers.
         $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $shareB]), [
-            'first_name' => 'Fri', 'last_name' => 'End', 'phone' => '2125550777',
+            'first_name' => 'Fri', 'last_name' => 'End', 'phone' => '2125550777', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
 
         $this->post(route('refer.verify.check'), ['code' => '123456'])
@@ -429,12 +638,15 @@ class ReferFlowTest extends TestCase
         $business = World::business();
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership, $shareToken] = World::membership($business, $referrer);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $membership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
         $friend = World::customer('+12125550777', 'Fri', 'End');
 
         World::referral($membership, $friend, ['expires_at' => now()->subDay()]);
 
         $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Fri', 'last_name' => 'End', 'phone' => '2125550777',
+            'first_name' => 'Fri', 'last_name' => 'End', 'phone' => '2125550777', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
@@ -443,22 +655,34 @@ class ReferFlowTest extends TestCase
         $this->assertSame(1, Referral::query()->where('state', Referral::STATE_PENDING)->count());
     }
 
-    public function test_velocity_cap_records_the_referral_held_for_review(): void
+    public function test_velocity_cap_records_the_referral_not_held_for_review(): void
     {
+        // Option B (2026-10-28), design-pass T1: past the daily
+        // cap at CLAIM time, the referral is still created exactly
+        // like an unflagged claim — pending, unheld, no
+        // flag_raised. The review item is born at redemption,
+        // when the recheck converts the breach into a held reward.
         $business = World::business(['daily_referral_cap' => 1]);
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership, $shareToken] = World::membership($business, $referrer);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $membership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
         $friendOne = World::customer('+12125550777', 'One', 'A');
         World::referral($membership, $friendOne);
 
         $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Two', 'last_name' => 'B', 'phone' => '2125550666',
+            'first_name' => 'Two', 'last_name' => 'B', 'phone' => '2125550666', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
-        $held = Referral::query()->where('hold', true)->firstOrFail();
-        $this->assertSame(['velocity_daily'], $held->hold_rules);
-        $this->assertDatabaseHas('referral_events', ['event_type' => 'flag_raised', 'business_id' => $business->id]);
+        $created = Referral::query()->where('referred_customer_id', '!=', $friendOne->id)->latest('id')->firstOrFail();
+        $this->assertSame(Referral::STATE_PENDING, $created->state);
+        $this->assertFalse((bool) $created->hold);
+        $this->assertNull($created->hold_rules);
+        $this->assertNull($created->held_at);
+        $this->assertSame(0, Referral::query()->where('hold', true)->count());
+        $this->assertDatabaseMissing('referral_events', ['event_type' => 'flag_raised', 'business_id' => $business->id]);
     }
 
     public function test_friend_link_sms_goes_only_with_consent(): void
@@ -466,9 +690,12 @@ class ReferFlowTest extends TestCase
         $business = World::business();
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership, $shareToken] = World::membership($business, $referrer);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $membership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
 
         $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'send_link' => '1',
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'consent' => '1', 'send_link' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
@@ -483,9 +710,12 @@ class ReferFlowTest extends TestCase
         $business = World::business();
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership, $shareToken] = World::membership($business, $referrer);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $membership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
 
         $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212',
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
@@ -582,7 +812,7 @@ class ReferFlowTest extends TestCase
             'available_at' => now()->addDays(10),
             'notification_state' => 'queued',
         ]);
-        $date = $reward->available_at->format('F j, Y');
+        $date = $business->localTime($reward->available_at)->format('F j, Y');
 
         // Inside the live session (the enrollment above): shown.
         $this->get(route('refer.claim.page', ['token' => $claimToken]))

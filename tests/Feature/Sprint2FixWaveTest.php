@@ -83,8 +83,12 @@ class Sprint2FixWaveTest extends TestCase
             // The reward is the headline, not a prefixed line.
             ->assertSee('$10 off your first visit')
             ->assertSee('For Fri')
-            ->assertSee('First visit reward')
+            // R4-U3: the verdict band and the facts well (Business /
+            // Sent by) replace the old kind line.
+            ->assertSee('Ready to redeem')
+            ->assertSee('Sent by')
             ->assertSee('Not now')
+            ->assertDontSee('First visit reward')
             ->assertDontSee('Reward: $10')
             ->assertDontSee('Hand the customer their reward');
     }
@@ -102,10 +106,13 @@ class Sprint2FixWaveTest extends TestCase
             ->assertOk()
             ->assertSee('$10 off')
             ->assertSee('For Reg')
-            // The kind line: this is the referrer's earned
-            // reward, named for its holder.
-            ->assertSee("Reg's reward", false)
+            // R4-U3: the kind line ("Reg's reward") is retired; the
+            // band names the action and the facts well names the
+            // sender.
+            ->assertSee('Ready to claim')
+            ->assertSee('Sent by')
             ->assertSee('Not now')
+            ->assertDontSee("Reg's reward", false)
             ->assertDontSee('Hand the customer their reward');
     }
 
@@ -115,32 +122,61 @@ class Sprint2FixWaveTest extends TestCase
         $owner = World::owner($business);
         [$qr, $qrToken] = World::qr($business);
 
+        // QRK-07 (Train 3, Amendment 23 / REF-POSTER-03): the
+        // "About this code" panel and its single-code copy are
+        // retired; the placements panel carries the counter
+        // code's added date and the per-placement replace modal
+        // copy, and the danger zone replaces all codes at once.
         $this->actingAs($owner)->get(route('owner.qr'))
             ->assertOk()
-            ->assertSee('For a screen or tablet')
-            ->assertSee('For the counter, A5')
-            ->assertSee('Full page, for the window')
-            ->assertSee('Print counter poster')
-            ->assertSee("This is your store's only active code", false)
-            ->assertSee('Created '.$qr->created_at->format('F j, Y'))
-            ->assertSee('A customer shows their reward code. Any staff member scans it with their own phone and taps Mark as Redeemed. No app, no login, nothing to type.')
-            ->assertSee('Regenerating creates a new QR code. Previously printed codes will stop working. Continue?')
-            ->assertSee('Printed copies of the current code will stop working right away.');
+            // P3 MIX: the placements table and its size labels
+            // are retired; the by-spot panel names each spot and
+            // its print action, and the Added date is gone
+            // (QrPlacementsPanelTest pins the new grammar).
+            ->assertSee('Print by spot')
+            // [MIX-04] (Amendment 31): the counter spot line
+            // carries its real print size.
+            ->assertSee('By the register, where people pay. Prints on half a sheet of paper (5.8 x 8.3 in).')
+            ->assertSee('Print the counter poster')
+            // [ON-QR-1] (Amendment 31): the Screen poster is retired.
+            ->assertDontSee('Screen poster')
+            ->assertDontSee("This is your store's only active code", false)
+            ->assertDontSee('Your codes by placement')
+            // QF-5 (Amendment 29 [QF-2]): the redemption
+            // paragraph is now the numbered three-step list;
+            // the steps are pinned in full in QrFrameTest.
+            ->assertSee('A customer shows their reward code.')
+            ->assertSee('A staff member scans it with their own phone.')
+            ->assertSee('They tap Mark as Redeemed.')
+            ->assertSee('No app, no login, nothing to type.')
+            // [ON-SPOT-3] (Amendment 31): the replace modal
+            // title is shared and its body reads the current
+            // display name (the counter default here).
+            ->assertSee('Replace this code?')
+            ->assertSee('Printed copies of the Counter poster code will stop working right away. Your other codes keep working.')
+            ->assertSee('Every printed code for your store will stop working right away. Print new posters for each spot after you replace them.');
 
-        // A poster renders as its own printable document and
-        // records the download the checklist reads.
-        $this->actingAs($owner)->get(route('owner.qr.poster', 'counter'))
+        // A poster renders as its own printable document; a
+        // print-mode open (the URL every poster link carries)
+        // records the download the checklist reads. A bare view
+        // records nothing (coherence Phase 2, ruling Q2; pinned
+        // by PosterPrintCompletionTest).
+        $this->actingAs($owner)->get(route('owner.qr.poster', ['counter', 'print' => 1]))
             ->assertOk()
             ->assertSee($business->name)
-            ->assertSee('Scan this code to join and start referring.');
+            // Amendment 58 [REF-POSTER-04]: the print-mode open
+            // carries the composed poster headline (asserted as
+            // text: the F5 amount span interrupts it in markup).
+            ->assertSeeText('Give a friend $10 off your first visit. Get $10 off when they visit.');
         $this->assertSame(1, ReferralEvent::query()->where('event_type', 'poster_downloaded')->count());
 
         $this->actingAs($owner)->get(route('owner.qr.poster', 'bogus'))->assertNotFound();
 
-        // Regenerating retires the printed code right away.
+        // Replacing (now: all codes at once, REF-POSTER-03c)
+        // retires the printed code right away.
         $this->actingAs($owner)->post(route('owner.qr.regenerate'))
             ->assertRedirect(route('owner.qr'))
-            ->assertSessionHas('status', 'Your new QR code is ready. Print new posters to replace the old ones.');
+            ->assertSessionHas('status', 'All new codes are ready. Print new posters to replace the old ones.');
 
         $this->assertSame('revoked', $qr->fresh()->state);
         $this->get(route('refer.landing', ['token' => $qrToken]))
@@ -167,7 +203,7 @@ class Sprint2FixWaveTest extends TestCase
         $owner = World::owner($business);
         World::qr($business);
 
-        $message = 'Your new QR code is ready. Print new posters to replace the old ones.';
+        $message = 'All new codes are ready. Print new posters to replace the old ones.';
         $this->actingAs($owner)->post(route('owner.qr.regenerate'))
             ->assertRedirect(route('owner.qr'))
             ->assertSessionHas('status', $message);
@@ -235,9 +271,23 @@ class Sprint2FixWaveTest extends TestCase
         $membership = Membership::query()->firstOrFail();
         $this->flushSessionAndCookies();
 
+        // SELF-01 refuses the referrer's own number at the
+        // claim step now, so this F-27 test reaches the
+        // completion backstop the crafted way: a claim starts
+        // with a different number, then the server-side pending
+        // is rewritten to the referrer's own, exactly what a
+        // tampered client would present at completion.
         $this->carryFlowCookie($this->post(route('refer.friend.claim', ['token' => $membership->plainShareToken()]), [
-            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550111',
+            'first_name' => 'Pat', 'last_name' => 'Lee', 'phone' => '2125550999', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
+
+        $flowSession = \App\Models\FlowSession::query()->get()
+            ->first(fn (\App\Models\FlowSession $s) => ($s->data['pending']['kind'] ?? null) === 'claim');
+        $this->assertNotNull($flowSession);
+        $pendingData = $flowSession->data;
+        $pendingData['pending']['phone_e164'] = '+12125550111';
+        $flowSession->data = $pendingData;
+        $flowSession->save();
 
         $verify = $this->post(route('refer.verify.check'), ['code' => '123456']);
         $verify->assertOk()
@@ -274,7 +324,7 @@ class Sprint2FixWaveTest extends TestCase
         $this->actingAs($owner)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('1 visit counted this month')
-            ->assertSee('All time: 2 visits counted, about $100.00 in first-visit sales (estimate)');
+            ->assertSee('All time: 2 visits counted, about $100.00 in estimated sales, based on your typical spend per visit (estimate)');
     }
 
     public function test_customer_receipts_render_the_success_flood(): void
@@ -293,7 +343,9 @@ class Sprint2FixWaveTest extends TestCase
         $this->get(route('refer.redeem.page', ['token' => $redeemToken]))
             ->assertOk()
             ->assertSee('Keep this screen as your receipt.')
-            ->assertSee('Confirmed ')
+            // R4-U4: "Confirmed" is now the fact row's label.
+            ->assertSee('Confirmed')
+            ->assertSee('Reward redeemed')
             ->assertSee('$10 off your first visit');
 
         [, $claimToken] = World::reward($membership, $referral, [
@@ -303,7 +355,8 @@ class Sprint2FixWaveTest extends TestCase
         $this->get(route('refer.claim.page', ['token' => $claimToken]))
             ->assertOk()
             ->assertSee('Keep this screen as your receipt.')
-            ->assertSee('Confirmed ');
+            ->assertSee('Confirmed')
+            ->assertSee('Reward claimed');
     }
 
     public function test_vertical_pages_render_no_site_footer(): void

@@ -23,6 +23,10 @@ class GiveGetLineTest extends TestCase
         $business = new Business;
         $business->friend_reward_text = $friend;
         $business->referrer_reward_text = $referrer;
+        // OR-1: a fixture carrying two texts intends the SPLIT
+        // configuration — the flag is the configuration now, so
+        // the helper sets it whenever a referrer text is given.
+        $business->reward_split = $referrer !== null && trim($referrer) !== '';
 
         return $business;
     }
@@ -93,34 +97,47 @@ class GiveGetLineTest extends TestCase
             $this->business('$10 off .', 'a free pastry')->giveGetLine()
         );
 
+        // OR-1: friend blank is UNSET in every configuration —
+        // the old referrer-only branch is dead (see below).
         $this->assertSame(
-            'Your friend gets a reward on their first visit. You get a free pastry when they visit.',
+            'Scan, share, and you both get rewarded when your friend visits.',
             $this->business('', 'a free pastry .')->giveGetLine()
         );
     }
 
-    public function test_friend_only_falls_back_to_the_share_line(): void
+    public function test_friend_only_is_the_unified_line(): void
     {
+        // OR-1 / ORS-05: friend-only IS unified under canonical
+        // storage, and the unified line names the one reward on
+        // both sides — the old weaker share line ("You get a
+        // reward", value unnamed) was the state-blind residue
+        // of the pair model and is gone.
         $this->assertSame(
-            'Share it with a friend. You get a reward when they visit.',
+            'Give $10 off. Get $10 off when your friend visits.',
             $this->business('$10 off', '')->giveGetLine()
         );
 
         $this->assertSame(
-            'Share it with a friend. You get a reward when they visit.',
+            'Give $10 off. Get $10 off when your friend visits.',
             $this->business('$10 off', null)->giveGetLine()
         );
     }
 
-    public function test_referrer_only_names_the_friends_reward_without_a_text(): void
+    public function test_referrer_only_is_unreachable_and_reads_as_unset(): void
     {
+        // OR-1 §1.3 D1: the referrer-only branch DIES. Under
+        // canonical storage a referrer text cannot exist
+        // without the reward, so a non-canonical row (friend
+        // blank, referrer set) composes the UNSET line — the
+        // composer never invents a friend reward from the
+        // referrer column.
         $this->assertSame(
-            'Your friend gets a reward on their first visit. You get $10 off your next cut when they visit.',
+            'Scan, share, and you both get rewarded when your friend visits.',
             $this->business('', '$10 off your next cut')->giveGetLine()
         );
 
         $this->assertSame(
-            'Your friend gets a reward on their first visit. You get $10 off your next cut when they visit.',
+            'Scan, share, and you both get rewarded when your friend visits.',
             $this->business('   ', '$10 off your next cut')->giveGetLine()
         );
     }
@@ -145,7 +162,7 @@ class GiveGetLineTest extends TestCase
         // The headline composer (F-2) already stands alone when
         // the reward carries "first"; the give/get line must
         // not re-introduce the phrase on either side.
-        $this->assertSame('Get $10 off your first visit', $business->friendRewardHeadline());
+        $this->assertSame('$10 off your first visit', $business->friendRewardHeadline());
         $this->assertSame(
             'Give $10 off. Get $10 off when your friend visits.',
             $business->giveGetLine()

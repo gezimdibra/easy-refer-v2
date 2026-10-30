@@ -186,17 +186,20 @@ class TesterAdversarialTest extends TestCase
         $this->assertSame(1, BillingEvent::count());
         $this->assertSame(1, Reward::count());
 
-        // The 6th is held at the redemption-time recheck: no
-        // transition, no billing event, no reward.
+        // The 6th trips the redemption-time recheck: under
+        // Option B (2026-10-28) the visit still COMPLETES — what
+        // is held is its reward and its billing coverage.
         [$sixth] = World::referral($membership, $this->friend('+12125550806'));
         $result = $service->redeemReferral($sixth, null, '127.0.0.1');
-        $this->assertSame('held', $result['outcome']);
+        $this->assertSame('redeemed', $result['outcome']);
         $sixth->refresh();
-        $this->assertSame(Referral::STATE_PENDING, $sixth->state);
-        $this->assertTrue((bool) $sixth->hold);
-        $this->assertSame(['velocity_daily'], $sixth->hold_rules);
-        $this->assertSame(1, BillingEvent::count());
-        $this->assertSame(1, Reward::count());
+        $this->assertSame(Referral::STATE_REDEEMED, $sixth->state);
+        $this->assertFalse((bool) $sixth->hold);
+        $this->assertTrue($result['reward']->hold);
+        $this->assertSame(['velocity_daily'], $result['reward']->hold_rules);
+        $this->assertSame(2, BillingEvent::count());
+        $this->assertSame('held', BillingEvent::query()->where('referral_id', $sixth->id)->firstOrFail()->coverage);
+        $this->assertSame(2, Reward::count());
     }
 
     public function test_adv5_monthly_velocity_boundary_at_the_default_cap_of_fifty(): void
@@ -221,18 +224,27 @@ class TesterAdversarialTest extends TestCase
         [$fiftyFirst] = World::referral($membership, $this->friend('+12125551999'));
         $result = $service->redeemReferral($fiftyFirst, null, '127.0.0.1');
 
-        $this->assertSame('held', $result['outcome']);
+        // Option B (2026-10-28): past the monthly cap the visit
+        // completes; the velocity rule (plus the concentration
+        // anomaly this fixture also trips) holds the reward and
+        // the billing coverage.
+        $this->assertSame('redeemed', $result['outcome']);
         $fiftyFirst->refresh();
-        $this->assertSame(Referral::STATE_PENDING, $fiftyFirst->state);
+        $this->assertSame(Referral::STATE_REDEEMED, $fiftyFirst->state);
+        $this->assertTrue($result['reward']->hold);
         if (now()->day === 1) {
             // On the 1st, "earlier this month" is also "today", so
             // either velocity rule is a correct trip.
-            $this->assertContains($fiftyFirst->hold_rules[0], ['velocity_daily', 'velocity_monthly']);
+            $this->assertTrue(
+                in_array('velocity_daily', $result['reward']->hold_rules, true)
+                || in_array('velocity_monthly', $result['reward']->hold_rules, true)
+            );
         } else {
-            $this->assertSame(['velocity_monthly'], $fiftyFirst->hold_rules);
+            $this->assertContains('velocity_monthly', $result['reward']->hold_rules);
         }
-        $this->assertSame(0, BillingEvent::count());
-        $this->assertSame(0, Reward::count());
+        $this->assertSame(1, BillingEvent::count());
+        $this->assertSame('held', BillingEvent::firstOrFail()->coverage);
+        $this->assertSame(1, Reward::count());
     }
 
     public function test_adv6_flow_session_boundary_twenty_nine_and_thirty_one_minutes(): void

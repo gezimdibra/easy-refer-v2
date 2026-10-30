@@ -47,6 +47,30 @@ class MessageCopyCampaignTest extends TestCase
         );
     }
 
+    public function test_a_body_that_already_carries_the_opt_out_line_gets_it_exactly_once(): void
+    {
+        // U6 (P-OWN-1): an owner who types the opt-out line
+        // themselves used to receive it twice in the as-sent
+        // message, because the suffix was appended unconditionally.
+        $business = $this->business('Harbor Street Barbers');
+
+        $rendered = MessageCopy::campaign($business, 'Spring sale is on. Reply STOP to opt out.');
+        $this->assertSame(1, substr_count($rendered, 'STOP to opt out'));
+        $this->assertSame('Harbor Street Barbers: Spring sale is on. Reply STOP to opt out.', $rendered);
+
+        // The detection is case-insensitive: a lowercase typing
+        // of the line is the same line.
+        $lower = MessageCopy::campaign($business, 'Spring sale is on. Reply stop to opt out.');
+        $this->assertSame(1, substr_count(strtolower($lower), 'stop to opt out'));
+    }
+
+    public function test_a_body_without_the_opt_out_line_still_gains_it_exactly_once(): void
+    {
+        $rendered = MessageCopy::campaign($this->business('Biz'), 'Spring sale is on');
+
+        $this->assertSame(1, substr_count($rendered, 'STOP to opt out'));
+    }
+
     public function test_encoding_flips_to_unicode_on_emoji_and_stays_gsm_on_extension_chars(): void
     {
         $this->assertSame('GSM-7', SmsSegments::encoding('Spring sale, 20% off everything'));

@@ -100,10 +100,79 @@ for (const [variant, spec] of Object.entries(config.variants)) {
           });
         }
       });
+      // Card-fit measurements (Amendment 43): the sheet's own
+      // content height against its box, every text block's
+      // span relative to the sheet top, and the typed fallback
+      // paragraph's span — the numbers a clipped line shows up
+      // in even when no element box crosses the sheet box (a
+      // paragraph's box can end inside while its last wrapped
+      // line is cut by the sheet's overflow clip).
+      const paras = [...sheet.querySelectorAll('p, h1')].map(el => {
+        const r = el.getBoundingClientRect();
+        return {
+          tag: el.tagName.toLowerCase(),
+          text: (el.textContent || '').trim().replace(/\s+/g, ' '),
+          topRel: Math.round((r.top - sr.top) * 10) / 10,
+          bottomRel: Math.round((r.bottom - sr.top) * 10) / 10,
+          h: Math.round(r.height * 10) / 10,
+        };
+      });
+      const fbEl = [...sheet.querySelectorAll('p')].find(el => (el.textContent || '').trim().startsWith("Can't scan?"));
+      const fallback = fbEl ? {
+        text: (fbEl.textContent || '').trim().replace(/\s+/g, ' '),
+        topRel: Math.round((fbEl.getBoundingClientRect().top - sr.top) * 10) / 10,
+        bottomRel: Math.round((fbEl.getBoundingClientRect().bottom - sr.top) * 10) / 10,
+      } : null;
       return {
         w: Math.round(sr.width * 10) / 10,
         h: Math.round(sr.height * 10) / 10,
+        clientH: sheet.clientHeight,
+        scrollH: sheet.scrollHeight,
         violations,
+        paras,
+        fallback,
+      };
+    });
+  });
+  // The multi-up sheet's cards live in fixed cut-guide boxes
+  // inside one tall sheet, so sheet-level checks cannot see a
+  // clipped card. Measure every cut guide the same way.
+  const guides = await page.evaluate(() => {
+    return [...document.querySelectorAll('.cut-guide')].map(guide => {
+      const gr = guide.getBoundingClientRect();
+      const violations = [];
+      guide.querySelectorAll('*').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return;
+        const eps = 1.5;
+        const over = {
+          left: Math.round((gr.left - r.left) * 10) / 10,
+          right: Math.round((r.right - gr.right) * 10) / 10,
+          top: Math.round((gr.top - r.top) * 10) / 10,
+          bottom: Math.round((r.bottom - gr.bottom) * 10) / 10,
+        };
+        if (over.left > eps || over.right > eps || over.top > eps || over.bottom > eps) {
+          violations.push({
+            tag: el.tagName.toLowerCase(),
+            cls: (typeof el.className === 'string' ? el.className : '').slice(0, 46),
+            text: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40),
+            over,
+          });
+        }
+      });
+      const fbEl = [...guide.querySelectorAll('p')].find(el => (el.textContent || '').trim().startsWith("Can't scan?"));
+      const fallback = fbEl ? {
+        text: (fbEl.textContent || '').trim().replace(/\s+/g, ' '),
+        topRel: Math.round((fbEl.getBoundingClientRect().top - gr.top) * 10) / 10,
+        bottomRel: Math.round((fbEl.getBoundingClientRect().bottom - gr.top) * 10) / 10,
+      } : null;
+      return {
+        w: Math.round(gr.width * 10) / 10,
+        h: Math.round(gr.height * 10) / 10,
+        clientH: guide.clientHeight,
+        scrollH: guide.scrollHeight,
+        violations,
+        fallback,
       };
     });
   });
@@ -120,7 +189,7 @@ for (const [variant, spec] of Object.entries(config.variants)) {
     };
   });
   await page.emulateMedia({ media: 'screen' });
-  out[variant] = { sheets, print };
+  out[variant] = { sheets, print, guides };
 }
 
 console.log(JSON.stringify(out));

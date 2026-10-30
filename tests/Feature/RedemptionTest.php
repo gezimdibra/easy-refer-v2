@@ -59,11 +59,11 @@ class RedemptionTest extends TestCase
         return $m[1];
     }
 
-    private function pendingReferral(Business $business, array $overrides = []): array
+    private function pendingReferral(Business $business, array $overrides = [], string $friendPhone = '+12125550777'): array
     {
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership] = World::membership($business, $referrer);
-        $friend = World::customer('+12125550777', 'Fri', 'End');
+        $friend = World::customer($friendPhone, 'Fri', 'End');
 
         return World::referral($membership, $friend, $overrides);
     }
@@ -136,7 +136,9 @@ class RedemptionTest extends TestCase
         $this->get(route('redeem.show', ['token' => $token]))
             ->assertOk()
             ->assertSee('Show this screen if anyone asks.')
-            ->assertSee('Confirmed ')
+            // R4-U4: "Confirmed" is now the fact row's label.
+            ->assertSee('Confirmed')
+            ->assertSee('Reward redeemed')
             ->assertDontSee('Already redeemed');
 
         // A later scan renders the resume state, no button at all.
@@ -217,7 +219,10 @@ class RedemptionTest extends TestCase
 
         // Replaying the same nonce against a second referral's
         // screen fails (nonces are bound to one token render).
-        [$other, $otherToken] = $this->pendingReferral($business);
+        // (A second friend: BREAKER D-1's counted-pair key admits
+        // only one live-or-counted referral per (business,
+        // friend), and the first referral just redeemed.)
+        [$other, $otherToken] = $this->pendingReferral($business, [], '+12125550778');
         $this->post(route('redeem.confirm', ['token' => $otherToken]), ['nonce' => $nonce])
             ->assertRedirect(route('redeem.show', ['token' => $otherToken]));
         $this->assertSame(Referral::STATE_PENDING, $other->fresh()->state);
@@ -270,25 +275,16 @@ class RedemptionTest extends TestCase
             ->assertSee('This code is not active');
     }
 
-    public function test_held_referral_cannot_be_redeemed(): void
-    {
-        // RDM-22: while held, no transition, no billing, no reward.
-        $business = World::business();
-        [$referral, $token] = $this->pendingReferral($business, [
-            'hold' => true, 'hold_rules' => ['velocity_daily'], 'held_at' => now(),
-        ]);
-
-        $this->get(route('redeem.show', ['token' => $token]))
-            ->assertOk()
-            ->assertSee("This one needs the owner's review first", false)
-            ->assertDontSee('Mark as Redeemed');
-
-        $service = app(RedemptionService::class);
-        $result = $service->redeemReferral($referral, null, '127.0.0.1');
-        $this->assertSame('held', $result['outcome']);
-        $this->assertSame(0, BillingEvent::count());
-        $this->assertSame(0, Reward::count());
-    }
+    // RETIRED (fraud-hold conversion, Option B, 2026-10-28):
+    // test_held_referral_cannot_be_redeemed (RDM-22) pinned the
+    // behavior the owner ruling abolishes — a held referral
+    // blocking its own redemption. No production path can create
+    // that fixture after the conversion (claim creation never
+    // holds; legacy rows are converted at the release's Gate 1
+    // normalization), so the pin is retired, not rewritten. Its
+    // replacements: FraudHoldConversionTest T5/T7 (a flagged
+    // redemption completes; reward + billing are held) and T13
+    // (the staff screen confirms a flagged visit).
 
     public function test_expired_referral_shows_the_expired_state(): void
     {
@@ -315,7 +311,7 @@ class RedemptionTest extends TestCase
         // item 7) and no button.
         $this->get(route('redeem.show', ['token' => $claimToken]))
             ->assertOk()
-            ->assertSee('Available on '.$reward->available_at->format('F j, Y'))
+            ->assertSee('Available on '.$business->localTime($reward->available_at)->format('F j, Y'))
             ->assertSee($reward->reward_text_snapshot)
             ->assertDontSee('Mark as Redeemed');
 
@@ -350,7 +346,13 @@ class RedemptionTest extends TestCase
         $this->assertSame('+12125550999', $this->sms->sent[0]['to']);
         $this->assertStringContainsString('Congratulations for the successful referral', $this->sms->sent[0]['body']);
         $this->assertStringNotContainsString('succesful', $this->sms->sent[0]['body']);
-        $this->assertDatabaseHas('sms_messages', ['template_key' => 'reward_ready', 'delivery_state' => 'sent']);
+        // PIN RE-DERIVATION (ID-07, Amendment 51): this fixture's
+        // business is flow-active with a live share token, so the
+        // reshare appendage legitimately rides this send and the
+        // row carries the RR-M1 stamp 'reward_ready_reshare'
+        // (purpose stays 'reward_ready'). The pin's intent (one
+        // reward-ready row, delivered) is unchanged.
+        $this->assertDatabaseHas('sms_messages', ['template_key' => 'reward_ready_reshare', 'delivery_state' => 'sent']);
         $this->assertSame('sent', Reward::query()->firstOrFail()->notification_state);
 
         $this->artisan('rewards:notify-due')->assertSuccessful();
@@ -429,12 +431,13 @@ class RedemptionTest extends TestCase
         }
     }
 
-    public function test_redemption_time_velocity_recheck_holds_the_second_redemption(): void
+    public function test_redemption_time_velocity_recheck_completes_the_second_redemption_and_holds_its_reward(): void
     {
-        // CONC-01: both referrals were created inside the creation
-        // caps (cap counts rewarded referrals), but by redemption
-        // time the referrer already has today's rewarded visit, so
-        // the second redemption holds instead of paying out.
+        // CONC-01 + Option B (2026-10-28): the redemption-time
+        // velocity recheck still runs under the membership lock,
+        // but a breach no longer stops the visit — the second
+        // redemption COMPLETES, and velocity_daily holds its
+        // minted reward and its billing coverage instead.
         $business = World::business(['daily_referral_cap' => 1]);
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership] = World::membership($business, $referrer);
@@ -447,9 +450,13 @@ class RedemptionTest extends TestCase
         $this->assertSame('redeemed', $service->redeemReferral($first, null, '127.0.0.1')['outcome']);
 
         $result = $service->redeemReferral($second, null, '127.0.0.1');
-        $this->assertSame('held', $result['outcome']);
-        $this->assertSame(['velocity_daily'], $second->fresh()->hold_rules);
-        $this->assertSame(1, BillingEvent::count());
+        $this->assertSame('redeemed', $result['outcome']);
+        $this->assertSame(Referral::STATE_REDEEMED, $second->fresh()->state);
+        $this->assertFalse((bool) $second->fresh()->hold);
+        $this->assertTrue($result['reward']->hold);
+        $this->assertSame(['velocity_daily'], $result['reward']->hold_rules);
+        $this->assertSame(2, BillingEvent::count());
+        $this->assertSame('held', BillingEvent::query()->where('referral_id', $second->id)->firstOrFail()->coverage);
     }
 
     public function test_sim_swap_step_up_holds_a_dormant_membership_claim(): void
@@ -502,10 +509,10 @@ class RedemptionTest extends TestCase
         $this->assertSame(['number_link_cooling'], $reward->hold_rules);
         $this->assertSame(Reward::STATE_AVAILABLE, $reward->state);
 
-        // The queue renders the cooling rule in plain words.
+        // The queue renders the number-link rule in plain words.
         $this->actingAs(World::owner($business))->get(route('reviews'))
             ->assertOk()
-            ->assertSee('cooling window after the customer linked a new number');
+            ->assertSee('This customer linked a new phone number in the last 7 days, so this claim is paused as a safety check.');
     }
 
     public function test_claim_after_the_cooling_window_proceeds(): void

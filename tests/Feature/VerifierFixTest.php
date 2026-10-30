@@ -71,8 +71,8 @@ class VerifierFixTest extends TestCase
 
         $this->actingAs($owner)->get(route('reviews'))
             ->assertOk()
-            ->assertSee('Rejected presentations')
-            ->assertSee('A code that could not be used was presented');
+            ->assertSee('Codes that could not be used')
+            ->assertSee('A code that is no longer active was shown');
     }
 
     public function test_flow_resolution_budget_answers_429_with_the_same_body(): void
@@ -106,11 +106,14 @@ class VerifierFixTest extends TestCase
             'hold' => true, 'hold_rules' => ['velocity_daily'], 'held_at' => now(),
         ]);
 
+        // Option B (2026-10-28): the FRIEND's redeem page has no
+        // held state — a pending referral (even seeded with the
+        // legacy hold shape) renders the show state with its QR.
         $this->get(route('refer.redeem.page', ['token' => $redeemToken]))
             ->assertOk()
-            ->assertSee('Held for review')
-            ->assertDontSee('Show this at')
-            ->assertDontSee(route('refer.redeem.qr', ['token' => $redeemToken]));
+            ->assertDontSee('Held for review')
+            ->assertSee('Show this code to a staff member')
+            ->assertSee(route('refer.redeem.qr', ['token' => $redeemToken]));
 
         [$redeemed] = World::referral($membership, World::customer('+12125550666', 'Bee', 'Two'), [
             'state' => Referral::STATE_REDEEMED, 'redeemed_at' => now(),
@@ -119,6 +122,8 @@ class VerifierFixTest extends TestCase
             'hold' => true, 'hold_rules' => ['redemption_burst'], 'held_at' => now(),
         ]);
 
+        // The REFERRER's claim page keeps its held state, without
+        // credentials (bearer link) and without a date promise.
         $this->get(route('refer.claim.page', ['token' => $claimToken]))
             ->assertOk()
             ->assertSee('Held for review')
@@ -156,20 +161,28 @@ class VerifierFixTest extends TestCase
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456', 'device_signal' => 'device-abc'])->assertRedirect(route('refer.share'));
         $membershipA = Membership::query()->firstOrFail();
+        // RT-2: A's link predates B's claim by more than the
+        // 25-minute scan-to-claim gap.
+        $membershipA->forceFill(['created_at' => now()->subHour()])->saveQuietly();
 
         $this->app->forgetInstance('session');
         $this->defaultCookies = [];
         $this->unencryptedCookies = [];
 
         $this->carry($this->post(route('refer.friend.claim', ['token' => $membershipA->plainShareToken()]), [
-            'first_name' => 'Bee', 'last_name' => 'Two', 'phone' => '2125550222',
+            'first_name' => 'Bee', 'last_name' => 'Two', 'phone' => '2125550222', 'consent' => '1',
             'device_signal' => 'device-abc',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456', 'device_signal' => 'device-abc'])->assertRedirect();
 
+        // Option B (2026-10-28): the form-field device signal
+        // still arrives and still scores — as DATA (risk score +
+        // rules) on an UNHELD referral; the hold is born on the
+        // minted reward at redemption, not at claim creation.
         $referral = Referral::query()->firstOrFail();
-        $this->assertTrue($referral->hold);
-        $this->assertContains('device_signal_reuse', $referral->hold_rules);
+        $this->assertFalse((bool) $referral->hold);
+        $this->assertSame(50, $referral->risk_score);
+        $this->assertContains('device_signal_reuse', $referral->risk_rules);
     }
 
     public function test_review_queue_lists_pending_number_links(): void
@@ -187,7 +200,7 @@ class VerifierFixTest extends TestCase
 
         $this->actingAs($owner)->get(route('reviews'))
             ->assertOk()
-            ->assertSee('Pending number links')
+            ->assertSee('New phone numbers')
             ->assertSee('Reg linked a new number');
     }
 
@@ -294,7 +307,13 @@ class VerifierFixTest extends TestCase
 
     public function test_share_message_falls_back_when_no_friend_reward_text(): void
     {
-        $business = World::business(['friend_reward_text' => null, 'referrer_reward_text' => null]);
+        // Amendment 40 (Train F2): enrollment at a textless
+        // business is gated at the door now, so the member
+        // enrolls while texts are set and the business is then
+        // un-set (the R-6 Undo shape). The share page is
+        // deliberately not flow-gated (it is the member's
+        // home), and its message falls back exactly as before.
+        $business = World::business();
         [, $qrToken] = World::qr($business);
         $this->carry($this->get(route('refer.landing', ['token' => $qrToken])));
         $this->carry($this->post(route('refer.enroll', ['token' => $qrToken]), [
@@ -302,6 +321,8 @@ class VerifierFixTest extends TestCase
             'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->carry($this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share')));
+
+        $business->forceFill(['friend_reward_text' => null, 'referrer_reward_text' => null])->save();
 
         $this->get(route('refer.share'))
             ->assertOk()

@@ -23,6 +23,9 @@ class ReferralListsTest extends TestCase
         $this->app->instance(\App\Contracts\SmsGateway::class, new \Tests\Fakes\FakeSmsGateway);
     }
 
+    // Legacy shape (§7.9): the held referral seeded below is a
+    // pre-Option-B shape no live path creates since the conversion,
+    // kept to prove the legacy held filter/review surfaces still behave.
     public function test_referral_filters_and_counts(): void
     {
         $business = World::business();

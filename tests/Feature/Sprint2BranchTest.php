@@ -301,6 +301,11 @@ class Sprint2BranchTest extends TestCase
 
         $this->assertCount(9, $sentences);
         $this->assertStringContainsString('monthly limit of 50', $sentences[1]);
+        // Amendment 32 [PM-REV-2] (Lane B F-3): the SIM-swap
+        // sentence is pinned exactly, so the retired fact-only
+        // form ("...moved to a new SIM card." and nothing after)
+        // cannot return.
+        $this->assertSame('This phone number was recently moved to a new SIM card. Someone else may have taken over the number.', $sentences[7]);
         $this->assertSame('Flagged for review by the automatic risk checks.', $sentences[8]);
         $this->assertSame([], HoldReasons::sentences(null));
     }
@@ -325,7 +330,13 @@ class Sprint2BranchTest extends TestCase
 
         // EC-23: not dropped, not sent; the failure is the record.
         $this->assertSame('failed', $reward->fresh()->notification_state);
-        $this->assertDatabaseHas('sms_messages', ['template_key' => 'reward_ready', 'delivery_state' => 'failed']);
+        // PIN RE-DERIVATION (ID-07, Amendment 51): this fixture's
+        // business is flow-active with a live share token, so the
+        // reshare appendage legitimately rides this send and the
+        // row carries the RR-M1 stamp 'reward_ready_reshare'
+        // (purpose stays 'reward_ready'). The pin's intent (the
+        // failure is recorded, not dropped) is unchanged.
+        $this->assertDatabaseHas('sms_messages', ['template_key' => 'reward_ready_reshare', 'delivery_state' => 'failed']);
     }
 
     public function test_jobs_tolerate_missing_rows(): void
@@ -381,7 +392,7 @@ class Sprint2BranchTest extends TestCase
         Mail::fake();
         $this->get(route('register', ['ticket' => 45, 'type' => 'cafe']))->assertOk();
 
-        $this->post(route('register'), $this->registrationPayload())->assertRedirect(route('dashboard'));
+        $this->post(route('register'), $this->registrationPayload())->assertRedirect(route('onboarding.welcome'));
 
         $business = \App\Models\Business::query()->latest('id')->firstOrFail();
         $this->assertSame(4500, $business->average_ticket_cents);

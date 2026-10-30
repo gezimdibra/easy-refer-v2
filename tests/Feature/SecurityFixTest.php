@@ -86,9 +86,12 @@ class SecurityFixTest extends TestCase
         $original = Customer::query()->where('phone_e164', '+12125550111')->firstOrFail();
 
         $referrer = World::customer('+12125550888', 'Ola', 'Nord');
-        [, $shareToken] = World::membership($business, $referrer);
+        [$refMembership, $shareToken] = World::membership($business, $referrer);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $refMembership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
         $this->carry($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Ana', 'last_name' => 'Lee', 'phone' => '2125550333',
+            'first_name' => 'Ana', 'last_name' => 'Lee', 'phone' => '2125550333', 'consent' => '1',
         ]));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
@@ -134,9 +137,12 @@ class SecurityFixTest extends TestCase
         // Same flow cookie, second business's share link, new number.
         $businessB = World::business();
         $referrerB = World::customer('+12125550444', 'Bob', 'Ray');
-        [, $shareB] = World::membership($businessB, $referrerB);
+        [$refMembershipB, $shareB] = World::membership($businessB, $referrerB);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $refMembershipB->forceFill(['created_at' => now()->subHour()])->saveQuietly();
         $this->carry($this->post(route('refer.friend.claim', ['token' => $shareB]), [
-            'first_name' => 'Ana', 'last_name' => 'Lee', 'phone' => '2125550666',
+            'first_name' => 'Ana', 'last_name' => 'Lee', 'phone' => '2125550666', 'consent' => '1',
         ]));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
@@ -165,7 +171,9 @@ class SecurityFixTest extends TestCase
 
         $this->actingAs($owner)
             ->post(route('reviews.referrals.deny', ['referral' => $referral->id]))
-            ->assertSessionHas('status', 'That referral has already been resolved and can no longer be denied.');
+            // BREAKER D-2: the refusal now names the actual state
+            // instead of the generic "already resolved".
+            ->assertSessionHas('status', 'That referral can no longer be denied: it is already redeemed and was never held for review.');
         $this->assertSame('redeemed', $referral->fresh()->state, 'deny refused after redemption');
         $this->assertSame(1, \App\Models\BillingEvent::query()->where('referral_id', $referral->id)->count(), 'billing record untouched');
 
@@ -190,7 +198,9 @@ class SecurityFixTest extends TestCase
 
         $this->actingAs($owner)
             ->post(route('reviews.rewards.deny', ['reward' => $reward->id]))
-            ->assertSessionHas('status', 'That reward has already been resolved and can no longer be denied.');
+            // BREAKER D-2: the refusal now names the actual state
+            // instead of the generic "already resolved".
+            ->assertSessionHas('status', 'That reward can no longer be denied: it is already claimed and was never held for review.');
         $this->assertSame('claimed', $reward->fresh()->state);
         $this->assertNotNull($reward->fresh()->claimed_at);
     }

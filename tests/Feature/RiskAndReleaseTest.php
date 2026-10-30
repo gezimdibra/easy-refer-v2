@@ -57,7 +57,7 @@ class RiskAndReleaseTest extends TestCase
         }
     }
 
-    public function test_device_signal_reuse_holds_the_second_customers_referral(): void
+    public function test_device_signal_reuse_scores_the_second_customers_referral_without_holding_it(): void
     {
         $business = World::business();
         [, $qrToken] = World::qr($business);
@@ -67,6 +67,9 @@ class RiskAndReleaseTest extends TestCase
         $this->withHeader('X-Device-Signal', 'device-xyz')->carrylessPostEnroll($qrToken, '2125550111');
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share'));
         $membershipA = Membership::query()->firstOrFail();
+        // RT-2: A's link predates B's claim by more than the
+        // 25-minute scan-to-claim gap.
+        $membershipA->forceFill(['created_at' => now()->subHour()])->saveQuietly();
 
         $this->flushCookies();
 
@@ -74,14 +77,28 @@ class RiskAndReleaseTest extends TestCase
         $this->carry($this->get(route('refer.friend', ['token' => $membershipA->plainShareToken()])));
         $this->withHeader('X-Device-Signal', 'device-xyz');
         $this->carry($this->post(route('refer.friend.claim', ['token' => $membershipA->plainShareToken()]), [
-            'first_name' => 'Bee', 'last_name' => 'Two', 'phone' => '2125550222',
+            'first_name' => 'Bee', 'last_name' => 'Two', 'phone' => '2125550222', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
+        // Option B (2026-10-28), design-pass T2+T7: the score and
+        // rule persist as DATA on the referral (score 50, the
+        // device rule), the referral itself is NOT held, no
+        // flag_raised fires at creation — and at redemption the
+        // flag converts: the visit completes and the minted
+        // reward + billing coverage carry the hold.
         $referral = Referral::query()->firstOrFail();
-        $this->assertTrue($referral->hold);
-        $this->assertContains('device_signal_reuse', $referral->hold_rules);
+        $this->assertFalse((bool) $referral->hold);
+        $this->assertNull($referral->hold_rules);
         $this->assertSame(50, $referral->risk_score);
+        $this->assertContains('device_signal_reuse', $referral->risk_rules);
+        $this->assertSame(0, ReferralEvent::query()->where('event_type', 'flag_raised')->count());
+
+        $result = app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');
+        $this->assertSame('redeemed', $result['outcome']);
+        $this->assertTrue($result['reward']->hold);
+        $this->assertSame(['device_signal_reuse'], $result['reward']->hold_rules);
+        $this->assertSame('held', BillingEvent::query()->where('referral_id', $referral->id)->firstOrFail()->coverage);
     }
 
     private function carrylessPostEnroll(string $qrToken, string $phone): void
@@ -193,8 +210,13 @@ class RiskAndReleaseTest extends TestCase
         $this->assertContains('redemption_burst', $result['reward']->hold_rules);
     }
 
-    public function test_monthly_velocity_holds_at_creation_and_redemption(): void
+    public function test_monthly_velocity_definition_and_redemption_conversion(): void
     {
+        // Split per design-pass §7.9 item 5: (a) the creation-count
+        // definition velocityBreach() is retained and still
+        // computes the monthly breach; (b) at redemption (T6) the
+        // breach converts — the visit completes and the minted
+        // reward carries velocity_monthly.
         $business = World::business(['daily_referral_cap' => 100, 'monthly_referral_cap' => 1]);
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
         [$membership] = World::membership($business, $referrer);
@@ -204,8 +226,9 @@ class RiskAndReleaseTest extends TestCase
         $service = app(RedemptionService::class);
         [$pending] = World::referral($membership, World::customer('+12125550614', 'New', 'Friend'));
         $result = $service->redeemReferral($pending, null, '127.0.0.1');
-        $this->assertSame('held', $result['outcome']);
-        $this->assertSame(['velocity_monthly'], $pending->fresh()->hold_rules);
+        $this->assertSame('redeemed', $result['outcome']);
+        $this->assertSame(['velocity_monthly'], $result['reward']->hold_rules);
+        $this->assertFalse((bool) $pending->fresh()->hold);
 
         $enrollment = app(EnrollmentService::class);
         $this->assertSame('velocity_monthly', $enrollment->velocityBreach($business, $membership));

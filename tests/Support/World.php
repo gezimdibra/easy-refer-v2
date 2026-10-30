@@ -60,6 +60,12 @@ final class World
             'current_plan_id' => Plan::launch()->id,
             'friend_reward_text' => '$10 off your first visit',
             'referrer_reward_text' => '$10 off',
+            // OR-1 §2.7 fixture sweep: the default world seeds a
+            // DISTINCT referrer reward, so it is a SPLIT fixture
+            // (the flag is the configuration; the pair alone no
+            // longer implies it). Overrides that blank a text
+            // keep the resolver's defensive fallback.
+            'reward_split' => true,
             'average_ticket_cents' => 5000,
         ], $overrides));
 
@@ -118,6 +124,21 @@ final class World
     /** @return array{0: Referral, 1: string} the referral and its plain redeem token */
     public static function referral(Membership $referrer, Customer $friend, array $overrides = []): array
     {
+        // Gap-at-redemption fixture rule (2026-10-29): a seeded
+        // referral represents a claim through a link shared
+        // AHEAD of the visit (the normal case, exactly the
+        // factory worlds' aged-Sam convention), so a referrer
+        // membership created moments ago in this test is aged
+        // two days — otherwise every seeded redemption would
+        // sit inside the 25-minute redemption window and block.
+        // Fixtures that deliberately age an anchor themselves
+        // (90+ seconds) are left untouched; the gap tests build
+        // their fresh anchors through completeClaim instead.
+        if ($referrer->created_at !== null && $referrer->created_at->greaterThan(now()->subSeconds(90))) {
+            $referrer->forceFill(['created_at' => now()->subDays(2)])->saveQuietly();
+            $referrer->refresh();
+        }
+
         $plain = OpaqueToken::generate();
 
         $referral = Referral::create(array_merge([
