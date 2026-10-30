@@ -122,12 +122,24 @@ class DashboardDataTest extends TestCase
 
         $this->actingAs($owner)->post(route('dashboard.checklist.dismiss'))->assertRedirect(route('dashboard'));
 
-        $this->assertNotNull($business->fresh()->checklist_dismissed_at);
+        // Phase 2 (G6): the dismissal lives in the Action
+        // Center's dismissal domain at the checklist's current
+        // fingerprint; the legacy checklist_dismissed_at column
+        // is no longer written.
+        $this->assertNull($business->fresh()->checklist_dismissed_at);
+        $this->assertTrue(\App\Models\ActionCenterDismissal::query()
+            ->where('business_id', $business->id)
+            ->where('item_key', 'setup_checklist')
+            ->exists());
         $this->actingAs($owner)->get(route('dashboard'))->assertDontSee('Setup checklist');
         $this->assertTrue(AuditLog::query()->where('action', 'business.checklist_dismissed')->exists());
 
         $this->actingAs($owner)->post(route('settings.checklist.reset'))->assertRedirect();
         $this->assertNull($business->fresh()->checklist_dismissed_at);
+        $this->assertFalse(\App\Models\ActionCenterDismissal::query()
+            ->where('business_id', $business->id)
+            ->where('item_key', 'setup_checklist')
+            ->exists());
         $this->actingAs($owner)->get(route('dashboard'))->assertSee('Setup checklist');
     }
 

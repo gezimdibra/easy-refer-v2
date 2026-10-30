@@ -153,14 +153,19 @@ class DunningTest extends TestCase
             $this->assertTrue($mail->hasTo($owner->email));
             // DUN-01, verbatim.
             $this->assertSame('Your Easy Refer payment did not go through', $mail->envelope()->subject);
-            // DUN-02, verbatim: the failed record's amount, the
-            // grace end (entry Mar 10 + 7 days), the billing link
-            // resolved through the route at this mount.
+            // DUN-02 under the B1 E3 grammar: the pinned first two
+            // sentences verbatim as the lead; the bare-URL third
+            // sentence is now the 'Update your card' button (its
+            // link still resolves through the route at this mount)
+            // over the fact well carrying the same figures.
+            $text = $this->renderMailText($mail);
             $this->assertStringContainsString(
-                'Your Easy Refer charge of $42 did not go through. Your QR code keeps working until Mar 17, 2026. '
-                .'Update your card to keep billing current: '.route('settings.billing'),
-                $this->renderMailText($mail)
+                'Your Easy Refer charge of $42 did not go through. Your QR code keeps working until Mar 17, 2026.',
+                $text
             );
+            $this->assertStringContainsString('Amount due $42', $text);
+            $this->assertStringContainsString('Update your card by Mar 17, 2026', $text);
+            $this->assertStringContainsString(route('settings.billing'), $text);
 
             return true;
         });
@@ -255,11 +260,14 @@ class DunningTest extends TestCase
             // DUN-06, verbatim.
             $this->assertSame('Your Easy Refer payment went through', $mail->envelope()->subject);
             // DUN-07, verbatim: 4 visits that counted on the
-            // recovered record; the value estimate is the
-            // statement page's own computation (5 March events
-            // at the business's $10 average ticket).
+            // recovered record. Train A2 (sweep-2 F-06): the
+            // value estimate is scoped to the record's OWN
+            // billable visits (4 at the $10 ticket = $40); the
+            // fifth March event rode the free credit and this
+            // charge never covered it, so it no longer
+            // inflates the figure.
             $this->assertStringContainsString(
-                'This charge covered 4 visits that counted, worth about $50 in first-visit sales (estimate).',
+                'This charge covered 4 visits that counted, worth about $40 in estimated sales, based on your typical spend per visit (estimate).',
                 $this->renderMailText($mail)
             );
 

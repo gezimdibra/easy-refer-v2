@@ -78,19 +78,30 @@ class BillingPageTest extends TestCase
         // Plan block (DASH-15 from the plan row).
         $response->assertSee('Current plan');
         $response->assertSee('Pay Per Visit');
-        $response->assertSee('Never more than $99 a month');
-        $response->assertSee('To stop billing entirely, close your account.');
+        $response->assertSee('Never more than $99 a month in visit charges');
+        // Merge ruling (lanes 3 x FE-CANCEL, 2026-10-26): the R2
+        // draft moved this sentence off the page, but it does not
+        // in fact live on Account (only the Close account button
+        // does); the interim disclosure stays on Billing.
+        $response->assertSee('To stop billing, end your program in Settings, under Account. Your final bill covers the visits and texts you already have.');
         // No-card block (BILL-01) and the charges-off honesty line (BILL-10).
+        // RE-DERIVED (activation redesign, census C-16,
+        // ACT-BILL-01): a cardless business with its allowance
+        // untouched is ON — the panel's heading is the code's
+        // state and the body carries the gate's own count.
         $response->assertSee('Card on file');
-        $response->assertSee('Add a card to turn on your QR code');
-        $response->assertSee('Your first 5 visits are free. Nothing is charged when you add your card.');
+        $response->assertSee('Your code is on');
+        $response->assertSee('You have 5 of your 5 free visits left. After those, your code pauses until a card is on file. Nothing is charged when you add your card.');
+        $response->assertDontSee('Add a card to turn on your QR code');
         $response->assertSee('Charges are not switched on yet. Visits still count, and this page keeps the running total.');
         // This month at zero, and the empty history (BILL-15).
         $response->assertSee('This month');
-        $response->assertSee('0 visits counted this month');
-        $response->assertSee('Free visits left: 5 of 5');
-        $response->assertSee('Fees so far this month: $0.00');
-        $response->assertSee('Built up so far: $0.00. Charged once a month.');
+        // R2 BILL: this month is tiles now (label + value).
+        $response->assertSee('Visits counted');
+        $response->assertSee('Free visits left');
+        $response->assertSee('5 of 5');
+        $response->assertSee('Visit fees so far');
+        $response->assertDontSee('Built up so far:');
         $response->assertSee('Charges');
         $response->assertSee('No charges yet. Your first charge comes after your 5 free visits.');
     }
@@ -101,7 +112,19 @@ class BillingPageTest extends TestCase
         // gone must not be told its first 5 visits are free or
         // that adding a card turns its QR code on (it never went
         // off).
+        //
+        // RE-DERIVED (activation redesign, census C-17): the
+        // panel reads the settlement walk's own count over
+        // BillingEvent participants, never the lagged
+        // free_visits_remaining column, so this fixture seeds
+        // the ledger itself — five counted visits — instead of
+        // stating the column. The form is ACT-BILL-02, the one
+        // state where a turn-back-on heading is true again.
         $business = World::business(['free_visits_remaining' => 0]);
+        $membership = $this->membership($business);
+        for ($i = 0; $i < 5; $i++) {
+            $this->event($business, $membership);
+        }
         $owner = World::owner($business);
 
         $response = $this->actingAs($owner)->get(route('settings.billing'));
@@ -109,13 +132,22 @@ class BillingPageTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('Add a card to turn on your QR code');
         $response->assertDontSee('Your first 5 visits are free');
-        $response->assertSee('Add a card to restart monthly charges');
-        $response->assertSee('Your 5 free visits are used up. Nothing is charged when you add your card.');
+        $response->assertSee('Your code is paused');
+        $response->assertSee('Your 5 free visits are used up. Add a card to turn your code back on. Nothing is charged when you add your card.');
     }
 
     public function test_no_card_panel_counts_the_free_visits_still_left(): void
     {
+        // RE-DERIVED (activation redesign, census C-17/C-21):
+        // the count is the ledger's (3 participants seeded, 2
+        // left), and the panel and the tile print that same
+        // number — the column's stale 2 is now a coincidence
+        // the fixture keeps only as settlement state.
         $business = World::business(['free_visits_remaining' => 2]);
+        $membership = $this->membership($business);
+        for ($i = 0; $i < 3; $i++) {
+            $this->event($business, $membership);
+        }
         $owner = World::owner($business);
 
         $response = $this->actingAs($owner)->get(route('settings.billing'));
@@ -123,7 +155,8 @@ class BillingPageTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('Add a card to turn on your QR code');
         $response->assertDontSee('Your first 5 visits are free');
-        $response->assertSee('You have 2 of your 5 free visits left. Nothing is charged when you add your card.');
+        $response->assertSee('You have 2 of your 5 free visits left. After those, your code pauses until a card is on file. Nothing is charged when you add your card.');
+        $response->assertSee('2 of 5');
     }
 
     public function test_plan_block_states_the_configured_per_visit_price(): void
@@ -163,15 +196,19 @@ class BillingPageTest extends TestCase
 
         $response->assertOk();
         // Card line (DASH-14 verbatim) and expiry.
-        $response->assertSee('Card on file ending 5858. Managed securely by Square.');
+        // R2 BILL: the card is a wallet row with a state pill.
+        $response->assertSee('•••• 5858');
+        $response->assertSee('On file');
         $response->assertSee('Expires 03/2028');
         $response->assertDontSee('Add a card to turn on your QR code');
         // This month agrees with the dashboard's own computation.
-        $response->assertSee('7 visits counted this month');
-        $response->assertSee('Free visits left: 0 of 5');
-        $response->assertSee('Fees so far this month: $4.00');
+        $response->assertSee('Visits counted');
+        $response->assertSee('Free visits left');
+        $response->assertSee('0 of 5');
+        $response->assertSee('Visit fees so far');
         $response->assertSee('$4.00 of $99 monthly cap');
-        $response->assertSee('Built up so far: $4.00. Charged once a month.');
+        // R2 BILL: the forecast headline states the accrued figure once.
+        $response->assertSee('Expected charge on');
         $response->assertDontSee('under $1, so it carries forward');
     }
 
@@ -209,12 +246,19 @@ class BillingPageTest extends TestCase
         $response = $this->actingAs($owner)->get(route('settings.billing'));
 
         $response->assertOk();
-        $response->assertSee('Built up so far: $0.50. Charged once a month.');
+        // Train A2 (A8): a sub-$1 total charges nothing on the
+        // scheduled date, so no forecast line may name one;
+        // the carry-forward line owns this state.
+        $response->assertDontSee('Expected charge on');
         $response->assertSee('Your amount so far is under $1, so it carries forward. It joins your next monthly charge.');
     }
 
     public function test_past_due_banner_renders_the_dash_copy(): void
     {
+        // FLOW-STATE TRUTH train: this fixture's past_due has
+        // no audit row and no failed record — an undatable
+        // episode, which fails closed. The banner states the
+        // paused truth; the dateless grace line never renders.
         $business = World::business(['billing_status' => 'past_due']);
         $owner = World::owner($business);
         $this->card($business);
@@ -224,7 +268,8 @@ class BillingPageTest extends TestCase
         $response->assertOk();
         $response->assertSee('A payment failed. Please update your card to keep billing current.');
         $response->assertSee('Update card');
-        $response->assertSee('Your QR code and customer links keep working during the grace period.');
+        $response->assertSee('Your QR code and customer links are paused until you update your card.');
+        $response->assertDontSee('keep working during the grace period');
     }
 
     public function test_active_without_a_card_shows_the_pause_banner(): void
@@ -235,7 +280,10 @@ class BillingPageTest extends TestCase
         $response = $this->actingAs($owner)->get(route('settings.billing'));
 
         $response->assertOk();
-        $response->assertSee('No card on file. Visits keep counting, and the amount builds up here. Add a card to restart monthly charges.');
+        // RE-DERIVED (activation redesign, census C-18,
+        // ACT-BILL-03a): the keeps-counting banner names the
+        // free visits it is true for.
+        $response->assertSee('No card on file. Visits keep counting while your free visits last (5 left), and the amount builds up here.');
     }
 
     public function test_pending_card_renders_the_confirming_state(): void
@@ -264,7 +312,9 @@ class BillingPageTest extends TestCase
         $response = $this->actingAs($owner)->get(route('settings.billing'));
 
         $response->assertOk();
-        $response->assertSee('Card on file ending 5858. Managed securely by Square.');
+        // R2 BILL: the wallet row's pill carries the expired state.
+        $response->assertSee('•••• 5858');
+        $response->assertSee('Expired');
         $response->assertSee('This card has expired. Replace it to keep monthly charges going.');
         // SV-02: an expired card shows the expired state only,
         // never the approaching-expiry pill.

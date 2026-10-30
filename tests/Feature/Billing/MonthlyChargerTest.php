@@ -315,16 +315,25 @@ class MonthlyChargerTest extends TestCase
         $record = app(MonthlyCharger::class)->charge($business);
 
         // BILL-40 at the charge: 5 free, 49 billed ($98), 6 over
-        // cap, exactly 49 line items.
+        // cap, exactly 49 line items. FE-BILL-01: the record
+        // claims all 60 events (the coverage rows carry its
+        // statement counts) while the charge itself still
+        // contains the 49 billed visits only.
         $this->assertSame(9800, $record->amount_cents);
         $this->assertCount(49, $this->gateway->chargeCalls[0]['line_items']);
-        $this->assertSame(49, BillingEvent::query()->where('billing_record_id', $record->id)->count());
+        $this->assertSame(49, BillingEvent::query()->where('billing_record_id', $record->id)->where('coverage', 'billable')->count());
+        $this->assertSame(60, BillingEvent::query()->where('billing_record_id', $record->id)->count());
         $this->assertSame(5, BillingEvent::query()->where('coverage', 'free_credit')->count());
         $this->assertSame(6, BillingEvent::query()->where('coverage', 'over_cap')->count());
     }
 
-    public function test_carried_months_charge_together_each_under_its_own_cap(): void
+    public function test_carried_months_charge_as_separate_records_each_under_its_own_cap(): void
     {
+        // Superseded pin (money fix train, audit 1.3): this test
+        // used to assert the two months combined into ONE
+        // 19,600-cent record. That combined shape is the defect:
+        // the cap binds per month of visits, so arrears settle
+        // month by month as separate records.
         $business = World::business(['free_visits_remaining' => 0]);
         $membership = $this->membership($business);
         $this->cardOnFile($business);
@@ -335,9 +344,22 @@ class MonthlyChargerTest extends TestCase
             $this->event($business, $membership, 200, Carbon::parse('2026-02-10 12:00:00'));
         }
 
-        $record = app(MonthlyCharger::class)->charge($business);
+        $charger = app(MonthlyCharger::class);
+        $january = $charger->charge($business);
 
-        $this->assertSame(19600, $record->amount_cents);
-        $this->assertSame(98, BillingEvent::query()->where('billing_record_id', $record->id)->count());
+        $this->assertSame(9800, $january->amount_cents);
+        // FE-BILL-01: January's 49 billed visits claimed for the
+        // charge, plus January's 6 over-cap rows for its
+        // statement. February's rows are untouched.
+        $this->assertSame(49, BillingEvent::query()->where('billing_record_id', $january->id)->where('coverage', 'billable')->count());
+        $this->assertSame(55, BillingEvent::query()->where('billing_record_id', $january->id)->count());
+        $this->assertSame(55, BillingEvent::query()->whereNull('billing_record_id')->count());
+
+        $february = $charger->charge($business->fresh());
+
+        $this->assertSame(9800, $february->amount_cents);
+        $this->assertSame(49, BillingEvent::query()->where('billing_record_id', $february->id)->where('coverage', 'billable')->count());
+        $this->assertSame(55, BillingEvent::query()->where('billing_record_id', $february->id)->count());
+        $this->assertCount(2, $this->gateway->chargeCalls);
     }
 }

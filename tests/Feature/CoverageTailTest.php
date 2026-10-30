@@ -130,7 +130,7 @@ class CoverageTailTest extends TestCase
         // The same flow tries to start a second verification (a
         // friend claim): the flow budget answers first.
         $this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212',
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550212', 'consent' => '1',
         ])->assertOk()->assertSee('Too many tries');
     }
 

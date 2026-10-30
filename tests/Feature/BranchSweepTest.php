@@ -156,7 +156,7 @@ class BranchSweepTest extends TestCase
         }
 
         $this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550111',
+            'first_name' => 'Jo', 'last_name' => 'Kim', 'phone' => '2125550111', 'consent' => '1',
         ])->assertOk()->assertSee('Too many tries');
     }
 
@@ -292,7 +292,10 @@ class BranchSweepTest extends TestCase
     {
         $business = World::business();
         $referrer = World::customer('+12125550999', 'Reg', 'Ular');
-        [, $shareToken] = World::membership($business, $referrer);
+        [$refMembership, $shareToken] = World::membership($business, $referrer);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $refMembership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
         $friend = World::customer('+12125550777', 'Fri', 'End');
 
         $outcome = app(EnrollmentService::class)->completeClaim(

@@ -83,27 +83,41 @@ class MeteringPinsTest extends TestCase
         $this->assertSame(350, BillingEvent::firstOrFail()->amount_cents);
     }
 
-    public function test_held_referral_writes_no_event(): void
+    public function test_flagged_referral_writes_one_held_event(): void
     {
+        // Option B (2026-10-28): the pre-conversion pin (a held
+        // referral writes NO event, outcome 'held') is retired —
+        // a flagged referral now completes its redemption and
+        // writes exactly one billing event, coverage 'held',
+        // which the settlement walk excludes until release.
         $business = World::business();
         $referrer = World::customer('+12125550993', 'Reg', 'Ular');
         [$membership] = World::membership($business, $referrer);
         $friend = World::customer('+12125550204', 'Fri', 'End');
-        [$referral] = World::referral($membership, $friend, ['hold' => true]);
+        [$referral] = World::referral($membership, $friend, [
+            'risk_score' => 50, 'risk_rules' => ['device_signal_reuse'],
+        ]);
 
         $result = app(RedemptionService::class)->redeemReferral($referral, null, '127.0.0.1');
 
-        $this->assertSame('held', $result['outcome']);
-        $this->assertSame(0, BillingEvent::count());
+        $this->assertSame('redeemed', $result['outcome']);
+        $this->assertSame(1, BillingEvent::count());
+        $this->assertSame('held', BillingEvent::firstOrFail()->coverage);
     }
 
+    // Legacy shape (§7.9): this denyReferral pin exercises the
+    // pre-Option-B referral-level drain for legacy held referrals — a
+    // shape no live path creates since the conversion — kept to prove
+    // the legacy drain still behaves (a voided referral writes no event).
     public function test_voided_referral_writes_no_event(): void
     {
         $business = World::business();
         $referrer = World::customer('+12125550992', 'Reg', 'Ular');
         [$membership] = World::membership($business, $referrer);
         $friend = World::customer('+12125550205', 'Fri', 'End');
-        [$referral] = World::referral($membership, $friend);
+        // BREAKER D-2: deny resolves a held review, so the legacy
+        // held shape this pin exercises is fixtured as held.
+        [$referral] = World::referral($membership, $friend, ['hold' => true, 'held_at' => now(), 'hold_rules' => ['device_signal_reuse']]);
 
         $service = app(RedemptionService::class);
         $this->assertTrue($service->denyReferral($referral));

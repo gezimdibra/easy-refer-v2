@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Lead;
 use App\Models\Plan;
+use App\Models\Post;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -74,7 +75,7 @@ class MarketingTest extends TestCase
         // inventory Amendment 13).
         $response->assertSee('hero-stage', false);
         $response->assertSee('Turn every customer into a referral.', false);
-        $response->assertSee('One plan. $2 when a referred friend visits. Never more than $99 a month.');
+        $response->assertSee('One plan. $2 when a referred friend visits. Never more than $99 a month in visit charges.');
         $response->assertSee('Pay Per Visit');
         $response->assertSee('$0/month, $2 per referral visit');
         // Amendment 12 (release 11): the pricing card states the
@@ -82,13 +83,13 @@ class MarketingTest extends TestCase
         // section carries the visit-that-counts definition and
         // the public bulk text rate, and the jargon sweep's word
         // appears nowhere on the page.
-        $response->assertSee('Card on file to activate; first charge after your 5 free visits');
+        $response->assertSee('Your friend reward set to activate, and your first 5 visits are free. A card keeps your code going after that; first charge after your 5 free visits');
         $response->assertSee('A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.');
         $response->assertSee('Bulk texts cost 2 cents per segment for each customer. Most short texts are one segment. One text to 100 customers costs $2.');
         $response->assertDontSee('verified');
         $response->assertSee('Ready to grow your business?');
         $response->assertSee('Nothing charged until after your first 5 free visits');
-        $response->assertSee('Get the free Referral Program Starter Kit');
+        $response->assertSee('Join the list for the free Referral Program Starter Kit');
 
         // AP-03: exactly one pricing card on the page.
         $this->assertSame(1, substr_count($response->getContent(), 'Pay Per Visit'));
@@ -106,8 +107,14 @@ class MarketingTest extends TestCase
         $response->assertSee('higher purchase amount');
         $response->assertSee('2x');
         $response->assertSee('customer retention');
-        $response->assertSee('First 5');
-        $response->assertSee('visits free');
+        // ON-STAT-1 (Amendment 31, 2026-10-27): tile 4 carries
+        // its fact as a numeral like its siblings: the value is
+        // "5" and the caption under it is "first visits free".
+        // The sentence-shaped "First 5" / "visits free" pairing
+        // is retired from the band (the band block below pins its
+        // absence); the hero bullet "First 5 visits free" is a
+        // sentence among sentences and stays (pinned above).
+        $response->assertSee('first visits free');
         $response->assertDontSee('93%');
         $response->assertDontSee('satisfaction');
 
@@ -125,9 +132,17 @@ class MarketingTest extends TestCase
         // span ends at the stories heading.
         $band = substr($html, $bandStart, strpos($html, 'Success stories') - $bandStart);
         $this->assertSame(4, substr_count($band, 'type-stat'));
-        foreach (['400+', 'new customers per year on average', '30%', 'higher purchase amount', '2x', 'customer retention', 'First 5', 'visits free'] as $stat) {
+        foreach (['400+', 'new customers per year on average', '30%', 'higher purchase amount', '2x', 'customer retention', '5', 'first visits free'] as $stat) {
             $this->assertStringContainsString($stat, $band);
         }
+        // ON-STAT-1: the tile itself changed, structurally: the
+        // stat element renders exactly the numeral "5", the old
+        // value "First 5" appears nowhere in the band, and the
+        // old caption never stands alone (the new caption
+        // contains it only as the tail of "first visits free").
+        $this->assertStringContainsString('type-stat text-text-1">5</p>', $band);
+        $this->assertStringNotContainsString('First 5', $band);
+        $this->assertStringNotContainsString('>visits free</p>', $band);
         $this->assertStringNotContainsString('$2', $band);
         $this->assertStringNotContainsString('per verified visit', $band);
         $this->assertStringNotContainsString('never more than', $band);
@@ -149,6 +164,64 @@ class MarketingTest extends TestCase
         $response->assertDontSee('$1 Per Referral');
         $response->assertDontSee('80+');
         $response->assertDontSee('retention rate');
+    }
+
+    public function test_home_story_quotes_carry_the_v1_decorative_quote_marks(): void
+    {
+        // QUOTES-01 (owner directive 2026-10-25): v1 framed its
+        // testimonials with oversized decorative quote marks
+        // (testimonials.css: serif glyphs at 4rem, brand color at
+        // 20 percent opacity, opening mark top-left, closing mark
+        // bottom-right, italic quote text). v2 carries the same
+        // pattern as a scoped class on the two story blockquotes
+        // only. The copy itself is Amendment-pinned and must stay
+        // byte-identical; the marks are CSS only.
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $html = $response->getContent();
+        $this->assertSame(2, substr_count($html, 'story-quote'));
+        $response->assertSee('<blockquote class="type-quote story-quote text-text-1">We used to spend a lot of money on Google Ads. Now our customers do the marketing for us.</blockquote>', false);
+        $response->assertSee('<blockquote class="type-quote story-quote text-text-1">I would have used Easy Refer since day 1 if it was available.</blockquote>', false);
+
+        // Scope: the auth panel's Ralston blockquote and every
+        // other view stay unmarked.
+        $auth = (string) file_get_contents(resource_path('views/layouts/auth.blade.php'));
+        $this->assertStringNotContainsString('story-quote', $auth);
+
+        // The rules live in the shipped stylesheet source.
+        $css = (string) file_get_contents(resource_path('css/app.css'));
+        $block = static function (string $selector) use ($css): ?string {
+            $pattern = '/'.preg_quote($selector, '/').'\s*\{([^}]*)\}/';
+            return preg_match($pattern, $css, $m) === 1 ? $m[1] : null;
+        };
+
+        $base = $block('.story-quote');
+        $this->assertNotNull($base, 'the scoped .story-quote rule exists');
+        $this->assertStringContainsString('position: relative', $base);
+        $this->assertStringContainsString('font-style: italic', $base, 'the v1 italic quote text');
+
+        $shared = $block('.story-quote::before, .story-quote::after');
+        $this->assertNotNull($shared, 'the shared pseudo-element rule exists');
+        foreach (['position: absolute', 'font-size: 4rem', 'opacity: 0.2', 'serif'] as $needle) {
+            $this->assertStringContainsString($needle, $shared, "both marks share the v1 treatment ({$needle})");
+        }
+
+        // The dedicated pseudo rules are anchored at line start:
+        // the bare class name also appears inside the shared
+        // rule's selector list, which must not satisfy the lookup.
+        $dedicated = static function (string $selector) use ($css): ?string {
+            $pattern = '/^\s*'.preg_quote($selector, '/').'\s*\{([^}]*)\}/m';
+            return preg_match($pattern, $css, $m) === 1 ? $m[1] : null;
+        };
+
+        $before = $dedicated('.story-quote::before');
+        $this->assertNotNull($before, 'the opening mark rule exists');
+        $this->assertStringContainsString("content: '\\201C'", $before, 'the opening mark is the typographic left double quote');
+
+        $after = $dedicated('.story-quote::after');
+        $this->assertNotNull($after, 'the closing mark rule exists');
+        $this->assertStringContainsString("content: '\\201D'", $after, 'the closing mark is the typographic right double quote');
     }
 
     public function test_home_no_longer_carries_the_faq_subset(): void
@@ -209,10 +282,32 @@ class MarketingTest extends TestCase
 
     public function test_claims_render_from_the_single_source_config(): void
     {
-        config(['claims.new_customers_per_year' => '555+', 'claims.businesses' => '777+']);
+        config(['claims.new_customers_per_year' => '555+', 'claims.higher_purchase' => '66%']);
 
         $this->get('/')->assertSee('555+')->assertDontSee('400+');
-        $this->get('/about')->assertSee('777+');
+        $this->get('/about')->assertSee('555+')->assertSee('66%');
+    }
+
+    public function test_platform_count_claims_are_removed_and_render_nowhere(): void
+    {
+        // Money fix train (coordinator ruling 2026-10-25): the
+        // two platform count claims are false at launch and are
+        // gone from the single source; no surface may render
+        // them or their captions as achieved results. The
+        // approved per-business claims stay.
+        $this->assertNull(config('claims.businesses'));
+        $this->assertNull(config('claims.successful_referrals'));
+
+        foreach (['/', '/about'] as $path) {
+            $response = $this->get($path);
+            $response->assertOk();
+            $response->assertDontSee('Businesses Empowered');
+            $response->assertDontSee('Successful Referrals');
+            $response->assertDontSee('80+');
+        }
+
+        $this->get('/')->assertSee('400+')->assertSee('new customers per year on average');
+        $this->get('/about')->assertSee('400+')->assertSee('new customers per year on average');
     }
 
     public function test_pricing_card_start_free_button_is_the_primary(): void
@@ -230,6 +325,45 @@ class MarketingTest extends TestCase
         $response->assertDontSee('$2 per referral visit');
     }
 
+    public function test_home_sections_render_in_the_move_01_order_on_alternating_grounds(): void
+    {
+        // MOVE-01 (2026-10-25, landing-section-placement study):
+        // Powerful Features sits immediately after How It Works;
+        // Real Stores and Benefits flipped grounds so the section
+        // grounds still alternate down the whole page (the pair
+        // discipline the blade comments call STEP-CONTRAST). This
+        // pins the rendered top-level section sequence as
+        // [id, ground] pairs; the HIW story's nested hiw-beat
+        // sections carry no ground class and are excluded.
+        $response = $this->get('/');
+
+        $response->assertOk();
+
+        preg_match_all('/<section\b([^>]*)>/', $response->getContent(), $matches);
+        $sequence = [];
+        foreach ($matches[1] as $attrs) {
+            if (! preg_match('/\b(bg-(?:surface-\d|ink-950))\b/', $attrs, $ground)) {
+                continue;
+            }
+            preg_match('/\bid="([^"]+)"/', $attrs, $id);
+            $sequence[] = [$id[1] ?? null, $ground[1]];
+        }
+
+        $this->assertSame([
+            [null, 'bg-surface-0'], // Hero
+            [null, 'bg-surface-1'], // Stat band
+            ['success-stories', 'bg-surface-0'],
+            ['how-it-works', 'bg-surface-1'],
+            ['demo-block', 'bg-ink-950'], // G6 demo block (Amendment 63, demo-phase1-design-pass.md Section 3): the owner-ordered second demo door sits immediately after How It Works; its dark ground keeps the alternation.
+            ['features', 'bg-surface-0'],
+            [null, 'bg-surface-1'], // Running in real stores
+            ['benefits', 'bg-surface-0'],
+            ['pricing', 'bg-surface-1'],
+            [null, 'bg-surface-0'], // Calculator
+            ['closing-cta', 'bg-ink-950'],
+        ], $sequence);
+    }
+
     public function test_calculator_is_present_with_its_inventory_labels(): void
     {
         $response = $this->get('/');
@@ -239,13 +373,13 @@ class MarketingTest extends TestCase
         // slim-down short form and the share label is five words.
         $response->assertSee('Use your own numbers: your weekly customers and your average sale. The math uses the same $2 fee and the same $99 limit.');
         $response->assertSee('How many people pay at your counter each week?');
-        $response->assertSee('Your average ticket');
+        $response->assertSee('Typical spend per visit');
         $response->assertSee('Customers who bring a friend');
         $response->assertDontSee('Share of customers who bring a friend who visits');
         $response->assertSee('Estimates from your own numbers, not our results.');
         // Amendment 12 (release 11): the honesty notes ride with
         // the estimate label.
-        $response->assertSee('The sales figure is before the rewards you hand out. Our fee, shown above, is the only charge from us.');
+        $response->assertSee('The sales figure is before the rewards you hand out. Our visit fee, shown above, is the only per-visit charge from us. Bulk texts, if you send them, cost 2 cents per segment for each customer.');
         $response->assertSee('Your first 5 visits are free. This monthly estimate does not subtract them.');
     }
 
@@ -267,16 +401,16 @@ class MarketingTest extends TestCase
             $this->assertLessThan(strpos($html, 'id="how-it-works"'), strpos($html, $objection));
             $response->assertSee($line);
             $response->assertSee($objection);
-            $response->assertSee('Free to start. $2 only when a brand-new customer visits and redeems. Never more than $99 a month.');
+            $response->assertSee('Free to start. $2 only when a brand-new customer visits and redeems. Never more than $99 a month in visit charges.');
             $response->assertSee('Your first 5 visits are free.');
             // Amendment 12 (release 11): the shared pricing card
             // carries the card bullet on the verticals too, while
             // the FAQ subset stays at indices 0 to 3, so the five
             // appended questions never render here.
-            $response->assertSee('Card on file to activate; first charge after your 5 free visits');
+            $response->assertSee('Your friend reward set to activate, and your first 5 visits are free. A card keeps your code going after that; first charge after your 5 free visits');
             $response->assertDontSee('How long does setup take?');
             $response->assertDontSee('How do I cancel?');
-            $response->assertSee('Get the free Referral Program Starter Kit');
+            $response->assertSee('Join the list for the free Referral Program Starter Kit');
             // Minimal chrome: the header carries no Site nav on a
             // paid landing (the shared footer still links About).
             $response->assertDontSee('aria-label="Site"', false);
@@ -306,6 +440,53 @@ class MarketingTest extends TestCase
         // hook and its behavior script.
         $response->assertSee('id="site-header"', false);
         $response->assertSee('site-header-hidden', false);
+    }
+
+    public function test_home_hero_demo_door_variant_d_forms_and_frozen_pair_adjacency(): void
+    {
+        // Landing integration pass, Variant D: ONE hero demo door
+        // in two geometry forms. The frozen pair ("Start free",
+        // "See how it works") renders adjacent, in order; the
+        // wide ghost sits AFTER the pair in the row and is hidden
+        // below 640px; below 640px a tertiary text link (not a
+        // button) directly under the row carries the door.
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $heroStart = strpos($html, 'mkt-hero-actions');
+        $heroEnd = strpos($html, 'mkt-hero-trust');
+        $this->assertNotFalse($heroStart);
+        $this->assertNotFalse($heroEnd);
+        $hero = substr($html, $heroStart, $heroEnd - $heroStart);
+
+        $posStart = strpos($hero, '>Start free<');
+        $posSee = strpos($hero, '>See how it works<');
+        $posGhost = strpos($hero, 'id="demo-hero-entry"');
+        $this->assertNotFalse($posStart);
+        $this->assertNotFalse($posSee);
+        $this->assertNotFalse($posGhost);
+        $this->assertLessThan($posSee, $posStart, 'The frozen pair is adjacent and in its approved order.');
+        $this->assertLessThan($posGhost, $posSee, 'The wide ghost no longer splits the frozen pair.');
+
+        // Wide form: a ghost button, hidden on phones.
+        $this->assertMatchesRegularExpression(
+            '/<a class="btn btn-demo-ghost btn-lg demo-hero-entry hidden sm:inline-flex" href="#demo-block" id="demo-hero-entry">/',
+            $hero
+        );
+
+        // Narrow form: a text link under the row, hidden at sm
+        // and up, carrying the shared hook and NO button classes
+        // (no third btn-lg exists in the phone hero).
+        $this->assertStringContainsString('<p class="mt-2 text-center sm:hidden">', $hero);
+        $this->assertMatchesRegularExpression(
+            '/<a class="demo-hero-link demo-hero-entry" href="#demo-block" id="demo-hero-entry-mobile">/',
+            $hero
+        );
+        $this->assertSame(3, substr_count($hero, 'btn-lg'), 'The hero carries exactly three btn-lg anchors: the frozen pair plus the wide ghost, which is display-hidden on phones; the narrow link is not a button.');
+        $this->assertSame(2, substr_count($html, 'Try it live</a>'), 'Exactly the two hero forms carry the entry label on the landing.');
+
+        // No other door: nav, mobile menu and sticky bar stay
+        // demo-free (Variants C and the sticky split rejected).
+        $this->assertSame(1, substr_count($html, 'id="demo-frame"'));
     }
 
     public function test_about_shows_a_real_store_photo_with_its_own_business_caption(): void
@@ -359,23 +540,35 @@ class MarketingTest extends TestCase
         $response->assertSee('Our impact');
         // S-07: the closing band renders on About too.
         $response->assertSee('Ready to grow your business?');
+        // Money fix train: Our Impact carries the approved
+        // per-business outcomes; the platform count claims
+        // (400+ businesses, 80+ referrals) are removed.
         $response->assertSee('400+');
-        $response->assertSee('Businesses Empowered');
-        $response->assertSee('80+');
-        $response->assertSee('Successful Referrals');
-        $response->assertSee('First 5');
-        $response->assertSee('visits free');
+        $response->assertSee('new customers per year on average');
+        $response->assertSee('30%');
+        $response->assertSee('higher purchase amount');
+        $response->assertDontSee('Businesses Empowered');
+        $response->assertDontSee('80+');
+        $response->assertDontSee('Successful Referrals');
+        // ON-STAT-1 (Amendment 31): the About impact counters
+        // render the same tile from the same claims key, so they
+        // take the same numeral form and cannot diverge: "5"
+        // over "first visits free", and no "First 5" tile (the
+        // string appears nowhere else on this page).
+        $response->assertSee('first visits free');
+        $response->assertSee('type-stat text-text-1">5</p>', false);
+        $response->assertDontSee('First 5');
         $response->assertDontSee('93%');
         $response->assertDontSee('Customer Satisfaction');
         $response->assertDontSee('Trusted by');
     }
 
-    public function test_faq_renders_all_twelve_questions_with_plan_amounts(): void
+    public function test_faq_renders_all_thirteen_questions_with_plan_amounts(): void
     {
         $response = $this->get('/faq');
 
         $response->assertOk();
-        foreach (['What is Easy Refer?', 'How does the QR code referral system work?', 'How much does it cost?', 'How do I track referrals?', 'Is there a setup fee?', 'Is my data secure?', 'Do I need a card to start?', 'How long does setup take?', 'Which businesses does Easy Refer fit?', 'What do rewards cost me?', 'How do I cancel?', 'What if a customer never scans the code?'] as $question) {
+        foreach (['What is Easy Refer?', 'How does the QR code referral system work?', 'How much does it cost?', 'How do I track referrals?', 'Is there a setup fee?', 'Is my data secure?', 'Do I need a card to start?', 'How long does setup take?', 'Which businesses does Easy Refer fit?', 'What do rewards cost me?', 'How do I cancel?', 'What if a customer never scans the code?', 'How long do rewards last?'] as $question) {
             $response->assertSee($question);
         }
         // S-06 order: the money questions sit together (cost,
@@ -388,17 +581,22 @@ class MarketingTest extends TestCase
         $this->assertLessThan(strpos($html, 'How long does setup take?'), strpos($html, 'Do I need a card to start?'));
         // FAQ-03 as amended: terms, then the worked example, then
         // the visit-that-counts definition last.
-        $response->assertSee('Only when a referred friend visits and redeems: $2. No monthly fee. First 5 visits free. Never more than $99 a month. Say 12 referred friends visit in a month. That is one $24 charge. In your first month, the first 5 are free. The same 12 visits cost $14 that month. A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.', false);
+        $response->assertSee('Only when a referred friend visits and redeems: $2. No monthly fee. First 5 visits free. Never more than $99 a month in visit charges. Say 12 referred friends visit in a month. That is one $24 charge. In your first month, the first 5 are free. The same 12 visits cost $14 that month. A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.', false);
         // FAQ-07 as amended: the card is the activation step, not
         // a signup field.
-        $response->assertSee('Yes. Your QR code turns on once a card is on file. Nothing is charged until after your first 5 free visits. You can cancel any time before then.');
+        // RE-DERIVED (activation redesign, census addendum
+        // C-38, FAQ-07): the card is not needed to start.
+        $response->assertSee('No. Your QR code turns on once your friend reward is set, and your first 5 visits are free with no card at all. After those, your code pauses until a card is on file. Nothing is charged until after your first 5 free visits. You can cancel any time before then.');
         $response->assertDontSee('we ask for a card when you sign up');
         // The five new answers, verbatim.
-        $response->assertSee('Minutes. Sign up in four short steps. Then set your reward, print your QR code, and add your card.');
+        $response->assertSee('Minutes. Sign up in three short steps. Then set your reward, print your QR code, and add your card.');
         $response->assertSee('Any local business customers visit in person. It is built for barbershops, salons, cafes, and boutiques. If people pay at your counter, it can work for you.');
         $response->assertSee('You choose the reward, so you choose the cost. A free coffee, a discount, whatever brings people back. You hand it out only when a referred friend redeems it. Our $2 fee is separate.');
-        $response->assertSee('Close your account any time in Settings, under Account. Billing stops after a final check of your visits. Rewards your customers already earned stay good for 30 days.');
+        $response->assertSee('End your program any time in Settings, under Account. Your code turns off right away, we charge one final bill for the visits and texts you already have, and rewards your customers already earned stay good for 30 days, or until their own use by date if that comes first. Your account stays open so you can see your history.');
         $response->assertSee('Nothing happens, and nothing is charged. You pay only when a referred friend visits and redeems a reward. Put the code where customers cannot miss it.');
+        // M-4 [M4-FAQ-13]: appended last so subset indices never
+        // move; vesting range and term render from config.
+        $response->assertSee("A friend's reward is given at their visit. The referrer's reward is ready after a short wait, 7 to 14 days, and stays good for 12 months from the day it is ready. The date is on the reward itself, and we text the referrer a reminder before it runs out.");
         $response->assertDontSee('verified');
         // S-05: the page closes with the support fallback.
         $response->assertSee('Still have a question?');
@@ -417,8 +615,10 @@ class MarketingTest extends TestCase
         $response = $this->get('/faq');
 
         $response->assertOk();
-        $response->assertSee('Only when a referred friend visits and redeems: $2. No monthly fee. First 5 visits free. Never more than $99 a month. Say 12 referred friends visit in a month. That is one $24 charge. In your first month, the first 5 are free. The same 12 visits cost $14 that month. A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.', false);
-        $response->assertSee('Yes. Your QR code turns on once a card is on file. Nothing is charged until after your first 5 free visits. You can cancel any time before then.');
+        $response->assertSee('Only when a referred friend visits and redeems: $2. No monthly fee. First 5 visits free. Never more than $99 a month in visit charges. Say 12 referred friends visit in a month. That is one $24 charge. In your first month, the first 5 are free. The same 12 visits cost $14 that month. A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.', false);
+        // RE-DERIVED (activation redesign, census addendum
+        // C-38, FAQ-07): the card is not needed to start.
+        $response->assertSee('No. Your QR code turns on once your friend reward is set, and your first 5 visits are free with no card at all. After those, your code pauses until a card is on file. Nothing is charged until after your first 5 free visits. You can cancel any time before then.');
         // The accordion's scope variable is the discriminator:
         // the layout's own menu uses x-show, but only the FAQ
         // accordion emits openItem.
@@ -493,7 +693,8 @@ class MarketingTest extends TestCase
         $response->assertSee('failed delivery caused by a system problem on our side.');
         // Item 2: the exact texting rate, rendered from the same
         // billing config as the home page's pricing section.
-        $response->assertSee('Text campaigns cost '.(int) config('billing.sms_segment_price_cents').' cents per segment for each customer');
+        $response->assertSee('Text campaigns cost '.(int) config('billing.sms_segment_price_cents').' cents per segment for each customer, sent through Twilio and charged on your monthly bill.');
+        $response->assertDontSee('charged through Twilio');
         // Item 4: one window everywhere: 30 days to raise it,
         // approved refunds issued within 7 business days.
         $response->assertSee('Disputes must be raised within 30 days');
@@ -508,7 +709,7 @@ class MarketingTest extends TestCase
         // Item 4: the legal page carries the same unified window
         // as the refund page; the old 14-day / 7-to-10-day lines
         // are gone.
-        $response->assertSee('Refund requests must be made within 30 days of payment. Approved refunds are issued within 7 business days.');
+        $response->assertSee('Refund requests under our refund policy must be made within 30 days of payment. Approved refunds are issued within 7 business days.');
         $response->assertDontSee('within 14 days of payment');
         $response->assertDontSee('7 to 10 business days');
         // Item 6: no blanket compliance certification claim; the
@@ -568,7 +769,80 @@ class MarketingTest extends TestCase
         $response->assertDontSee('Welcome to the Easy Refer blog.');
         $response->assertSee('Posts are on the way. Check back soon.');
         // DG-10: the page closes with the starter-kit block.
-        $response->assertSee('Get the free Referral Program Starter Kit');
+        $response->assertSee('Join the list for the free Referral Program Starter Kit');
+    }
+
+    /**
+     * B5 (M-6 blog week 1): the populated half of the split. With
+     * posts present the index lists them newest first with title,
+     * date, and excerpt, the empty state is gone, an unpublished
+     * post never appears, and the starter kit still closes the page.
+     */
+    public function test_blog_index_lists_published_posts_and_hides_the_empty_state(): void
+    {
+        Post::create([
+            'slug' => 'older-post',
+            'title' => 'Older Post',
+            'excerpt' => 'The older excerpt.',
+            'body' => 'Older body.',
+            'published_at' => now()->subDays(2),
+        ]);
+        $newer = Post::create([
+            'slug' => 'newer-post',
+            'title' => 'Newer Post',
+            'excerpt' => 'The newer excerpt.',
+            'body' => 'Newer body.',
+            'published_at' => now()->subDay(),
+        ]);
+        Post::create([
+            'slug' => 'draft-post',
+            'title' => 'Draft Post',
+            'excerpt' => 'The draft excerpt.',
+            'body' => 'Draft body.',
+            'published_at' => null,
+        ]);
+
+        $response = $this->get('/blog');
+
+        $response->assertOk();
+        $response->assertSee('You will find helpful tips, success stories, and insights into how referral programs can boost small business growth.');
+        $response->assertDontSee('Posts are on the way. Check back soon.');
+        $response->assertSeeInOrder(['Newer Post', 'Older Post']);
+        $response->assertSee($newer->published_at->format('M j, Y'));
+        $response->assertSee('The newer excerpt.');
+        $response->assertSee(route('blog.post', ['slug' => 'newer-post']), false);
+        $response->assertDontSee('Draft Post');
+        $response->assertDontSee('The draft excerpt.');
+        // The starter kit block still closes the index page.
+        $response->assertSee('Join the list for the free Referral Program Starter Kit');
+    }
+
+    /**
+     * B2 (M-6 blog week 1): the sitemap gains one URL per published
+     * post and keeps unpublished posts out, both directions.
+     */
+    public function test_sitemap_includes_published_posts_and_excludes_unpublished(): void
+    {
+        Post::create([
+            'slug' => 'listed-post',
+            'title' => 'Listed Post',
+            'excerpt' => 'Listed excerpt.',
+            'body' => 'Listed body.',
+            'published_at' => now(),
+        ]);
+        Post::create([
+            'slug' => 'unlisted-post',
+            'title' => 'Unlisted Post',
+            'excerpt' => 'Unlisted excerpt.',
+            'body' => 'Unlisted body.',
+            'published_at' => null,
+        ]);
+
+        $response = $this->get('/sitemap.xml');
+
+        $response->assertOk();
+        $response->assertSee('<loc>'.route('blog.post', ['slug' => 'listed-post']).'</loc>', false);
+        $response->assertDontSee('unlisted-post');
     }
 
     public function test_newsletter_signup_creates_a_lead_and_queues_the_confirmation(): void
@@ -647,7 +921,7 @@ class MarketingTest extends TestCase
             'city' => 'New York',
             'state' => 'NY',
             'postal_code' => '10001',
-        ])->assertRedirect(route('dashboard'));
+        ])->assertRedirect(route('onboarding.welcome'));
 
         $business = \App\Models\Business::query()->where('name', 'Acme Cuts')->firstOrFail();
         $this->assertSame('google', $business->acq_source);

@@ -94,7 +94,8 @@ class CampaignsTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Message');
-        $response->assertSee('Send to all customers');
+        // R2 CAMP-COMPOSE: the button names the step it takes (review, not send).
+        $response->assertSee('Review before sending');
         $response->assertSee('Sending to 2 customers who agreed to receive messages.');
         $response->assertSee('Only customers who agreed to receive text messages, and who have not opted out, will receive this.');
         $response->assertSee('added by you and not yet confirmed');

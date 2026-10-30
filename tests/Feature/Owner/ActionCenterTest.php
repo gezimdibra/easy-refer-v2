@@ -168,19 +168,26 @@ class ActionCenterTest extends TestCase
         // verified here (World cannot mass-assign the user's
         // verification column, so it is pinned by force-fill,
         // the Train 1 pattern). Open: poster, card. (Train 2
-        // LV-02 extends the checklist to six and this count
-        // becomes 2 of 6.)
+        // LV-02 extends the checklist to six rows; ON-SET-2
+        // counts required steps only, so this reads 2 of 5
+        // required — the open review link is optional.)
         $owner->forceFill(['email_verified_at' => now()])->save();
 
         $page = $this->actingAs($owner)->get(route('actions.index'));
         $page->assertOk();
-        $page->assertSee('Your setup is not finished: 2 of 6 steps done.');
+        // RE-DERIVED (activation redesign, census C-24): the
+        // card is optional; required is 4.
+        $page->assertSee('Your setup is not finished: 2 of 4 required steps done.');
         $page->assertSee('Finish setup');
         $page->assertSee('href="'.route('dashboard').'"', false);
     }
 
-    public function test_reward_held_too_long_produces_its_own_row(): void
+    public function test_reward_held_too_long_folds_into_the_review_row(): void
     {
+        // Phase 2 (G5; AC-03 as amended, AC-04 retired): a hold
+        // that has waited too long is the review queue's own
+        // row carrying a stale clause — never a second row
+        // asserting the same wait (the badge counted it twice).
         $business = $this->healthyBusiness();
         $owner = World::owner($business);
         $referrer = World::customer('+12125550104', 'Rue', 'Four');
@@ -196,7 +203,9 @@ class ActionCenterTest extends TestCase
 
         $page = $this->actingAs($owner)->get(route('actions.index'));
         $page->assertOk();
-        $page->assertSee('A reward has been waiting 10 days for review.');
+        $page->assertSee('1 item is waiting for your review. One has been waiting 10 days.');
+        $page->assertDontSee('A reward has been waiting');
+        $this->assertCount(1, $page->viewData('items'));
     }
 
     public function test_resolving_the_state_removes_the_row(): void
@@ -225,9 +234,14 @@ class ActionCenterTest extends TestCase
         $this->actingAs($owner)->post(route('actions.dismiss', 'review_holds'))
             ->assertRedirect();
 
+        // Phase 2 (G3, ruling Q3): the dismissed hold is still
+        // open underneath, so the page carries the honest
+        // quiet line (AC-10) — "good standing" (AC-02) renders
+        // only when no state is open at all.
         $this->actingAs($owner)->get(route('actions.index'))
             ->assertDontSee('waiting for your review')
-            ->assertSee('✓ Account in good standing');
+            ->assertSee('Nothing new needs you right now.')
+            ->assertDontSee('Account in good standing');
 
         // A second hold is a changed state: the row resurfaces.
         $this->holdReferral($business);

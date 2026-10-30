@@ -7,6 +7,7 @@ use App\Mail\CardExpiryGuardMail;
 use App\Models\BillingEvent;
 use App\Models\Business;
 use App\Models\PaymentMethod;
+use App\Support\BillingForecast;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -42,6 +43,10 @@ class BillingForecastTest extends TestCase
     private function billableBusiness(int $events = 3): Business
     {
         $business = World::business(['free_visits_remaining' => 0]);
+        // Train A2: a charge date is named only when a charge
+        // is really expected, so the fixture carries the
+        // default card a live business would have.
+        $this->card($business, 12, 2030);
         $referrer = World::customer('+12125550989', 'Reg', 'Ular');
         [$membership] = World::membership($business, $referrer);
 
@@ -80,10 +85,41 @@ class BillingForecastTest extends TestCase
         $business = $this->billableBusiness(3);
         $owner = World::owner($business);
 
-        $line = 'Counted so far: 3 visits through October 31. Expected charge on November 1: $6.00.';
+        // Train 3.5: the World business is America/New_York, and
+        // the Nov 1, 03:00 UTC charge lands Oct 31 local, so the
+        // line names October 31 (the UTC naming this test pinned
+        // before Train 3.5 was the audit's seam 1).
+        $line = 'Counted so far: 3 visits through October 31. Expected charge on October 31: $6.00.';
 
         $this->actingAs($owner)->get(route('settings.billing'))->assertOk()->assertSee($line);
         $this->actingAs($owner)->get(route('dashboard'))->assertOk()->assertSee($line);
+    }
+
+    // Truth sweep 2026-10-30, item 2j rider: lineFrom()'s legacy
+    // fallback arm (a preview without total_cents, rendered from
+    // accrued_cents alone, bypassing chargeIsExpected()) is dead
+    // code on live paths — both partial callers pass
+    // gatedPreview() output, which always carries total_cents.
+    // The legacy shape must now render NOTHING, while the gated
+    // shape keeps rendering exactly as before.
+    public function test_line_from_returns_null_for_a_legacy_preview_without_total_cents(): void
+    {
+        Carbon::setTestNow('2026-10-25 12:00:00');
+
+        $this->assertNull(BillingForecast::lineFrom([
+            'accrued_cents' => 1800,
+            'billable_events' => 9,
+        ], now()));
+
+        $line = BillingForecast::lineFrom([
+            'billable_events' => 1,
+            'visit_cents' => 200,
+            'text_cents' => 0,
+            'total_cents' => 200,
+        ], now());
+        $this->assertNotNull($line);
+        $this->assertStringContainsString('Counted so far: 1 visit', $line);
+        $this->assertStringContainsString('$2.00', $line);
     }
 
     public function test_no_accrual_no_forecast_line(): void
@@ -140,15 +176,21 @@ class BillingForecastTest extends TestCase
     {
         Mail::fake();
         Carbon::setTestNow('2026-10-25 12:00:00');
-        $business = World::business(['square_customer_id' => 'sq_fc']);
-        $this->card($business, 10, 2026);
+        // Train A2 (F-15): the guard also needs a charge
+        // really coming; the fixture accrues billable visits.
+        $business = $this->billableBusiness(3);
+        $business->forceFill(['square_customer_id' => 'sq_fc'])->save();
+        // The fixture's default card, re-dated to expire before
+        // the next charge (a second card row would collide).
+        PaymentMethod::query()->where('business_id', $business->id)
+            ->update(['exp_month' => 10, 'exp_year' => 2026]);
         $owner = World::owner($business);
         $owner->forceFill(['email_verified_at' => now()])->save();
 
         // The Action Center row (AC-08).
         $this->actingAs($owner)->get(route('actions.index'))
             ->assertOk()
-            ->assertSee('Your card expires before your next charge on November 1. Replace it so the charge goes through.')
+            ->assertSee('Your card expires before your next charge on October 31. Replace it so the charge goes through.')
             ->assertSee('Replace card');
 
         // The guard email, once per cycle (Oct 25 is inside the

@@ -91,14 +91,26 @@ class FlowBranchTest extends TestCase
         $this->beginEnrollment($business, $qrToken);
         $this->assertCount(1, $this->verify->starts);
 
-        // Inside the 60-second cooldown: a notice, no provider call.
+        // Inside the 60-second cooldown: no provider call, and
+        // (RC-6, VOL-3) the notice tells the truth — a wait, not
+        // a send. This assertion previously pinned the defective
+        // behaviour itself: it expected the "We sent you a new
+        // code" claim in exactly the state where nothing is
+        // sent. The exact-seconds pins live in Vol3TruthFixTest
+        // (frozen time); here the wait sentence's tail and the
+        // false claim's absence are pinned.
         $this->post(route('refer.verify.resend'))->assertRedirect(route('refer.verify'));
-        $this->get(route('refer.verify'))->assertSee('We sent you a new code');
+        $this->get(route('refer.verify'))
+            ->assertSee('before asking for a new code.')
+            ->assertDontSee('We sent you a new code');
         $this->assertCount(1, $this->verify->starts);
 
         $this->travel(61)->seconds();
         $this->post(route('refer.verify.resend'))->assertRedirect(route('refer.verify'));
         $this->assertCount(2, $this->verify->starts);
+        // After the cooldown the send is real, so the sent
+        // claim is true — and only here does it render.
+        $this->get(route('refer.verify'))->assertSee('We sent you a new code. It can take a minute to arrive.');
 
         // The fresh code starts a fresh check budget.
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect(route('refer.share'));
@@ -366,10 +378,13 @@ class FlowBranchTest extends TestCase
         $original = Customer::query()->firstOrFail();
 
         $referrer = World::customer('+12125550888', 'Ola', 'Nord');
-        [, $shareToken] = World::membership($business, $referrer);
+        [$refMembership, $shareToken] = World::membership($business, $referrer);
+        // RT-2: the referrer's link predates the claim by more
+        // than the 25-minute scan-to-claim gap.
+        $refMembership->forceFill(['created_at' => now()->subHour()])->saveQuietly();
 
         $this->carry($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'New', 'last_name' => 'Number', 'phone' => '2125550333',
+            'first_name' => 'New', 'last_name' => 'Number', 'phone' => '2125550333', 'consent' => '1',
         ])->assertRedirect(route('refer.verify')));
         $this->post(route('refer.verify.check'), ['code' => '123456'])->assertRedirect();
 
@@ -394,7 +409,7 @@ class FlowBranchTest extends TestCase
         // same canonical address (the Section 4.1 canonical rule:
         // case-insensitive, plus tags ignored).
         $this->carry($this->post(route('refer.friend.claim', ['token' => $shareToken]), [
-            'first_name' => 'Reg', 'last_name' => 'Ular', 'phone' => '2125550444',
+            'first_name' => 'Reg', 'last_name' => 'Ular', 'phone' => '2125550444', 'consent' => '1',
             'email' => 'Reg+friend@gmail.com',
         ])->assertRedirect(route('refer.verify')));
 

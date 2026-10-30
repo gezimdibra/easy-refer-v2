@@ -158,7 +158,10 @@ class MonthlyChargerCampaignLegTest extends TestCase
         $this->assertCount(50, $lineItems);
         $this->assertSame('Text campaigns', $lineItems[49]['name']);
         $this->assertSame(500, $lineItems[49]['amount_cents']);
-        $this->assertSame(49, BillingEvent::query()->where('billing_record_id', $record->id)->count());
+        $this->assertSame(49, BillingEvent::query()->where('billing_record_id', $record->id)->where('coverage', 'billable')->count());
+        // FE-BILL-01: the 11 over-cap rows are claimed too
+        // (statement counts); they add nothing to the charge.
+        $this->assertSame(60, BillingEvent::query()->where('billing_record_id', $record->id)->count());
         foreach ($rows as $row) {
             $this->assertSame($record->id, $row->fresh()->billing_record_id);
         }
@@ -268,7 +271,11 @@ class MonthlyChargerCampaignLegTest extends TestCase
             ->get(route('settings.billing.statement', $record));
 
         $response->assertOk();
-        $response->assertSee('Text campaigns: $6.00');
-        $response->assertSee('Charge: $6.00');
+        // BS-3 receipt shape: the texts row leads with the
+        // claimed $6.00, the visit rows collapse to the single
+        // line, and the charge/total carry the record amount.
+        $response->assertSee('Text campaigns:');
+        $response->assertSee('No referral visits in this charge.');
+        $this->assertGreaterThanOrEqual(2, substr_count($response->getContent(), '$6.00'));
     }
 }

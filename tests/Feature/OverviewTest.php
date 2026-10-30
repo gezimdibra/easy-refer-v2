@@ -48,7 +48,12 @@ class OverviewTest extends TestCase
         $response->assertOk()
             ->assertSee('Welcome to Easy Refer, '.$business->name.'.', false)
             // The greeting's designed second sentence (F-09d).
-            ->assertSee('Your program is live. The first step is getting your code where customers can see it.')
+            // Amendment 40: this fixture's rewards are unset, so
+            // the flow is NOT live on the card alone (finding
+            // F-2) — the not-live line renders instead, and the
+            // live line is absence-pinned here.
+            ->assertDontSee('Your program is live.')
+            ->assertSee('Your program is not live yet. Finish setup and your code starts working.')
             // The action card's designed line and text actions (F-09c).
             ->assertSee('Posters at the register get scanned. Posters in a drawer do not.')
             // DASH-18 (Train 2 LV-02 micro-unit): the row is
@@ -58,10 +63,10 @@ class OverviewTest extends TestCase
             ->assertSee('Print your QR code')
             // PACK-00: the starter pack card shows while rewards
             // hold defaults, with the type's packs and cost notes.
-            ->assertSee('Start from a pack owners like you use')
-            ->assertSee('You can edit both rewards after picking.')
-            ->assertSee('10 percent off your first visit')
-            ->assertSee('Typical cost: The safe default pair.')
+            ->assertSee('Start from a ready-made pack')
+            ->assertSee('You can edit the reward after picking.')
+            ->assertSee('20% off')
+            ->assertSee('Typical cost: The safe default.')
             ->assertSee('Use this pack')
             // The invented defaults editor is gone (F-07).
             ->assertDontSee('Your starter rewards')
@@ -76,15 +81,19 @@ class OverviewTest extends TestCase
             // in every state, and the tile links to the list.
             ->assertSee('Rewards waiting to be claimed')
             // The checklist: six items since Train 2 LV-02
-            // (DASH-16/17 joined), a progress line (F-09b).
-            ->assertSee('1 of 6 done')
-            ->assertSee('Add a card (required to activate your QR code)')
+            // (DASH-16/17 joined), a progress line (F-09b) that
+            // counts required steps only since ON-SET-2.
+            // RE-DERIVED (activation redesign, census C-24 +
+            // ACT-CHK-01): required is 4 and the card row's
+            // label names what the card now does.
+            ->assertSee('1 of 4 required steps done')
+            ->assertSee('Add a card (keeps your code on after your free visits)')
             // The Value panel's zero variant (VAL-01, VAL-03): no
             // estimate, no illustrative numbers.
             ->assertSee('What Easy Refer brought you')
             ->assertSee('After your first visit counts, this panel shows what Easy Refer brought you')
-            ->assertSee('Estimates use your average ticket of $50.00')
-            ->assertDontSee('Estimated first-visit sales');
+            ->assertSee('Estimates use your typical spend per visit of $50.00')
+            ->assertDontSee('first-visit sales');
     }
 
     public function test_owner_shell_renders_the_help_link(): void
@@ -119,35 +128,34 @@ class OverviewTest extends TestCase
         $dashboard = $this->actingAs($owner)->get(route('dashboard'));
         $dashboard->assertSee('Use this pack');
 
+        // OR-1: a pack is ONE reward; the prefill carries the
+        // single pack_reward key and fills the one field.
         $prefillUrl = route('settings.rewards', [
-            'pack_friend' => '10 percent off your first visit',
-            'pack_referrer' => '10 percent off your next visit',
+            'pack_reward' => '20% off',
         ]);
-        $dashboard->assertSee('pack_friend=', false);
+        $dashboard->assertSee('pack_reward=', false);
 
         $this->actingAs($owner)->get($prefillUrl)
             ->assertOk()
-            ->assertSee('value="10 percent off your first visit"', false)
-            ->assertSee('value="10 percent off your next visit"', false);
+            ->assertSee('value="20% off"', false);
 
         // Nothing was written by choosing the pack.
         $business->refresh();
         $this->assertNull($business->friend_reward_text);
         $this->assertNull($business->referrer_reward_text);
 
-        // Submitting the settings form saves the pair, and the
-        // card leaves the Overview.
+        // Submitting the settings form saves the one reward
+        // (UNIFIED), and the card leaves the Overview.
         $this->actingAs($owner)->post(route('settings.rewards.update'), [
-            'friend_reward_text' => '10 percent off your first visit',
-            'referrer_reward_text' => '10 percent off your next visit',
+            'friend_reward_text' => '20% off your first visit',
             'redemption_window_days' => 30,
             'reward_vesting_days' => 14,
         ])->assertSessionHas('status', 'Rewards saved.');
 
         $business->refresh();
-        $this->assertSame('10 percent off your first visit', $business->friend_reward_text);
+        $this->assertSame('20% off your first visit', $business->friend_reward_text);
         $this->actingAs($owner)->get(route('dashboard'))
-            ->assertDontSee('Start from a pack owners like you use');
+            ->assertDontSee('Start from a ready-made pack');
     }
 
     public function test_populated_overview_value_panel_reconciles(): void
@@ -170,11 +178,11 @@ class OverviewTest extends TestCase
         $response->assertOk()
             // VAL-02 verbatim, with correct number agreement.
             ->assertSee('2 visits counted this month')
-            // 2 visits x $50 average ticket = $100.00 estimated.
-            ->assertSee('About $100.00 in first-visit sales (estimate)')
+            // 2 visits x $50 typical spend per visit = $100.00 estimated.
+            ->assertSee('About $100.00 in estimated sales, based on your typical spend per visit (estimate)')
             // First five visits are free: fees are exactly zero and
             // they reconcile with the billing rows.
-            ->assertSee('Fees so far this month: $0.00')
+            ->assertSee('Visit fees so far this month: $0.00')
             ->assertDontSee('After your first visit counts');
     }
 

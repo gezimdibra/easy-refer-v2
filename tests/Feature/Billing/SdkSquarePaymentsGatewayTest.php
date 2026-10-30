@@ -219,4 +219,57 @@ class SdkSquarePaymentsGatewayTest extends TestCase
         $this->assertFalse($result->succeeded);
         $this->assertSame('square_not_configured', $result->errorCode);
     }
+
+    /**
+     * FE-BILL-01: a record also claims the month's free and
+     * over-cap coverage rows (for its statement), but a
+     * sweeper resolution must rebuild the ORIGINAL charge:
+     * its order line items are the billed visits only, so
+     * they still sum to the record's amount.
+     */
+    public function test_resolve_charge_line_items_are_the_billed_visits_only(): void
+    {
+        $business = World::business(['square_customer_id' => 'sq_cust_1']);
+        $card = $this->cardFor($business);
+        $record = \App\Models\BillingRecord::create([
+            'business_id' => $business->id,
+            'kind' => \App\Models\BillingRecord::KIND_PER_REFERRAL_BATCH,
+            'amount_cents' => 200,
+            'currency' => 'USD',
+            'idempotency_key' => 'perref_'.$business->id.'_2026-09-30_1',
+            'payment_method_id' => $card->id,
+            'state' => \App\Models\BillingRecord::STATE_PENDING,
+            'period_start' => '2026-09-03',
+            'period_end' => '2026-09-24',
+        ]);
+
+        $referrer = World::customer('+12125550986', 'Reg', 'Ular');
+        [$membership] = World::membership($business, $referrer);
+        foreach (['free_credit', 'billable', 'over_cap'] as $i => $coverage) {
+            $friend = World::customer('+121255500'.(70 + $i), 'Fri', 'End');
+            [$referral] = World::referral($membership, $friend);
+            \App\Models\BillingEvent::create([
+                'business_id' => $business->id,
+                'referral_id' => $referral->id,
+                'billing_record_id' => $record->id,
+                'amount_cents' => 200,
+                'coverage' => $coverage,
+            ]);
+        }
+
+        $transport = new QueuedSquareTransport([
+            $this->jsonResponse(['order' => ['id' => 'sq_order_9', 'version' => 1, 'location_id' => 'sq_location_1']]),
+            $this->jsonResponse(['payment' => ['id' => 'sq_payment_9', 'status' => 'COMPLETED']]),
+        ]);
+        $gateway = new SdkSquarePaymentsGateway($transport);
+
+        $result = $gateway->resolveCharge($record);
+
+        $this->assertNotNull($result);
+        $this->assertTrue($result->succeeded);
+        $orderBody = json_decode((string) $transport->requests[0]->getBody(), true);
+        $this->assertCount(1, $orderBody['order']['line_items']);
+        $paymentBody = json_decode((string) $transport->requests[1]->getBody(), true);
+        $this->assertSame(200, $paymentBody['amount_money']['amount']);
+    }
 }

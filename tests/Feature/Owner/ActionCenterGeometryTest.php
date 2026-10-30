@@ -4,7 +4,6 @@ namespace Tests\Feature\Owner;
 
 use App\Models\PaymentMethod;
 use App\Models\Referral;
-use App\Models\ReferralEvent;
 use App\Models\SmsCampaign;
 use App\Models\SmsCampaignRecipient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,16 +60,14 @@ class ActionCenterGeometryTest extends TestCase
         $owner = World::owner($business);
         $owner->forceFill(['email_verified_at' => now()])->save();
 
-        // Close the checklist's test-referral and poster steps
-        // so the remaining open step is the review link alone;
-        // the row set below does not depend on which steps are
-        // open, only on the count staying under the total.
+        // Close the checklist's test-referral step, and leave
+        // the poster step — a REQUIRED step — open, so the
+        // unfinished-checklist row is in the measured set.
+        // (ON-SET-2 pin move: the fixture used to leave the
+        // review link as the only open step; an open OPTIONAL
+        // step alone no longer produces the setup row, by
+        // design, so the row set shrank to four.)
         World::membership($business, World::customer($owner->phone_e164));
-        ReferralEvent::create([
-            'business_id' => $business->id,
-            'event_type' => 'poster_downloaded',
-            'actor' => 'owner',
-        ]);
 
         PaymentMethod::create([
             'business_id' => $business->id,

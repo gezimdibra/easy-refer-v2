@@ -50,12 +50,15 @@ class QrDownloadTest extends TestCase
 
         // F-06 (coordinator ruling, Train 1 fix round): the
         // mini-poster is a print artifact this release, so its
-        // action says Print, sibling-consistent with the other
-        // poster actions; "Download" promised a file that
-        // never came (the T2-F5 mismatch class). Shareable
-        // raster images are decided once in Train 3 (QRK-08).
-        $page->assertSee('Print mini-poster');
+        // action says Print; "Download" promised a file that
+        // never came (the T2-F5 mismatch class). P3 MIX-4: the
+        // mini-poster now sits in the Also available rows, its
+        // action a plain "Print" beside its name; the old
+        // "Print mini-poster" button label is retired (pinned
+        // absent in QrPosterMixTest).
+        $page->assertSee('Mini-poster');
         $page->assertDontSee('Download mini-poster');
+        $page->assertDontSee('Print mini-poster');
         $page->assertSee('/qr/poster/mini?print=1', false);
         $page->assertSee('Download code only (for your own designs)');
         $page->assertDontSee('Download QR code');
@@ -74,11 +77,16 @@ class QrDownloadTest extends TestCase
         $text = (string) preg_replace('/\s+/', ' ', $text);
 
         $this->assertStringContainsString('Business 1', $text);
-        $this->assertStringContainsString('Get $10 off your first visit', $text);
-        $this->assertStringContainsString('Give $10 off. Get $10 off when your friend visits.', $text);
+        // Amendment 58 [REF-POSTER-04]: the mini-poster headline
+        // is the poster composer output (the give/get sentence);
+        // the friend reward text rides inside it verbatim and the
+        // old "Get {reward-alone}" form stays absent.
+        $this->assertStringContainsString($business->friendRewardHeadline(), $text);
+        $this->assertStringNotContainsString('Get '.$business->friendRewardHeadline(), $text);
+        $this->assertStringContainsString($business->posterHeadline(), $text);
         $this->assertStringContainsString('YOUR REWARD', $text);
-        $this->assertStringContainsString('Scan to join', $text);
-        $this->assertStringContainsString('Free to join. Rewards for sharing.', $text);
+        $this->assertStringContainsString('Scan to share', $text);
+        $this->assertStringContainsString('Rewards for sharing.', $text);
         $this->assertStringNotContainsString('1. Scan', $text);
         $this->assertStringNotContainsString('No app to install', $text);
         $response->assertSee('poster-halo', false);
@@ -111,14 +119,23 @@ class QrDownloadTest extends TestCase
 
         $page = $this->actingAs($owner)->get(route('owner.qr'))->assertOk();
 
-        // One print action per variant (screen, counter, window,
-        // tent, receipt), each opening its poster page in print mode.
-        $this->assertSame(5, substr_count($page->getContent(), 'Print poster'));
-        foreach (['screen', 'counter', 'window', 'tent', 'receipt'] as $variant) {
+        // P3 MIX grammar: every print action names its artifact.
+        // The counter print URL appears twice by design (the
+        // Start here action and the counter row, M-3 href
+        // identity); the mini rides the Also available row with
+        // a plain "Print". Amendment 31 [ON-QR-1]: the screen
+        // variant is retired, so its print URL is absent (its
+        // 404 is pinned in QrSpotRenameTest).
+        $page->assertSee('Print this poster');
+        $page->assertSee('Print the counter poster');
+        $page->assertSee('Print the window poster');
+        $page->assertSee('Print the table tent');
+        $page->assertSee('Print the receipt card');
+        foreach (['counter', 'window', 'tent', 'receipt', 'mini'] as $variant) {
             $page->assertSee('/qr/poster/'.$variant.'?print=1', false);
         }
-        $page->assertSee('Table tent, two faces');
-        $page->assertSee('Receipt / thank-you card');
+        $page->assertDontSee('/qr/poster/screen?print=1', false);
+        $this->assertSame(2, substr_count($page->getContent(), '/qr/poster/counter?print=1'));
 
         // No poster link still promises a download that never comes.
         $page->assertDontSee('> Download</a>', false);
@@ -133,16 +150,18 @@ class QrDownloadTest extends TestCase
         $page = $this->actingAs($owner)->get(route('owner.qr'))->assertOk();
         $html = $page->getContent();
 
-        // F-05: at phone width the desktop row (thumb + flex-1
-        // label + button on one line) squeezed the labels into
-        // word-per-line stacks. The list now stacks per row on
-        // mobile (thumb + label on one line, the print action
-        // full-width below) and returns to the desktop row at
-        // sm and up. The structure is the check: five rows, each
-        // carrying the stacked-column mobile layout with the
-        // sm row restore, and five full-width mobile actions.
-        $this->assertSame(5, substr_count($html, 'poster-row'));
-        $this->assertSame(5, substr_count($html, 'flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4'));
-        $this->assertSame(5, substr_count($html, 'w-full justify-center sm:w-auto'));
+        // P3 MIX-2: the old five-row poster list (and its F-05
+        // row structure) is retired; the by-spot panel carries
+        // four placement rows, each with its named print link.
+        // F-05's phone-width concern (labels squeezed, actions
+        // cramped) is carried forward by QrPosterMixGeometryTest:
+        // every action at least 44px tall and zero overlaps at
+        // 390 and 375 in the real rig.
+        $this->assertSame(4, substr_count($html, 'data-placement='));
+        foreach (['counter', 'window', 'table', 'receipt'] as $placement) {
+            $this->assertStringContainsString('data-placement="'.$placement.'"', $html);
+        }
+        $page->assertSee('Print by spot');
     }
+
 }

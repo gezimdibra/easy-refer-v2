@@ -65,18 +65,35 @@ class PosterAudienceTest extends TestCase
 
             // The scan instruction speaks to the person holding
             // the phone, in the second person.
+            // Amendment 58 [REF-POSTER-04]: the old subline
+            // ("Scan this code to join and start referring.")
+            // is retired with the banned word; the second-
+            // person instruction is now the CTA under the code
+            // and the headline itself, pinned here in its place.
             $this->assertStringContainsString(
-                'Scan this code to join and start referring.',
+                'Scan to share',
                 $text,
                 "Poster variant [{$variant}] lost its second-person scan instruction."
             );
-
-            // The reward headline (the customer-addressed line
-            // composed by Business::friendRewardHeadline()) stays.
             $this->assertStringContainsString(
-                'Get $10 off your first visit',
+                $business->posterHeadline(),
+                $text,
+                "Poster variant [{$variant}] lost its composed headline."
+            );
+
+            // The reward headline is the reward itself, exactly
+            // as composed by Business::friendRewardHeadline()
+            // (release 37: the printed poster loses the generated
+            // "Get " prefix too, matching release 35's flow fix).
+            $this->assertStringContainsString(
+                $business->friendRewardHeadline(),
                 $text,
                 "Poster variant [{$variant}] lost its reward headline."
+            );
+            $this->assertStringNotContainsString(
+                'Get '.$business->friendRewardHeadline(),
+                $text,
+                "Poster variant [{$variant}] still prefixes its headline with \"Get\"."
             );
 
             $this->assertStringContainsString(
@@ -109,8 +126,15 @@ class PosterAudienceTest extends TestCase
                 );
             }
 
-            $this->assertStringContainsString('Get $10 off your first visit', $text);
-            $this->assertStringContainsString('Scan to join', $text);
+            // Release 37: headline equals the composer output
+            // verbatim, with no "Get " prefix (tent + both receipt
+            // sheets render this same headline).
+            $this->assertStringContainsString($business->friendRewardHeadline(), $text);
+            $this->assertStringNotContainsString('Get '.$business->friendRewardHeadline(), $text);
+            // Amendment 58: the CTA is "Scan to share" (the
+            // banned "Scan to join" is pinned absent in
+            // PosterCopyRulingTest, both configurations).
+            $this->assertStringContainsString('Scan to share', $text);
         }
     }
 }

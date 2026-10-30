@@ -2,13 +2,17 @@
 
 namespace Tests\Feature\Billing;
 
+use App\Contracts\SquarePaymentsGateway;
 use App\Models\BillingEvent;
 use App\Models\BillingRecord;
 use App\Models\BillingRefund;
 use App\Models\Business;
 use App\Models\Membership;
 use App\Models\PaymentMethod;
+use App\Models\Plan;
+use App\Services\Billing\MonthlyCharger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Fakes\FakeSquarePaymentsGateway;
 use Tests\Support\World;
 use Tests\TestCase;
 
@@ -22,14 +26,33 @@ use Tests\TestCase;
  * (the persisted coverage ledger), and the value line is the
  * period estimate, labeled as one, never sharing a line with
  * an exact charge figure.
+ *
+ * FE-BILL-01: the September fixture record is produced by
+ * running MonthlyCharger over real settled visits, never by
+ * hand-linking events to a record — the hand-linked fixture
+ * is exactly what let the statement's free/over-cap lines
+ * ship structurally zero (the charger claimed billable
+ * events only, so no real record ever carried the coverage
+ * rows the old fixture invented).
  */
 class BillingStatementTest extends TestCase
 {
     use RefreshDatabase;
 
+    private FakeSquarePaymentsGateway $gateway;
+
     private int $friendSequence = 9000;
 
     private int $keySequence = 0;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->gateway = new FakeSquarePaymentsGateway;
+        $this->app->instance(SquarePaymentsGateway::class, $this->gateway);
+        config(['billing.charges_enabled' => true]);
+    }
 
     private function membership(Business $business): Membership
     {
@@ -69,7 +92,7 @@ class BillingStatementTest extends TestCase
         ], $overrides));
     }
 
-    private function event(Business $business, Membership $membership, BillingRecord $record, string $coverage, string $at): BillingEvent
+    private function visit(Business $business, Membership $membership, string $at): BillingEvent
     {
         $friend = World::customer('+1212555'.str_pad((string) $this->friendSequence++, 4, '0', STR_PAD_LEFT), 'Fri', 'End');
         [$referral] = World::referral($membership, $friend);
@@ -77,9 +100,7 @@ class BillingStatementTest extends TestCase
         $event = BillingEvent::create([
             'business_id' => $business->id,
             'referral_id' => $referral->id,
-            'billing_record_id' => $record->id,
             'amount_cents' => 200,
-            'coverage' => $coverage,
         ]);
         $event->forceFill(['created_at' => $at])->save();
 
@@ -87,20 +108,39 @@ class BillingStatementTest extends TestCase
     }
 
     /**
-     * A September record with the full coverage mix: two
-     * charged visits, one free-credit visit, one over-cap
-     * visit recorded free.
+     * A September record with the full coverage mix, produced
+     * by the production path: one free-credit visit, two
+     * charged visits, one over-cap visit recorded free, under
+     * a plan whose $4.00 cap the fourth visit would cross.
      */
     private function septemberRecord(Business $business): BillingRecord
     {
-        $card = $this->card($business);
-        $membership = $this->membership($business);
-        $record = $this->record($business, $card);
+        $plan = Plan::create([
+            'key' => 'statement_cap_probe',
+            'name' => 'Statement Cap Probe',
+            'model' => 'per_referral',
+            'per_referral_cents' => 200,
+            'monthly_cap_cents' => 400,
+            'active' => true,
+        ]);
+        $business->forceFill([
+            'free_visits_remaining' => 1,
+            'current_plan_id' => $plan->id,
+        ])->save();
 
-        $this->event($business, $membership, $record, 'free_credit', '2026-09-03 12:00:00');
-        $this->event($business, $membership, $record, 'billable', '2026-09-10 12:00:00');
-        $this->event($business, $membership, $record, 'billable', '2026-09-17 12:00:00');
-        $this->event($business, $membership, $record, 'over_cap', '2026-09-24 12:00:00');
+        $this->card($business);
+        $membership = $this->membership($business);
+
+        $this->visit($business, $membership, '2026-09-03 12:00:00');
+        $this->visit($business, $membership, '2026-09-10 12:00:00');
+        $this->visit($business, $membership, '2026-09-17 12:00:00');
+        $this->visit($business, $membership, '2026-09-24 12:00:00');
+
+        $record = app(MonthlyCharger::class)->charge($business->fresh());
+
+        $this->assertNotNull($record);
+        $this->assertSame(BillingRecord::STATE_SUCCEEDED, $record->state);
+        $this->assertSame(400, $record->amount_cents);
 
         return $record;
     }
@@ -132,7 +172,7 @@ class BillingStatementTest extends TestCase
         $response->assertSee('$4.00');
         $response->assertSee('Paid');
         $response->assertSee('VISA ending 5858');
-        $response->assertSee('Sep 1 to Sep 30, 2026');
+        $response->assertSee('Sep 3 to Sep 24, 2026');
         $response->assertSee('Refund: $1.00');
         $response->assertSee('Refund: $2.00 · Processing');
         $response->assertSee('View statement');
@@ -159,23 +199,26 @@ class BillingStatementTest extends TestCase
 
     public function test_statement_reconciles_counts_and_labels_the_estimate(): void
     {
-        $business = World::business(['billing_status' => 'active', 'free_visits_remaining' => 0]);
+        $business = World::business(['billing_status' => 'active']);
         $owner = World::owner($business);
         $record = $this->septemberRecord($business);
 
         $response = $this->actingAs($owner)->get(route('settings.billing.statement', $record));
 
         $response->assertOk();
-        // The charge itself, exact, on its own line.
-        $response->assertSee('Charge: $4.00');
-        // Coverage counts from the record's own ledger.
+        // The charge itself, exact: the BS-1 tile and the BS-2
+        // total row both carry the record amount ($4.00).
+        $response->assertSee('tile-value', false);
+        $this->assertGreaterThanOrEqual(2, substr_count($response->getContent(), '$4.00'));
+        // Coverage counts from the record's own ledger: the
+        // charger claimed all three classes under the record.
         $response->assertSee('Visits charged: 2');
         $response->assertSee('Free visits used: 1');
         $response->assertSee('Visits past the monthly cap, recorded free: 1');
         // The period estimate: 4 visits at the $50 average ticket.
         $response->assertSee('What those visits were worth (estimate): $200.00');
         $response->assertSee('Amounts are in US dollars. Charges are handled by Square.');
-        $response->assertSee('Sep 1 to Sep 30, 2026');
+        $response->assertSee('Sep 3 to Sep 24, 2026');
     }
 
     public function test_statement_is_owner_scoped_and_succeeded_only(): void

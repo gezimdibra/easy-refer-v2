@@ -74,7 +74,7 @@ class CustomersTest extends TestCase
         ]);
 
         $response->assertRedirect(route('customers.index'));
-        $response->assertSessionHas('status', 'Customer added. Their referral link is on its way by text.');
+        $response->assertSessionHas('status', 'Customer added. A confirmation text is on its way; their referral link follows when they reply YES.');
 
         $customer = Customer::query()->where('phone_e164', '+12125550221')->firstOrFail();
         $membership = Membership::query()

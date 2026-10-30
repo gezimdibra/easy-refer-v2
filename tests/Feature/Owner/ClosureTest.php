@@ -157,7 +157,7 @@ class ClosureTest extends TestCase
             'code' => \App\Support\Totp::code('JBSWY3DPEHPK3PXP'),
         ])->assertRedirect(route('dashboard'));
 
-        $this->get(route('dashboard'))->assertOk()->assertSee('Your account is closed.');
+        $this->get(route('dashboard'))->assertOk()->assertSee('Your program has ended.');
     }
 
     public function test_closed_business_is_read_only_and_enrollment_stops(): void
@@ -171,7 +171,7 @@ class ClosureTest extends TestCase
             ->post(route('settings.account.close'), ['confirm' => '1']);
 
         // Reads still work (the wind-down login).
-        $this->actingAs($owner)->get(route('dashboard'))->assertOk()->assertSee('Your account is closed.');
+        $this->actingAs($owner)->get(route('dashboard'))->assertOk()->assertSee('Your program has ended.');
         $this->actingAs($owner)->get(route('customers.index'))->assertOk();
 
         // Writes are refused.

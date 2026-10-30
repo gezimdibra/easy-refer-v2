@@ -3,6 +3,7 @@
 namespace Tests\Feature\Owner;
 
 use App\Models\BillingRecord;
+use App\Models\Business;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\World;
 use Tests\TestCase;
@@ -20,12 +21,30 @@ class PastDueGateTest extends TestCase
 
     private const LINE = 'A payment failed. Please update your card to keep billing current.';
 
-    private const GRACE = 'Your QR code and customer links keep working during the grace period.';
+    // The fixture seeds the real webhook shape: the failed
+    // record AND its billing.past_due audit row (SquareWebhook
+    // Handler writes both in one transaction), so the episode
+    // dates from the audit row and the line names that
+    // grace-end date; the retired dateless grace line never
+    // renders. (Two-key Finding 1 fix, 2026-10-30: the earlier
+    // fixture seeded no audit row and relied on the failed
+    // record to date the episode — that unbound fallback is
+    // removed; an audit-missing episode fails closed instead,
+    // pinned in FlowStateTruthTest.)
+    private function graceLine($business): string
+    {
+        $graceEnd = $business->fresh()->dunningGraceEndsAt();
+        $this->assertNotNull($graceEnd);
+
+        return 'Your QR code keeps working until '
+            .$business->localTime($graceEnd)->format('F j, Y')
+            .'. Update your card by then to keep it on.';
+    }
 
     private function pastDueBusiness()
     {
         $business = World::business(['billing_status' => 'past_due']);
-        BillingRecord::create([
+        $record = BillingRecord::create([
             'business_id' => $business->id,
             'kind' => BillingRecord::KIND_PER_REFERRAL_BATCH,
             'state' => BillingRecord::STATE_FAILED,
@@ -35,18 +54,21 @@ class PastDueGateTest extends TestCase
             'period_start' => now()->subMonth()->startOfMonth(),
             'period_end' => now()->subMonth()->endOfMonth(),
         ]);
+        \App\Models\AuditLog::write('billing.past_due', null, ['square_payment_id' => 'sq_past_due_gate'], $business, $record);
 
         return $business->fresh();
     }
 
     public function test_dashboard_gate_states_the_failure_once_with_the_fix_beside_it(): void
     {
-        $owner = World::owner($this->pastDueBusiness());
+        $business = $this->pastDueBusiness();
+        $owner = World::owner($business);
 
         $page = $this->actingAs($owner)->get(route('dashboard'));
         $page->assertOk();
         $page->assertSee(self::LINE);
-        $page->assertSee(self::GRACE);
+        $page->assertSee($this->graceLine($owner->business));
+        $page->assertDontSee('keep working during the grace period');
         $page->assertSee('href="'.route('settings.billing').'#card"', false);
         $page->assertDontSee('past_due');
         $this->assertSame(1, substr_count($page->getContent(), self::LINE));
@@ -54,13 +76,15 @@ class PastDueGateTest extends TestCase
 
     public function test_billing_page_states_the_failure_once_from_the_same_partial(): void
     {
-        $owner = World::owner($this->pastDueBusiness());
+        $business = $this->pastDueBusiness();
+        $owner = World::owner($business);
 
         $page = $this->actingAs($owner)->get(route('settings.billing'));
         $page->assertOk();
         $page->assertDontSee('past_due');
         $this->assertSame(1, substr_count($page->getContent(), self::LINE));
-        $this->assertSame(1, substr_count($page->getContent(), self::GRACE));
+        $this->assertSame(1, substr_count($page->getContent(), $this->graceLine($owner->business)));
+        $page->assertDontSee('keep working during the grace period');
     }
 
     public function test_active_business_dashboard_has_no_billing_gate(): void

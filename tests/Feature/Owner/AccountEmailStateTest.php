@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Owner;
 
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\VerifyEmailNotification as VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\World;
@@ -47,11 +47,13 @@ class AccountEmailStateTest extends TestCase
 
         $page = $this->actingAs($owner)->get(route('settings.account'));
         $page->assertOk();
-        $page->assertSee('Account email');
+        // R2 SET-ACCOUNT: the panel is the identity card now,
+        // headed by the business name, not "Account email".
+        $page->assertSee('signed in as the owner');
         $page->assertSee($owner->email);
         $page->assertSee('pill-warning', false);
         $page->assertSee('Not verified');
-        $page->assertSee('Your QR code and billing stay off until this email is verified.');
+        $page->assertSee('This email is not verified yet. Verify it so your receipts and password resets reach you.');
         $page->assertSee('action="'.route('verification.send').'"', false);
         $page->assertSee('Resend verification email');
         $page->assertSee('Change email');
@@ -110,7 +112,7 @@ class AccountEmailStateTest extends TestCase
         $html = $page->getContent();
 
         $this->assertSame(0, substr_count($html, '>Change email</a>'));
-        $this->assertSame(1, substr_count($html, 'Your QR code and billing stay off until this email is verified.'));
+        $this->assertSame(1, substr_count($html, 'This email is not verified yet. Verify it so your receipts and password resets reach you.'));
         $this->assertStringNotContainsString('stay off until that link is used', $html);
 
         $verified = $this->verifiedOwner();
@@ -118,7 +120,7 @@ class AccountEmailStateTest extends TestCase
         $html = $this->actingAs($verified)->get(route('security'))->assertOk()->getContent();
 
         $this->assertSame(0, substr_count($html, '>Change email</a>'));
-        $this->assertSame(0, substr_count($html, 'Your QR code and billing stay off until this email is verified.'));
+        $this->assertSame(0, substr_count($html, 'This email is not verified yet. Verify it so your receipts and password resets reach you.'));
         $this->assertStringNotContainsString('stay off until that link is used', $html);
     }
 
@@ -132,7 +134,7 @@ class AccountEmailStateTest extends TestCase
         $html = $this->actingAs($owner)->get(route('settings.account'))->assertOk()->getContent();
 
         $this->assertSame(1, substr_count($html, '>Change email</a>'));
-        $this->assertSame(1, substr_count($html, 'Your QR code and billing stay off until this email is verified.'));
+        $this->assertSame(1, substr_count($html, 'This email is not verified yet. Verify it so your receipts and password resets reach you.'));
         $this->assertSame(1, substr_count($html, '>Resend verification email</button>'));
 
         $verified = $this->verifiedOwner();

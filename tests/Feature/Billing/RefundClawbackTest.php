@@ -251,6 +251,10 @@ class RefundClawbackTest extends TestCase
         $this->assertSame(0, ReferralEvent::query()->where('event_type', 'clawback')->count());
     }
 
+    // Legacy shape (§7.9): this denyReferral pin exercises the
+    // pre-Option-B referral-level drain for legacy held referrals — a
+    // shape no live path creates since the conversion — kept to prove
+    // the legacy drain still behaves (deny is refused after redemption).
     public function test_deny_after_redeem_is_refused_so_a_billed_visit_cannot_be_voided(): void
     {
         $business = World::business();
