@@ -30,6 +30,7 @@
                         <th scope="col" class="py-2 pr-3 font-semibold">Plan</th>
                         <th scope="col" class="py-2 pr-3 font-semibold">Customers</th>
                         <th scope="col" class="py-2 pr-3 font-semibold">Referrals completed</th>
+                        <th scope="col" class="py-2 pr-3 font-semibold">How they heard</th>
                         <th scope="col" class="py-2 font-semibold">Joined</th>
                     </tr>
                 </thead>
@@ -46,6 +47,7 @@
                             <td class="py-2 pr-3">{{ $business->currentPlan?->name ?? 'Pay Per Visit' }}</td>
                             <td class="py-2 pr-3">{{ $business->memberships_count }}</td>
                             <td class="py-2 pr-3">{{ $business->completed_referrals }}</td>
+                            <td class="py-2 pr-3">{{ \App\Support\SignupSource::effectiveLabel($business) }}@if ($business->signup_source_detail) <span class="text-text-2">({{ $business->signup_source_detail }})</span>@endif</td>
                             <td class="py-2">{{ $business->created_at->format('M j, Y') }}</td>
                         </tr>
                     @endforeach

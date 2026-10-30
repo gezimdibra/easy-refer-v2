@@ -22,9 +22,15 @@ return [
     'new_customers_per_year' => '400+',
     'higher_purchase' => '30%',
     'retention_rate' => '2x',
-    'businesses' => '400+',
-    'successful_referrals' => '80+',
-    'first_visits_free' => 'First 5',
+    // The two platform count claims ('businesses' => '400+'
+    // and 'successful_referrals' => '80+') were removed in the
+    // pre-launch money fix train (coordinator ruling
+    // 2026-10-25): rendered as achieved platform results, they
+    // are false on day one at launch, when the platform has no
+    // real businesses yet. They return here, with their
+    // renderers, only when the counts are true. The approved
+    // per-business outcome claims above stay as approved.
+    'first_visits_free' => '5',
     'founded' => 'Founded in 2023',
 
 ];

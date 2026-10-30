@@ -34,12 +34,12 @@ class EnrollmentService
      * customer and membership in one transaction, record the
      * consent projection, and write the scan and enrollment events.
      *
-     * @param  array{first_name: string, last_name: string, phone_e164: string, email: ?string, consent: bool, scan_event_pending: bool}  $input
+     * @param  array{first_name: string, last_name: string, phone_e164: string, email: ?string, consent: bool, scan_event_pending: bool}  $input (last_name is '' when the customer did not give one, F-6)
      * @return array{membership: Membership, customer: Customer, created_membership: bool, share_token: ?string}
      */
-    public function completeEnrollment(Business $business, array $input, ?string $ipAddress, ?string $deviceSignalHash, bool $recordScan): array
+    public function completeEnrollment(Business $business, array $input, ?string $ipAddress, ?string $deviceSignalHash, bool $recordScan, ?int $scanQrCodeId = null, ?string $scanPlacement = null): array
     {
-        return DB::transaction(function () use ($business, $input, $ipAddress, $deviceSignalHash, $recordScan) {
+        return DB::transaction(function () use ($business, $input, $ipAddress, $deviceSignalHash, $recordScan, $scanQrCodeId, $scanPlacement) {
             $customer = $this->findOrCreateCustomer($input, $business, $ipAddress);
 
             [$membership, $created, $shareToken] = Membership::findOrCreateWithToken($business, $customer);
@@ -47,7 +47,14 @@ class EnrollmentService
             $this->applyConsent($membership, (bool) $input['consent'], 'enrollment', $ipAddress);
 
             if ($recordScan) {
-                ReferralEvent::record('scan', 'customer', $business, null, null, $membership, [], $ipAddress, $deviceSignalHash);
+                // QRK-05: stamp which code produced this scan
+                // (id + placement), so per-placement counts on
+                // the owner's QR page derive from the events.
+                $scanMetadata = array_filter([
+                    'qr_code_id' => $scanQrCodeId,
+                    'placement' => $scanPlacement,
+                ], fn ($value) => $value !== null);
+                ReferralEvent::record('scan', 'customer', $business, null, null, $membership, $scanMetadata, $ipAddress, $deviceSignalHash);
                 $this->fireFirstScanOnce($business);
             }
 
@@ -65,11 +72,12 @@ class EnrollmentService
 
     /**
      * Complete a friend claim after verification (Step 8): integrity
-     * checks, dedupe, referral creation with risk scoring and
-     * velocity holds, all in one transaction. The outcome tells the
-     * controller which screen the friend lands on.
+     * checks, dedupe, referral creation with risk scoring recorded
+     * as data only (Option B: creation never holds; redemption
+     * converts the flags), all in one transaction. The outcome
+     * tells the controller which screen the friend lands on.
      *
-     * @param  array{first_name: string, last_name: string, phone_e164: string, email: ?string, consent: bool}  $input
+     * @param  array{first_name: string, last_name: string, phone_e164: string, email: ?string, consent: bool}  $input (last_name '' when not given, F-6)
      * @return array{kind: string, referral: ?Referral, membership: ?Membership}
      */
     public function completeClaim(Membership $referrerMembership, array $input, ?string $ipAddress, ?string $deviceSignalHash): array
@@ -114,42 +122,89 @@ class EnrollmentService
 
             ReferralEvent::record('verification_passed', 'customer', $business, null, null, $friendMembership, [], $ipAddress, $deviceSignalHash);
 
-            // Dedupe (Section 3.1): a live pending referral for this
-            // (business, friend) pair is returned as-is, whoever's
-            // link the friend arrived through. An expired one is
-            // flipped under its row lock first, freeing the slot.
-            $existing = Referral::query()
-                ->where('business_id', $business->id)
-                ->where('referred_customer_id', $friend->id)
-                ->where('state', Referral::STATE_PENDING)
-                ->lockForUpdate()
-                ->first();
+            // Dedupe (Section 3.1; BREAKER D-1, 2026-10-29): a
+            // visit counts ONCE per (business, friend) — the
+            // governing referral for the pair decides this claim,
+            // whoever's link the friend arrived through:
+            //  - redeemed: the visit already counted. The claim
+            //    resolves to that referral ('already_redeemed');
+            //    the controller lands the friend on their existing
+            //    visit page. No second referral, reward, or fee.
+            //  - live pending: returned as-is ('existing', the
+            //    shipped shape). An expired pending referral is
+            //    flipped under its row lock first, freeing the
+            //    slot: no visit ever counted, so a new claim is
+            //    legal and is created below.
+            //  - voided: the pair's claim was denied by the owner.
+            //    Deny is terminal for the pair ('denied'); a fresh
+            //    claim would defeat the deny, so none is created.
+            $governing = $this->governingReferral($business, $friend);
 
-            if ($existing !== null) {
-                if (! $existing->applyExpiry()) {
-                    return ['kind' => 'existing', 'referral' => $existing, 'membership' => $friendMembership];
-                }
+            if ($governing !== null) {
+                return ['kind' => $governing['kind'], 'referral' => $governing['referral'], 'membership' => $friendMembership];
             }
 
-            // Velocity (Section 3.1): past the referrer's daily or
-            // monthly rewarded cap, the referral is recorded, earns
-            // nothing, and waits in the review queue.
-            $velocityRule = $this->velocityBreach($business, $referrerMembership);
+            // The 25-minute gap (owner rulings 2026-10-27 and
+            // 2026-10-29): the friend's claim completes
+            // immediately at any time; the gap is enforced ONLY
+            // at redemption, inside RedemptionService. Nothing
+            // in the claim flow evaluates, names, or conditions
+            // on the window.
 
+            // Fraud-hold conversion (Option B, owner ruling
+            // 2026-10-28; V-B compute-at-redemption): claim creation
+            // NEVER holds. A velocity breach at this moment is not
+            // recorded at all — the redemption-time recheck
+            // (RedemptionService::redemptionVelocityBreach) is the
+            // authoritative velocity gate, evaluated against
+            // redeemed counts when the visit actually happens. The
+            // friend's journey from here is identical to an
+            // unflagged claim in every field and screen.
             $redeemToken = OpaqueToken::generate();
 
-            $referral = Referral::create([
-                'business_id' => $business->id,
-                'referrer_membership_id' => $referrerMembership->id,
-                'referred_customer_id' => $friend->id,
-                'redeem_token_hash' => OpaqueToken::hash($redeemToken),
-                'redeem_token_encrypted' => $redeemToken,
-                'state' => Referral::STATE_PENDING,
-                'hold' => $velocityRule !== null,
-                'hold_rules' => $velocityRule !== null ? [$velocityRule] : null,
-                'held_at' => $velocityRule !== null ? now() : null,
-                'expires_at' => now()->addDays((int) $business->redemption_window_days),
-            ]);
+            try {
+                $referral = Referral::create([
+                    'business_id' => $business->id,
+                    'referrer_membership_id' => $referrerMembership->id,
+                    'referred_customer_id' => $friend->id,
+                    // F-UP-1: snapshot the friend's promised reward
+                    // text AT CLAIM CREATION, from the same source
+                    // the claim flow itself renders at this moment:
+                    // Business::rewardText(), the trimmed resolver of
+                    // the friend_reward_text column the friend page's
+                    // "Claim {text}" line is built from (no second
+                    // derivation). This is the column's ONLY writer;
+                    // later config edits never rewrite it, so
+                    // historical surfaces can render what the friend
+                    // was promised when they claimed. Display truth
+                    // only: no money path reads this column.
+                    // Merge note (dedupe merge 2026-10-30): the
+                    // snapshot field survives inside the closer's
+                    // try/catch insert, so a concurrent winner
+                    // still resolves to the governing referral.
+                    'friend_reward_text_snapshot' => $business->rewardText(),
+                    'redeem_token_hash' => OpaqueToken::hash($redeemToken),
+                    'redeem_token_encrypted' => $redeemToken,
+                    'state' => Referral::STATE_PENDING,
+                    'hold' => false,
+                    'hold_rules' => null,
+                    'held_at' => null,
+                    'expires_at' => now()->addDays((int) $business->redemption_window_days),
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // The counted-pair unique index (migration 000039)
+                // is the data-layer backstop: a concurrent claim
+                // for this pair won the insert race. Resolve to
+                // the winner exactly as a sequential second claim
+                // would; a violation from any other cause rethrows.
+                $raced = $this->governingReferral($business, $friend);
+
+                if ($raced === null) {
+                    throw $e;
+                }
+
+                return ['kind' => $raced['kind'], 'referral' => $raced['referral'], 'membership' => $friendMembership];
+            }
 
             // The shared-IP signal compares the claim's IP with
             // the referrer's own recorded flow IP (their latest
@@ -166,38 +221,94 @@ class EnrollmentService
                 'same_ip_as_referrer' => $ipAddress !== null && $referrerIp !== null && $referrerIp === $ipAddress,
             ]);
 
-            $holdRules = $referral->hold_rules ?? [];
-
-            if ($this->risk->holdsAt($scored['score'])) {
-                $holdRules = array_values(array_unique([...$holdRules, ...$scored['rules']]));
-            }
-
+            // The risk score persists as DATA ONLY (Option B):
+            // score and rules ride on the referral so redemption
+            // can convert a holding rule (today only
+            // device_signal_reuse, at the holdsAt threshold) into
+            // a held reward + held billing coverage. No hold
+            // fields are written here, and no flag_raised event
+            // fires at creation — the single flag_raised for a
+            // converted hold is recorded at redemption, against
+            // the reward, exactly as the anomaly path does.
             $referral->forceFill([
                 'risk_score' => $scored['score'],
                 'risk_rules' => $scored['rules'] === [] ? null : $scored['rules'],
-                'hold' => $referral->hold || $holdRules !== [],
-                'hold_rules' => $holdRules === [] ? null : $holdRules,
-                'held_at' => ($referral->hold || $holdRules !== []) ? ($referral->held_at ?? now()) : null,
             ])->save();
 
             $referrerMembership->increment('referral_count');
 
             ReferralEvent::record('referral_created', 'customer', $business, $referral, null, $friendMembership, [], $ipAddress, $deviceSignalHash);
 
-            if ($referral->hold) {
-                ReferralEvent::record('flag_raised', 'system', $business, $referral, null, $friendMembership, [
-                    'rules' => $referral->hold_rules,
-                ], $ipAddress, $deviceSignalHash);
-            }
-
             return ['kind' => 'created', 'referral' => $referral, 'membership' => $friendMembership];
         });
+    }
+
+    /**
+     * The governing referral for a (business, friend) pair, in
+     * lifecycle priority (BREAKER D-1): a redeemed referral governs
+     * forever (the visit counted); a live pending referral governs
+     * while it lives (an expired one is flipped under its row lock
+     * here, freeing the slot, and does not govern); a voided
+     * referral governs over nothing else existing (the owner's deny
+     * is terminal for the pair). Returns null when no referral
+     * governs and a new claim may be created.
+     *
+     * @return array{kind: string, referral: Referral}|null
+     */
+    private function governingReferral(Business $business, Customer $friend): ?array
+    {
+        $pair = Referral::query()
+            ->where('business_id', $business->id)
+            ->where('referred_customer_id', $friend->id);
+
+        // The governing redeemed row is the pair's SURVIVOR:
+        // a redeemed row stamped pair_superseded_at by
+        // migration 000039's resolution is a billed duplicate
+        // awaiting its operational money decision, never the
+        // visit the friend lands on. Fall back to any redeemed
+        // row only if no survivor exists (defensive).
+        $redeemed = (clone $pair)->where('state', Referral::STATE_REDEEMED)->whereNull('pair_superseded_at')->lockForUpdate()->first()
+            ?? (clone $pair)->where('state', Referral::STATE_REDEEMED)->lockForUpdate()->first();
+
+        if ($redeemed !== null) {
+            return ['kind' => 'already_redeemed', 'referral' => $redeemed];
+        }
+
+        $pending = (clone $pair)->where('state', Referral::STATE_PENDING)->lockForUpdate()->first();
+
+        if ($pending !== null && ! $pending->applyExpiry()) {
+            return ['kind' => 'existing', 'referral' => $pending];
+        }
+
+        // BREAKER close (two-key Finding 5): the voided check
+        // must also run when a pending row EXISTED but its
+        // expiry flip just freed it. The claim-step gate reads
+        // raw states, so a pair holding a time-expired pending
+        // row plus a voided row skips the gate's shortcut (the
+        // pluck still contains 'pending_redemption'); before
+        // this fix that same shape fell through here and minted
+        // a NEW claim over the owner's deny. Deny is terminal
+        // for the pair in every shape.
+        $voided = (clone $pair)->where('state', Referral::STATE_VOIDED)->lockForUpdate()->first();
+
+        if ($voided !== null) {
+            return ['kind' => 'denied', 'referral' => $voided];
+        }
+
+        return null;
     }
 
     /**
      * The per-referrer velocity caps (Section 3.1): rewarded
      * referrals in the business-local day and month, against the
      * business's configured caps. Returns the breached rule ID.
+     *
+     * NOTE (Option B conversion, 2026-10-28): claim creation no
+     * longer calls this method and no longer holds on it —
+     * redemption is the velocity gate (RedemptionService::
+     * redemptionVelocityBreach, counted on redeemed referrals).
+     * This creation-count definition is retained deliberately;
+     * its removal, if ever wanted, is a separate cleanup.
      */
     public function velocityBreach(Business $business, Membership $referrerMembership): ?string
     {
@@ -253,6 +364,15 @@ class EnrollmentService
             } catch (\Illuminate\Database\QueryException) {
                 return Customer::query()->where('phone_e164', $input['phone_e164'])->firstOrFail();
             }
+        }
+
+        // F-6: the last name is optional on the enroll and claim
+        // forms. A blank submission means "not given", never
+        // "erase it": a stored last name survives a later blank
+        // form, so the shared-phone name update below compares
+        // against the name the customer actually provided.
+        if (($input['last_name'] ?? '') === '' && $customer->last_name !== '') {
+            $input['last_name'] = $customer->last_name;
         }
 
         if ($customer->first_name !== $input['first_name'] || $customer->last_name !== $input['last_name']) {

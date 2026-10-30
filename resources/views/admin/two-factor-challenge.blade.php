@@ -2,7 +2,6 @@
 
 @section('title', 'Two-factor check')
 
-@section('notices_summary_only', '1')
 
 @section('content')
     <div class="card mx-auto max-w-[480px]">

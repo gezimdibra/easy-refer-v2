@@ -128,7 +128,14 @@ class SdkSquarePaymentsGateway implements SquarePaymentsGateway
             return null;
         }
 
+        // FE-BILL-01: a record also claims the month's free
+        // and over-cap coverage rows (they carry its statement
+        // counts), but the resolved charge must rebuild the
+        // ORIGINAL charge, so its line items are the billed
+        // visits only — the only rows whose amounts sum to the
+        // record's total.
         $lineItems = $record->events()
+            ->where('coverage', 'billable')
             ->orderBy('id')
             ->get()
             ->map(fn ($event) => [

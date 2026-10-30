@@ -281,6 +281,95 @@
     }
 }
 
+/*
+ | Portal refresh (portal-refresh-design/design.md Sections 1,
+ | 3, 4 and 7; build plan P1, unit U1): the portal layouts (app,
+ | admin, auth) carry .portal-theme on <html>, and this scope
+ | re-declares the portal token values per scheme, the same
+ | mechanism .theme-light-lock uses. The global table above does
+ | not move: the landing and the customer flow keep it byte for
+ | byte. Light is L2 Cool Slate; dark is D2 Midnight Slate
+ | (owner-notes train 2026-10-27: the owner said "Decide for
+ | me" and the coordinator picked the gallery's recommended
+ | pair, the only pair genuinely different in both modes while
+ | staying one family; L1 Gallery White / D1 Charcoal Neutral
+ | are the retired pair). The dark brand wells are KEPT from
+ | the global dark table: they are how the brand shows at
+ | depth on the new ladder. Adjustment A2 binds usage, not
+ | values: the line token is decorative separation only, and
+ | any edge that alone identifies a control uses line-strong
+ | or control. The L2 action/link/focus roles move with the
+ | new slate ink (the gallery's direction: the roles follow
+ | the ink, so the portal's buttons and links are slate, not
+ | the global warm ink); the dark roles keep the global amber
+ | values unchanged.
+ */
+
+/* Portal refresh, L2 (light) */
+.portal-theme {
+    --color-surface-1: #f4f6f8;
+    --color-surface-0: #ffffff;
+    --color-surface-2: #ebeef2;
+    --color-surface-3: #dce2e9;
+    --color-line: #dde3ea;
+    --color-line-strong: #7a8694;
+    --color-control: #5b6876;
+    --color-text-1: #131a22;
+    --color-text-2: #3d4a5a;
+    --color-text-3: #5e6d7e;
+    --color-text-disabled: #9aa6b2;
+    --color-brand-50: #fffaf1;
+    --color-brand-100: #fdebc8;
+    --color-action: #131a22;
+    --color-action-hover: #0b1118;
+    --color-action-pressed: #05080c;
+    --color-link: #0b1118;
+    --color-focus: #131a22;
+}
+
+/* Portal refresh, D2 (dark) */
+@media (prefers-color-scheme: dark) {
+    .portal-theme {
+        --color-surface-1: #0e1116;
+        --color-surface-0: #161b22;
+        --color-surface-2: #1e2630;
+        --color-surface-3: #2a3442;
+        --color-line: #262f3c;
+        --color-line-strong: #6b7a8d;
+        --color-control: #8e9eb3;
+        --color-text-1: #f2f5f8;
+        --color-text-2: #c2ceda;
+        --color-text-3: #94a6b8;
+        --color-text-disabled: #5d6b7d;
+        --color-brand-50: #2e2413;
+        --color-brand-100: #4d3a10;
+        --color-success-fill: #12261e;
+        --color-warning-fill: #2b2110;
+        --color-error-fill: #2e1611;
+        --color-info-fill: #162a38;
+        /* The role re-declarations are load-bearing, not
+           redundant: the L2 block above is unconditional, so
+           without these the slate-ink roles would win the
+           cascade in dark too (equal specificity, later in the
+           file than the global dark block). The values are the
+           global dark roles verbatim, as the gallery's D2 set
+           carried them. */
+        --color-action: #ffb224;
+        --color-action-hover: #f5a300;
+        --color-action-pressed: #e09500;
+        --color-link: #ffb224;
+        --color-focus: #ffb224;
+    }
+
+    /* The dark select chevron re-strokes at the D2 text-3,
+       scoped so the flow and landing selects keep the global
+       dark stroke. */
+    .portal-theme .form-select,
+    .portal-theme .ui-scope select:not(.form-input) {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a6b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    }
+}
+
 /* The printed-poster island (dark-mode-spec.md C-22): the poster
    is a print artifact and stays light at any device setting, so
    its root re-declares the light token values and locks its
@@ -624,6 +713,47 @@
         letter-spacing: -0.008em;
     }
 
+    /* QUOTES-01 (owner directive 2026-10-25): the v1 decorative
+       quote marks (v1 testimonials.css) adapted to the v2 story
+       cards: oversized serif glyphs in ink at 20 percent opacity,
+       the opening mark top-left, the closing mark bottom-right,
+       and italic quote text. Scoped to .story-quote, which only
+       the two Success stories blockquotes carry (the auth panel
+       blockquote is out of scope). The top and bottom padding
+       gutters hold the glyph ink clear of the text and the
+       figcaption: each glyph box is 4rem tall with its ink in
+       roughly the top third, anchored 1rem outside the text
+       block, still inside the card's 32px padding zone. */
+    .story-quote {
+        position: relative;
+        font-style: italic;
+        padding-top: 2.5rem;
+        padding-bottom: 3rem;
+    }
+
+    .story-quote::before, .story-quote::after {
+        position: absolute;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 4rem;
+        line-height: 1;
+        font-style: normal;
+        color: var(--color-text-1);
+        opacity: 0.2;
+        pointer-events: none;
+    }
+
+    .story-quote::before {
+        content: '\201C';
+        top: -1rem;
+        left: -0.5rem;
+    }
+
+    .story-quote::after {
+        content: '\201D';
+        bottom: -1rem;
+        right: -0.5rem;
+    }
+
     /*
      | Layout shell (Section 5): one container for marketing, app,
      | and auth. Marketing section rhythm is one padding step.
@@ -676,6 +806,22 @@
             border-color 120ms ease-out,
             box-shadow 150ms ease-out,
             transform 150ms ease-out;
+    }
+
+    /* The emphasized text action (affordance train, 2026-10-29):
+       a secondary action that must READ as an action, not as a
+       heading or body text (TEXT-THAT-IS-AN-ACTION class). Link
+       color, semibold, always underlined, and a padded target of
+       at least 44px tall (Apple HIG). Used for onboarding skips,
+       dismisses, and text-styled form submits; the generic submit
+       rule above excludes it by name. One treatment, everywhere. */
+    .text-action {
+        @apply inline-flex items-center font-semibold text-link underline underline-offset-4;
+        min-height: 44px;
+        padding-inline: 4px;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
     }
 
     .btn-sm {
@@ -997,7 +1143,13 @@
         accent-color: var(--color-action);
     }
 
-    .ui-scope button[type='submit']:not(.btn) {
+    /* CASCADE HIJACK guard (owner findings batch 2, 2026-10-29):
+       this generic rule once restyled the onboarding starter-pack
+       <button class="panel"> cards into filled action buttons with
+       failing contrast. It must NEVER restyle a card-shaped choice
+       (.panel / .card / .tile) or an explicit text action
+       (.text-action); those carry their own affordance. */
+    .ui-scope button[type='submit']:not(.btn):not(.panel):not(.card):not(.tile):not(.text-action) {
         @apply inline-flex items-center justify-center gap-2 bg-action px-5 text-on-action hover:bg-action-hover active:bg-action-pressed disabled:bg-surface-2 disabled:text-text-disabled;
         min-height: 48px;
         border-radius: var(--radius-md);
@@ -1010,7 +1162,7 @@
             box-shadow 150ms ease-out;
     }
 
-    .auth-scope button[type='submit']:not(.btn) {
+    .auth-scope button[type='submit']:not(.btn):not(.panel):not(.card):not(.tile):not(.text-action) {
         min-height: 48px;
         width: 100%;
     }
@@ -1172,9 +1324,34 @@
         color: var(--color-text-2);
     }
 
+    /* B1 (post-r26, r26 Gate 3 MINOR): the compact label step
+       for 3-across stat strips, where the 12px eyebrow step
+       makes REFERRALS MADE reach its tile edge at phone
+       widths. A component variant, not a token (the
+       .tile-value-sm pattern). Applied to every label in the
+       strip so the siblings stay one treatment. */
+    .tile-label-compact {
+        font-size: 11px;
+        line-height: 15px;
+        letter-spacing: 0.02em;
+    }
+
     .tile-value {
         font-size: 30px;
         line-height: 34px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-1);
+    }
+
+    /* R2 (design section 6 component note): the small value
+       step for 3-across tile grids on a 390 viewport, where the
+       30px step clips money strings like "$20.00". A component
+       variant, not a token. */
+    .tile-value-sm {
+        font-size: 22px;
+        line-height: 26px;
         font-weight: 650;
         letter-spacing: -0.02em;
         font-variant-numeric: tabular-nums;
@@ -1218,6 +1395,55 @@
 
     .pill-info {
         @apply bg-info-fill text-info-text;
+    }
+
+    /* State bands (R4-U1): the pill grown to counter distance for
+       the staff screens. Full-bleed at the top of the flow card:
+       the negative margins cancel the card's padding on this
+       element only, and the top corners inherit the card radius.
+       The label is uppercase text, never color alone (WCAG). */
+    .state-band {
+        @apply flex items-baseline gap-1 font-semibold uppercase;
+        margin: -20px -20px 16px;
+        padding: 10px 20px;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        font-size: 13px;
+        line-height: 18px;
+        letter-spacing: 0.06em;
+    }
+
+    @media (min-width: 768px) {
+        .state-band {
+            margin: -24px -24px 16px;
+            padding: 10px 24px;
+        }
+    }
+
+    /* QR stage (R4-U2): the show screens' single white plate.
+       Pure white in BOTH schemes (maximum luminance the page
+       controls, for glare and cheap cameras), 18px of padding so
+       plate + renderer margin sum past the 4-module quiet zone,
+       and the poster's amber halo demoted to a thin ring OUTSIDE
+       the white, never touching modules. */
+    .qr-stage {
+        display: inline-block;
+        padding: 18px;
+        background-color: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 0 0 2px var(--color-brand-500);
+        line-height: 0;
+    }
+
+    .state-band-success {
+        @apply bg-success-fill text-success-text;
+    }
+
+    .state-band-warning {
+        @apply bg-warning-fill text-warning-text;
+    }
+
+    .state-band-neutral {
+        @apply bg-surface-2 text-text-2;
     }
 
     /*
@@ -1432,6 +1658,23 @@
         @apply bg-action;
     }
 
+    /* Segmented either/or control (AU-11): a two-option switch
+       on a surface-2 track; the on option lifts to surface-0 with
+       the raised shadow. Used where exactly one of two inputs is
+       live (the step-up challenge). */
+    .segmented {
+        @apply flex gap-1 rounded-lg bg-surface-2 p-1;
+    }
+
+    .segmented-option {
+        @apply flex-1 rounded-md px-3 py-2 text-center font-medium text-text-2;
+        min-height: 44px;
+    }
+
+    .segmented-option-on {
+        @apply bg-surface-0 text-text-1 shadow-e1;
+    }
+
     /* The eyebrow pill (Section 10.1): brand-50 ground, link-role
        eyebrow text, for the hero and panel eyebrows. 08f
        (contrast audit F-7): brand-50 sits 1.01 to 1.03 from the
@@ -1553,6 +1796,13 @@
     #site-header {
         transition: none;
     }
+
+    /* R40: the steps bar's offset transition dies with the
+       header's (in this mode the header never hides, so the
+       offset never changes either). */
+    .hiw-progress {
+        transition: none;
+    }
 }
 
 #site-header .logo-link {
@@ -1607,6 +1857,27 @@
    dark scheme follows the token swap. The stage pauses while
    off screen via the .hs-paused class (IntersectionObserver
    script in home.blade.php). */
+/* Release 34 (owner order, 2026-10-27): the hero trust row
+   reads as its own band: the gap above it grows to 40px (the
+   mt-10 on .mkt-hero-trust in home.blade.php) and the stage
+   margin below it grows 56 to 80 here, 32 to 48 in the mobile
+   block. The short-viewport zone keeps its compacted stack
+   (R1-CLEARANCE governs that zone).
+   Release 38 (owner phone check, 2026-10-27): r34 overshot;
+   pull back to the middle values — trust gap 32px (mt-8 in
+   home.blade.php) and stage margin 64 here, 40 in the mobile
+   block. The short-viewport zone is still untouched.
+   Release 38 Revision 2 (owner clarification, 2026-10-27
+   21:04 EDT): the standard stack REVERTS FULLY to the pre-r34
+   values — trust gap 24px (mt-6 in home.blade.php) and stage
+   margin 56 here, 32 in the mobile block; r34's standard
+   change is undone entirely. The real fix is in the
+   short-viewport zone below: the owner's iPhone 13 in Safari
+   exposes <= 720px viewport height, so his phone renders the
+   COMPACTED stack, whose trust/stage margins rise 4px to
+   24px / 4px to 32px there (the standard band, inside the
+   R1-CLEARANCE headroom measured at 375x667 / 390x664 /
+   390x700). */
 .mkt-hero-stage {
     margin-top: 56px;
 }
@@ -1892,7 +2163,12 @@
 
     /* Hero animation (2026-10-24): the stage sits closer
        under the trust row on mobile, the step the phone-form
-       visual took in release 08b (F1/F2). */
+       visual took in release 08b (F1/F2). Release 34: 32 to
+       48, the mobile half of the trust-row band (see the base
+       .mkt-hero-stage rule). Release 38: 48 to 40, the mobile
+       half of the pullback to the middle values. Release 38
+       Revision 2: 40 back to 32 — the standard stack reverts
+       fully to the pre-r34 values (see the base rule). */
     .mkt-hero-stage {
         margin-top: 32px;
     }
@@ -1961,16 +2237,32 @@
             margin-top: 8px;
         }
 
+        /* Release 38 Revision 2 (owner clarification,
+           2026-10-27): this compacted stack is what the
+           owner's iPhone 13 actually renders (Safari exposes
+           <= 720px viewport height at load). Its trust and
+           stage margins rise from the 4px payback values to
+           the standard band, 24px / 32px, so the trust row
+           reads as its own band on his phone too. Paid for
+           out of the R1-CLEARANCE headroom, NOT by payback
+           inside the stack: clearance at 375x667 measured
+           169px before (floor 40), 390x664 166px, 390x700
+           202px; the +48px total step leaves >= 118px at
+           every measured compact viewport. Title and lede
+           values in this zone are unchanged. */
         .mkt-hero .mkt-hero-trust {
-            margin-top: 4px;
+            margin-top: 24px;
         }
 
         .mkt-hero-stage {
             /* Copy release: 8 to 4, part of the PROSE-GAP
                payback itemized at this zone's head; carried
                over to the animation stage (2026-10-24), which
-               now occupies the visual slot. */
-            margin-top: 4px;
+               now occupies the visual slot. Release 38
+               Revision 2: 4 to 32, the stage half of the
+               compact band raise itemized above the trust
+               rule in this zone. */
+            margin-top: 32px;
         }
 
         /* R-1 (release 08d): three independent reads of release
@@ -2194,6 +2486,183 @@
     }
 }
 
+/*
+ | Portal print shell (BS-5; PM review 2026-10-27 item B6):
+ | portal pages print as documents, not as screenshots of the
+ | app. Before this block the portal had no print behavior at
+ | all: printing the billing statement (the page an owner most
+ | plausibly prints, for records or an accountant) printed the
+ | top bar and the settings subnav with it, and in dark mode
+ | it printed the dark theme. This block is variant (b) of the
+ | two considered: hide the chrome AND give the content print
+ | width, print break rules, and a light print scheme. (The
+ | hide-chrome-only variant (a) was rejected on the before
+ | captures: the settings subnav row overflowed the page box,
+ | and dark mode printed near-white text on the dark ground.)
+ |
+ | Scope is the protection for the designed print pieces:
+ | every rule keys on .portal-theme, carried by the portal
+ | layouts (app, admin, auth) only. The standalone poster
+ | page does not carry it, so the poster print block above is
+ | untouched; the flow and marketing layouts do not carry it
+ | either. No global @page rule is added, for the reason the
+ | poster block sets none: the named poster pages own their
+ | paper, and portal pages take the printer's default paper
+ | and margins.
+ |
+ | The light scheme is a PRINT palette declared on the
+ | swapped tokens themselves, so every utility and component
+ | downstream prints light with no per-element color rules:
+ | paper white grounds, black text, two print greys for the
+ | secondary text steps, and status grounds at white with
+ | black status text (the word carries the meaning, as it
+ | does on screen; banner accent borders follow the strong
+ | token to black). The values are deliberately NOT copies of
+ | either screen token table, so a screen theme swap cannot
+ | stale them. Tokens that never swap (the ink constants, the
+ | amber fills) are untouched; shadows go to none and the
+ | color adjustment stays at the economy default, so no dark
+ | or tinted ground is poured onto paper. The one downstream
+ | exception is the poster sheet itself: its own rules set
+ | print-color-adjust exact on the sheet, which outranks the
+ | inherited economy here, so a poster preview embedded in a
+ | portal page still prints as designed.
+ */
+@media print {
+    .portal-theme {
+        color-scheme: only light;
+        -webkit-print-color-adjust: economy;
+        print-color-adjust: economy;
+
+        --color-surface-0: #ffffff;
+        --color-surface-1: #ffffff;
+        --color-surface-2: #f2f2f2;
+        --color-surface-3: #e5e5e5;
+        --color-line: #d9d9d9;
+        --color-line-strong: #8a8a8a;
+        --color-control: #666666;
+        --color-text-1: #000000;
+        --color-text-2: #333333;
+        --color-text-3: #555555;
+        --color-text-disabled: #8a8a8a;
+        --color-brand-50: #f2f2f2;
+        --color-brand-100: #e5e5e5;
+        --color-action: #000000;
+        --color-action-hover: #000000;
+        --color-action-pressed: #000000;
+        --color-on-action: #ffffff;
+        --color-link: #000000;
+        --color-focus: #000000;
+        --color-data-amber: #000000;
+        --color-success-fill: #ffffff;
+        --color-success-strong: #000000;
+        --color-success-text: #000000;
+        --color-warning-fill: #ffffff;
+        --color-warning-strong: #000000;
+        --color-warning-text: #000000;
+        --color-error-fill: #ffffff;
+        --color-error-strong: #000000;
+        --color-error-text: #000000;
+        --color-error: #000000;
+        --color-danger: #000000;
+        --color-info-fill: #ffffff;
+        --color-info-strong: #000000;
+        --color-info-text: #000000;
+        --shadow-e1: none;
+        --shadow-e2: none;
+        --shadow-e3: none;
+    }
+
+    /* The shell chrome leaves: the top bar, the primary rail
+       and its mobile slide-over, the settings subnav (and the
+       layout column that exists only to hold it), pagination,
+       the notices region (status flashes and the toast undo
+       action are screen furniture), the auth shell's legal
+       footer and brand panel, the skip link, and every action
+       button, whether a <button> or a .btn link. Form fields
+       themselves stay: on a settings page the fields are the
+       content. */
+    .portal-theme header,
+    .portal-theme footer,
+    .portal-theme aside,
+    .portal-theme nav[aria-label='Primary'],
+    .portal-theme nav[aria-label='Settings'],
+    .portal-theme nav[aria-label^='Pagination'],
+    .portal-theme div:has(> nav[aria-label='Settings']),
+    .portal-theme div[x-show='navOpen'],
+    .portal-theme [aria-label='Notices'],
+    .portal-theme .skip-link,
+    .portal-theme button,
+    .portal-theme .btn,
+    .portal-theme [x-cloak] {
+        display: none !important;
+    }
+
+    /* Content takes the full page width: the screen shell's
+       centered measure and padding are screen furniture, and
+       sticky or fixed positioning (the sticky table column,
+       sticky bars) must not pin, repeat, or clip in the page
+       box. Horizontal scroll containers open up so no table
+       is cut at the container's screen edge. */
+    .portal-theme main {
+        max-width: none !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .portal-theme .sticky,
+    .portal-theme .fixed {
+        position: static !important;
+    }
+
+    .portal-theme .tbl-sticky th:first-child,
+    .portal-theme .tbl-sticky td:first-child {
+        position: static !important;
+    }
+
+    .portal-theme .overflow-x-auto {
+        overflow: visible !important;
+    }
+
+    /* Print break discipline: a receipt row, a table row, a
+       panel, or a card never splits across pages where it can
+       be kept whole; a heading never strands at a page foot;
+       a table header repeats on the pages its table spans. */
+    .portal-theme .panel,
+    .portal-theme .card,
+    .portal-theme .tile,
+    .portal-theme tr,
+    .portal-theme dl > div {
+        break-inside: avoid;
+    }
+
+    /* A tile grid is one visual unit (its hairline ground
+       shows through the gaps): if its tiles move to the next
+       page whole, the grid must move with them, or its ground
+       strands as a slab at the page foot. Tile grids are one
+       or two rows of small tiles by design, so keeping them
+       whole cannot overflow a page. */
+    .portal-theme div:has(> .tile) {
+        break-inside: avoid;
+    }
+
+    .portal-theme h1,
+    .portal-theme h2,
+    .portal-theme h3 {
+        break-after: avoid;
+    }
+
+    .portal-theme thead {
+        display: table-header-group;
+    }
+
+    .portal-theme p {
+        orphans: 2;
+        widows: 2;
+    }
+}
+
 /* ------------------------------------------------------------------
    How-it-works scroll story (HIW-C, owner decision 2026-10-24:
    Variant C's step-by-step story, ported to the token system).
@@ -2206,6 +2675,19 @@
    key off .hiw-in, which the script's fallback path also applies,
    and the reduced-motion block at the end composes the terminal
    state. The strip docks under the sticky site header (h-16).
+   Release 40 (owner order, 2026-10-28): the strip's dock follows
+   the header's visibility. The header hides by transform, which
+   moves no layout, so a constant 64px dock left the strip parked
+   under an empty band one navbar tall. The strip's top is now a
+   function of the header's CURRENT state, consumed read-only:
+   the rule after this block keys off the header's own
+   .site-header-hidden class (the same class its transform reads)
+   via :has(), and the top transitions on the header's own 200ms
+   duration and easing, so the strip rides the header's motion
+   with no second state that could drift. The header's hide
+   script, triggers, and timing are untouched, as is the strip's
+   own visibility. On engines without :has() the rule never
+   matches and the strip keeps the shipped 64px dock.
    ------------------------------------------------------------------ */
 .hiw-story {
     position: relative;
@@ -2218,6 +2700,14 @@
     background: var(--color-surface-1);
     border-bottom: 1px solid var(--color-line);
     padding: 12px 0 10px;
+    transition: top 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* R40: navbar hidden -> the strip docks at the very top, as if
+   the navbar did not exist; navbar visible -> the base 64px
+   dock above applies, exactly as shipped. */
+body:has(> #site-header.site-header-hidden) .hiw-progress {
+    top: 0;
 }
 
 .hiw-plabels {
@@ -2443,4 +2933,123 @@
     .hiw-scanline {
         opacity: 1;
     }
+}
+
+/*
+ | G6 demo Phase 1 (Amendment 63): the DEMO device and the
+ | landing frame. The banner is amber (brand-500) with ink
+ | text; the solid chip is ink with white text; both are
+ | class-scoped so no generic rule can restyle them and they
+ | cannot restyle anything else (the cascade-hijack rule).
+ */
+.demo-banner {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 6px 10px;
+    background: var(--color-brand-500);
+    color: var(--color-brand-700);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 18px;
+}
+.demo-chip-solid {
+    flex: none;
+    background: var(--color-brand-700);
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 5px;
+}
+.demo-banner-text {
+    font-weight: 600;
+}
+.demo-banner-exit {
+    margin-left: auto;
+    flex: none;
+}
+.demo-banner-exit button {
+    background: none;
+    border: none;
+    padding: 2px 0;
+    font: inherit;
+    font-weight: 700;
+    color: var(--color-brand-700);
+    text-decoration: underline;
+    cursor: pointer;
+}
+.demo-chip-outline {
+    display: inline-block;
+    vertical-align: 2px;
+    margin-left: 6px;
+    border: 1.5px solid var(--color-brand-500);
+    color: var(--color-brand-700);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.demo-code-card {
+    position: relative;
+    border: 1.5px solid var(--color-brand-500);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    background: var(--color-brand-50);
+}
+.demo-code-value {
+    font-size: 34px;
+    line-height: 40px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--color-brand-700);
+}
+.demo-frame {
+    width: min(350px, 92vw);
+    margin-inline: auto;
+    border: 3px solid var(--color-brand-700);
+    border-radius: 36px;
+    padding: 10px;
+    background: var(--color-surface-0, #fff);
+}
+.demo-frame iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 26px;
+}
+.btn-demo-ghost {
+    border: 1.5px solid var(--color-brand-700);
+    color: var(--color-brand-700);
+    background: transparent;
+}
+.btn-demo-ghost:hover {
+    background: var(--color-brand-50);
+}
+.demo-play {
+    color: var(--color-brand-500);
+    font-size: 10px;
+}
+/* Landing integration (Variant D): the narrow hero demo door.
+   A tertiary text link, not a button: Ink, underlined, no box,
+   no fill, with a padded 48px tap target. Class-scoped only;
+   it restyles nothing else and no generic rule restyles it. */
+.demo-hero-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
+    padding-inline: 12px;
+    color: var(--color-text-1);
+    font-weight: 550;
+    text-decoration: underline;
+    text-underline-offset: 4px;
 }

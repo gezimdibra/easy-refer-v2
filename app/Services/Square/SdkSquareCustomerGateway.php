@@ -51,20 +51,27 @@ class SdkSquareCustomerGateway implements SquareCustomerGateway
             return null;
         }
 
-        $address = (new Address)
-            ->setAddressLine1($business->street)
-            ->setLocality($business->city)
-            ->setAdministrativeDistrictLevel1($business->state)
-            ->setPostalCode($business->postal_code)
-            ->setCountry($business->country);
-
         $request = (new CreateCustomerRequest)
             ->setIdempotencyKey('er2-business-'.$business->id)
             ->setCompanyName($business->name)
             ->setEmailAddress($business->contact_email)
             ->setPhoneNumber($business->contact_phone_e164)
-            ->setReferenceId('business-'.$business->id)
-            ->setAddress($address);
+            ->setReferenceId('business-'.$business->id);
+
+        // RS2-2: provisioning can now be asked for before the
+        // business has an address (the Card step precedes the
+        // Location step for a checkpoint account). A request
+        // carrying a null address is never sent: the Address is
+        // attached only when a street exists, exactly as it was
+        // when every business had an address at signup.
+        if (trim((string) $business->street) !== '') {
+            $request->setAddress((new Address)
+                ->setAddressLine1($business->street)
+                ->setLocality($business->city)
+                ->setAdministrativeDistrictLevel1($business->state)
+                ->setPostalCode($business->postal_code)
+                ->setCountry($business->country));
+        }
 
         try {
             $response = $this->client($token)->customers->create($request);

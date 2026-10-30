@@ -51,4 +51,20 @@ return [
 
     'dunning_grace_days' => 7,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Refund window (refund policy, post-Amendment 20)
+    |--------------------------------------------------------------------------
+    |
+    | The published policy states one window everywhere: refund
+    | requests and disputes within 30 days of the payment. The
+    | local refund path (RefundService::refund, reached through
+    | the billing:refund operator command) enforces it against
+    | the record's creation; refunds Square reports by webhook
+    | are already executed at Square and are always recorded.
+    |
+    */
+
+    'refund_window_days' => 30,
+
 ];

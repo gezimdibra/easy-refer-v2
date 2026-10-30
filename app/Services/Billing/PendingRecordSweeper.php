@@ -5,6 +5,7 @@ namespace App\Services\Billing;
 use App\Contracts\SquarePaymentsGateway;
 use App\Models\BillingEvent;
 use App\Models\BillingRecord;
+use App\Models\SmsCampaignRecipient;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -18,6 +19,13 @@ use Illuminate\Support\Facades\Log;
  * the key, the events are released and the record is superseded
  * so the next run builds a fresh one. Simulated records are
  * never swept: they are dry runs, not charge attempts.
+ *
+ * Release is symmetric across both legs of a batch (money fix
+ * train, audit 2.3): the campaign recipient rows claimed under
+ * the record are released with its billing events, exactly as
+ * the charger's own definitive-failure path releases them. A
+ * text row left claimed under a failed or superseded record
+ * would never bill and never appear on any statement.
  */
 class PendingRecordSweeper
 {
@@ -49,6 +57,9 @@ class PendingRecordSweeper
                     BillingEvent::query()
                         ->where('billing_record_id', $record->id)
                         ->update(['billing_record_id' => null]);
+                    SmsCampaignRecipient::query()
+                        ->where('billing_record_id', $record->id)
+                        ->update(['billing_record_id' => null]);
                     $record->forceFill(['state' => BillingRecord::STATE_SUPERSEDED])->save();
                 });
                 $summary['superseded']++;
@@ -62,6 +73,10 @@ class PendingRecordSweeper
                     'square_order_id' => $result->orderId ?? $record->square_order_id,
                 ])->save();
                 $summary['adopted']++;
+                // FE-CANCEL-01: a resolved final-bill record on a
+                // closed business sends its E-10 mail now (the
+                // tap-time job sent nothing while it was pending).
+                app(FinalBillService::class)->notifyResolved($record);
                 continue;
             }
 
@@ -69,11 +84,17 @@ class PendingRecordSweeper
                 BillingEvent::query()
                     ->where('billing_record_id', $record->id)
                     ->update(['billing_record_id' => null]);
+                SmsCampaignRecipient::query()
+                    ->where('billing_record_id', $record->id)
+                    ->update(['billing_record_id' => null]);
                 $record->forceFill([
                     'state' => BillingRecord::STATE_FAILED,
                     'error_code' => $result->errorCode,
                 ])->save();
             });
+            // FE-CANCEL-01: same E-10 resolution hook as the
+            // adopted branch, in the failed form.
+            app(FinalBillService::class)->notifyResolved($record);
             $summary['failed']++;
         }
 

@@ -35,9 +35,19 @@ class ForecastRemindersService
     public function run(): array
     {
         $summary = ['forecast' => 0, 'expiry_guard' => 0];
+        // The cycle key is a logic value, not an owner-facing
+        // name, so it stays on the UTC schedule date (Train 3.5
+        // converts only what owners read).
         $cycle = BillingForecast::nextChargeDate()->toDateString();
 
+        // Demo double exclusion (A-18 Finding 3): the sweep
+        // never selects the demo business (flag leg, in the
+        // query itself, not only the owner-null check below
+        // that used to be its only protection), and
+        // BillingForecast's gate carries both legs for every
+        // business it does select.
         Business::query()
+            ->where('is_demo', false)
             ->whereNull('closed_at')
             ->orderBy('id')
             ->each(function (Business $business) use (&$summary, $cycle): void {
@@ -52,7 +62,7 @@ class ForecastRemindersService
                     $body = BillingForecast::emailBody($business);
 
                     if ($body !== null) {
-                        Mail::to($owner->email)->send(new BillingForecastMail($business, $body));
+                        Mail::to($owner->email)->send(new BillingForecastMail($business, $body, BillingForecast::emailFacts($business)));
                         AuditLog::write('billing.forecast_email', null, ['cycle' => $cycle], $business);
                         $summary['forecast']++;
                     }
@@ -60,9 +70,16 @@ class ForecastRemindersService
 
                 $card = PaymentMethod::defaultFor($business);
 
+                // Train A2 (F-15): the guard asserts a charge on
+                // a named date, so it fires only when a charge
+                // on that date is real (the shared forecast
+                // gate). A gated-off run writes no audit row, so
+                // a business that starts accruing later in the
+                // cycle still gets its guard email.
                 if ($card !== null
                     && ActionCenter::cardExpiresBeforeNextCharge($card)
                     && $this->insideExpiryWindow($card)
+                    && BillingForecast::chargeIsExpected($business)
                     && ! $this->sentAlready($business, 'billing.expiry_guard_email', $cycle)) {
                     Mail::to($owner->email)->send(new CardExpiryGuardMail($business, $card));
                     AuditLog::write('billing.expiry_guard_email', null, ['cycle' => $cycle], $business);

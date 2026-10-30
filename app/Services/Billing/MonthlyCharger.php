@@ -14,10 +14,17 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * The monthly per-referral charge (spec Sections 9.5 and 9.3,
- * OD-1): assemble a business's unbilled billable events (this
- * month's plus any carried forward from earlier months, each
- * already cap-settled inside its own month by the shared walk),
- * and charge them once against the card on file.
+ * OD-1): assemble a business's unbilled billable events for ONE
+ * month of visits (each month already cap-settled inside its
+ * own month by the shared walk) and charge them once against
+ * the card on file. Arrears settle month by month as separate
+ * records, never one combined charge (money fix train, audit
+ * 1.3): charge() takes the oldest unclaimed month, and
+ * chargeAllMonths() drains several arrears months in one run
+ * as one record per month. The only cross-month carry left is
+ * the Square minimum: a month whose combined total is below
+ * it rolls its rows into the next month's batch, exactly the
+ * carry the spec names, and never more than those cents.
  *
  * The campaign leg (spec Sections 10.3, 9.5): attempted
  * campaign recipients whose sends were never claimed join the
@@ -36,7 +43,11 @@ use Illuminate\Support\Facades\Log;
  * the local billing_record exists in `pending` with its
  * deterministic key and the events claimed under it BEFORE the
  * Square call; the call happens outside the transaction; the
- * outcome is written back truthfully. A definitive Square
+ * outcome is written back truthfully. A referral batch claims
+ * the settled coverage rows of the months it bills alongside
+ * the billable events (FE-BILL-01), so the record's statement
+ * accounts for every visit in its window; the coverage rows
+ * never enter the charge total. A definitive Square
  * failure releases the events so a later run rebuilds under a
  * new record and key; an unknown outcome leaves the record
  * pending and the events claimed for the sweeper (EC-33). A
@@ -59,11 +70,84 @@ class MonthlyCharger
 
     public function charge(Business $business): ?BillingRecord
     {
+        // The demo business (Amendment 63, Section 13.6) is
+        // never chargeable. BOTH exclusion legs live in this
+        // surface (A-18 Finding 3): the flag leg here, before
+        // any settlement or batch read, and the coverage leg
+        // in nextBatch(), which never selects a coverage='demo'
+        // event for any business. Neither leg is delegated to
+        // the other surface.
+        if ($business->isDemo()) {
+            return null;
+        }
+
         $this->settlement->settleAndPersist($business);
 
+        $batch = $this->nextBatch($business);
+
+        if ($batch === null) {
+            return null;
+        }
+
+        return $this->chargeBatch($business, $batch['events'], $batch['sms'], $batch['total']);
+    }
+
+    /**
+     * Drain every arrears month in one run, one record per
+     * month of visits, oldest first. The drain stops at the
+     * first record that does not succeed: a definitive failure
+     * or an unknown outcome is one attempt per run against that
+     * card, and a simulated (record-only) batch claims nothing,
+     * so there is nothing further to drain.
+     *
+     * @return list<BillingRecord>
+     */
+    public function chargeAllMonths(Business $business): array
+    {
+        $records = [];
+
+        while (true) {
+            $record = $this->charge($business);
+
+            if ($record === null) {
+                break;
+            }
+
+            $records[] = $record;
+
+            if ($record->state !== BillingRecord::STATE_SUCCEEDED) {
+                break;
+            }
+
+            $business = $business->fresh() ?? $business;
+        }
+
+        return $records;
+    }
+
+    /**
+     * The next chargeable batch: the oldest unclaimed month of
+     * visits and texts, grouped by the month each row was
+     * created in (the settlement walk's own month, UTC). A
+     * month whose combined total sits below the Square minimum
+     * carries its rows into the next month's batch; when every
+     * remaining month together is still below the minimum,
+     * nothing is claimed and nothing is charged.
+     *
+     * @return array{events: \Illuminate\Support\Collection<int, BillingEvent>, sms: \Illuminate\Support\Collection<int, SmsCampaignRecipient>, total: int}|null
+     */
+    private function nextBatch(Business $business): ?array
+    {
+        // Coverage leg of the demo double exclusion, in this
+        // surface (A-18 Finding 3): a coverage='demo' event is
+        // never selected for a batch, for any business. The
+        // billable-only filter below already implies it; the
+        // explicit condition keeps the leg visible and pinned
+        // if the billable set ever widens.
         $events = BillingEvent::query()
             ->where('business_id', $business->id)
             ->whereNull('billing_record_id')
+            ->where('coverage', '!=', 'demo')
             ->where('coverage', 'billable')
             ->orderBy('id')
             ->get();
@@ -75,6 +159,7 @@ class MonthlyCharger
         $smsRows = SmsCampaignRecipient::query()
             ->whereHas('campaign', fn ($query) => $query->where('business_id', $business->id))
             ->whereNull('billing_record_id')
+            ->whereNull('written_off_at')
             ->whereNotNull('sms_message_id')
             ->orderBy('id')
             ->get();
@@ -83,25 +168,59 @@ class MonthlyCharger
             return null;
         }
 
+        $minimum = (int) config('billing.minimum_charge_cents', 100);
+
+        $byMonth = [];
+        foreach ($events as $event) {
+            $byMonth[$event->created_at->format('Y-m')]['events'][] = $event;
+        }
+        foreach ($smsRows as $row) {
+            $byMonth[$row->created_at->format('Y-m')]['sms'][] = $row;
+        }
+        ksort($byMonth);
+        $months = array_keys($byMonth);
+        $lastMonth = end($months);
+
+        $carryEvents = collect();
+        $carrySms = collect();
+
+        foreach ($byMonth as $month => $group) {
+            $candidateEvents = $carryEvents->concat($group['events'] ?? []);
+            $candidateSms = $carrySms->concat($group['sms'] ?? []);
+            $total = (int) $candidateEvents->sum('amount_cents') + (int) $candidateSms->sum('amount_cents');
+
+            if ($total < $minimum && $month !== $lastMonth) {
+                $carryEvents = $candidateEvents;
+                $carrySms = $candidateSms;
+                continue;
+            }
+
+            if ($total < $minimum) {
+                Log::info('Billing batch carried forward below the Square minimum.', [
+                    'business_id' => $business->id,
+                    'carried_cents' => $total,
+                ]);
+
+                return null;
+            }
+
+            return ['events' => $candidateEvents, 'sms' => $candidateSms, 'total' => $total];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, BillingEvent>  $events
+     * @param  \Illuminate\Support\Collection<int, SmsCampaignRecipient>  $smsRows
+     */
+    private function chargeBatch(Business $business, $events, $smsRows, int $total): ?BillingRecord
+    {
         $visitTotal = (int) $events->sum('amount_cents');
         $smsTotal = (int) $smsRows->sum('amount_cents');
-        $total = $visitTotal + $smsTotal;
         $kind = $events->isNotEmpty()
             ? BillingRecord::KIND_PER_REFERRAL_BATCH
             : BillingRecord::KIND_CAMPAIGN_METERING;
-        $minimum = (int) config('billing.minimum_charge_cents', 100);
-
-        if ($total < $minimum) {
-            // Sub-minimum totals carry forward into the next
-            // month's batch (spec Section 9.5); nothing is
-            // claimed and nothing is charged.
-            Log::info('Billing batch carried forward below the Square minimum.', [
-                'business_id' => $business->id,
-                'carried_cents' => $total,
-            ]);
-
-            return null;
-        }
 
         if (! (bool) config('billing.charges_enabled', false)) {
             return $this->recordDryRun($business, $kind, $events, $smsRows, $total);
@@ -123,7 +242,41 @@ class MonthlyCharger
             return null;
         }
 
-        $record = DB::transaction(function () use ($business, $kind, $events, $smsRows, $total, $card) {
+        // FE-BILL-01: a referral batch also claims the coverage
+        // rows of the months it bills (free_credit and over_cap
+        // events), so the per-charge statement can account for
+        // every visit in its own window. The coverage rows
+        // never enter the charge total — the total keeps
+        // summing the billable collection only — and they are
+        // claimed in the same transaction, so a definitive
+        // failure releases them with everything else and a
+        // later run re-claims them under the new record. The
+        // scope is every unclaimed coverage row settled up to
+        // the end of the batch's newest month: free/over-cap
+        // coverage is final once persisted, and any earlier
+        // batch already claimed its own months' rows, so the
+        // remainder belongs to this batch's statement. A
+        // campaign-only record claims no visit coverage rows:
+        // its statement is a texts statement, not a visits
+        // statement. Simulated records claim nothing (below).
+        $coverageEvents = collect();
+        if ($events->isNotEmpty()) {
+            $newest = $this->periodEnd($events, $smsRows);
+            $coverageEvents = BillingEvent::query()
+                ->where('business_id', $business->id)
+                ->whereNull('billing_record_id')
+                ->whereIn('coverage', ['free_credit', 'over_cap'])
+                ->where('created_at', '<=', $newest->copy()->endOfMonth())
+                ->orderBy('id')
+                ->get();
+        }
+
+        $record = DB::transaction(function () use ($business, $kind, $events, $smsRows, $total, $card, $coverageEvents) {
+            // The period spans the claimed coverage rows too:
+            // the statement window is the month the owner
+            // lived, not just the first billed visit onward.
+            $periodEvents = $events->concat($coverageEvents);
+
             $record = BillingRecord::create([
                 'business_id' => $business->id,
                 'kind' => $kind,
@@ -132,13 +285,19 @@ class MonthlyCharger
                 'idempotency_key' => $this->nextBatchKey($business, $kind),
                 'payment_method_id' => $card->id,
                 'state' => BillingRecord::STATE_PENDING,
-                'period_start' => $this->periodStart($events, $smsRows),
-                'period_end' => $this->periodEnd($events, $smsRows),
+                'period_start' => $this->periodStart($periodEvents, $smsRows),
+                'period_end' => $this->periodEnd($periodEvents, $smsRows),
             ]);
 
             if ($events->isNotEmpty()) {
                 BillingEvent::query()
                     ->whereIn('id', $events->pluck('id'))
+                    ->update(['billing_record_id' => $record->id]);
+            }
+
+            if ($coverageEvents->isNotEmpty()) {
+                BillingEvent::query()
+                    ->whereIn('id', $coverageEvents->pluck('id'))
                     ->update(['billing_record_id' => $record->id]);
             }
 
@@ -150,7 +309,6 @@ class MonthlyCharger
 
             return $record;
         });
-
         $lineItems = $events->map(fn (BillingEvent $event) => [
             'name' => 'Referral fee',
             'note' => 'referral '.$event->referral_id,

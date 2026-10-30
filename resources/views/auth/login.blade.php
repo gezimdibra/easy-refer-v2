@@ -1,18 +1,14 @@
 @extends('layouts.auth')
 
 @section('title', 'Sign in')
-@section('notices_summary_only', '1')
 
 @section('content')
-    {{-- AUTH-IN-06, the header line, set as the eyebrow
-         (redesign-spec.md Section 10.3 item 1). TY-07 correction
-         (2026-10-24): an eyebrow is a short label, so the line is
-         shortened from the full sentence the builder set in all
-         caps (guardian G-5); the meaning is unchanged. --}}
-    <p class="type-eyebrow text-link">Your one-stop referral platform</p>
-
-    {{-- AUTH-IN-01: heading and subheading. --}}
-    <h1 class="type-display-xs mt-3 text-text-1">Welcome back</h1>
+    {{-- AU-1 (R5 pack A1): the eyebrow leaves the login. It
+         competed with the heading and its job (name the program)
+         is done by the panel beside the form and the heading
+         itself; AUTH-IN-06's sentence survives on the marketing
+         surfaces where it is the pitch, not a caption. --}}
+    <h1 class="type-display-xs text-text-1">Welcome back</h1>
     <p class="type-body mt-2 text-text-2">Sign in to your account.</p>
 
     <form method="POST" action="{{ route('login.store') }}" class="mt-8" data-loading>

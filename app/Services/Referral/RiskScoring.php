@@ -148,6 +148,28 @@ class RiskScoring
         return $score >= (int) config('referrals.risk_hold_threshold');
     }
 
+    /**
+     * The one-hour minimum-age soft signal (money fix train,
+     * audit 2.2): the rule ID when the referral is being
+     * redeemed inside its first hour, null otherwise. This is
+     * a review and risk SIGNAL only, never a gate: callers
+     * record it and move on; nothing holds, blocks, or
+     * un-bills on the strength of this rule alone.
+     */
+    public function minimumAgeSignal(Referral $referral, ?\DateTimeInterface $at = null): ?string
+    {
+        if ($referral->created_at === null) {
+            return null;
+        }
+
+        $windowMinutes = (int) config('referrals.minimum_age_signal_minutes', 60);
+        $ageSeconds = ($at ?? now())->getTimestamp() - $referral->created_at->getTimestamp();
+
+        return $ageSeconds >= 0 && $ageSeconds < $windowMinutes * 60
+            ? 'referral_age_under_one_hour'
+            : null;
+    }
+
     private function deviceSignalSeenForAnotherCustomer(Referral $referral, string $deviceSignalHash): bool
     {
         return \App\Models\ReferralEvent::query()

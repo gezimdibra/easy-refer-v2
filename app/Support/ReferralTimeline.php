@@ -25,10 +25,35 @@ final class ReferralTimeline
         'review_release' => 'Released from review',
         'review_deny' => 'Denied in review',
         'redeem_token_regenerated' => 'New redeem link sent',
+        // N-5 (Amendment 45): the referral-scoped types the
+        // lifecycle actually records that used to fall back to
+        // the bare "Update" label, named from what each event
+        // is. (Enrollment/verification/poster types carry no
+        // referral and never render on this timeline.)
+        'reward_minted' => 'Referrer reward earned',
+        'reward_claimed' => 'Reward claimed',
+        'clawback' => 'Reward clawed back',
+        'risk_signal' => 'Risk signal recorded',
+        'redemption_blocked_missing_reward_text' => 'Redemption blocked: no reward was set',
     ];
 
     public static function label(string $eventType): string
     {
         return self::LABELS[$eventType] ?? 'Update';
+    }
+
+    /**
+     * RD-4: the timeline node's tone by event class. Completion
+     * is success, a hold or flag is warning, everything else
+     * stays neutral. The text label always renders beside the
+     * node, so tone is never the only signal (WCAG).
+     */
+    public static function nodeTone(string $eventType): string
+    {
+        return match ($eventType) {
+            'redemption' => 'success',
+            'flag_raised', 'review_deny', 'redemption_rejected' => 'warning',
+            default => 'neutral',
+        };
     }
 }

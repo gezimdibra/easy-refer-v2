@@ -50,6 +50,11 @@ class DemoDashboardSeeder extends Seeder
             'free_visits_remaining' => 0,
             'friend_reward_text' => '$10 off your first cut',
             'referrer_reward_text' => '$10 off your next cut',
+            // OR-1 §2.7: biz 7 is the SPLIT fixture — its two
+            // texts are the standing worst case for the print-fit
+            // evidence, so a reseed must reproduce the split
+            // state instead of drifting to the unified default.
+            'reward_split' => true,
             'average_ticket_cents' => 4200,
             'google_review_url' => 'https://g.page/r/Cdemo/review',
             'email_verified_at' => $now->copy()->subDays(45),

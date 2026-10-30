@@ -8,8 +8,9 @@ use Carbon\Carbon;
 
 /**
  * The Value panel's arithmetic (spec Sections 5.9 and 9.5).
- * Verified visits are billing event rows; estimated first-visit
- * sales are visits times the business's average ticket; platform
+ * Verified visits are billing event rows; estimated sales are
+ * visits times the business's typical spend per visit (stored
+ * as average_ticket_cents); platform
  * fees are what those visits carried under the plan's money rules,
  * derived by one settlement walk that the Phase 4 nightly batch
  * also uses to persist coverage: free-visit credit first, in event
@@ -42,6 +43,18 @@ class VisitValuation
     private array $settledByBusiness = [];
 
     /**
+     * The billing-event collections the settlement walks
+     * loaded, keyed by business id (B7 M-4): forMonth() slices
+     * the current month out of the walked collection instead
+     * of re-querying the same rows. Cleared together with the
+     * settlements by forgetSettlements(), so the two caches
+     * can never disagree about freshness.
+     *
+     * @var array<int, \Illuminate\Database\Eloquent\Collection<int, BillingEvent>>
+     */
+    private array $eventsByBusiness = [];
+
+    /**
      * Settle a business's events into coverage and fees.
      *
      * The result is memoized on this instance; see the
@@ -66,6 +79,7 @@ class VisitValuation
     public function forgetSettlements(): void
     {
         $this->settledByBusiness = [];
+        $this->eventsByBusiness = [];
     }
 
     /**
@@ -77,6 +91,33 @@ class VisitValuation
             ->where('business_id', $business->id)
             ->orderBy('id')
             ->get();
+
+        // Flag leg of the demo double exclusion, in this walk
+        // (A-18 Finding 3): a business flagged demo settles
+        // EVERY event as coverage='demo' at $0, whatever stamp
+        // the event itself carries, so a stamp mismatch event
+        // on the demo business is never promoted through the
+        // free, billable or over-cap logic below, counts as no
+        // verified visit, and estimates no sales. The coverage
+        // leg below handles the mirror mismatch (a
+        // coverage='demo' event on a real business).
+        if ($business->isDemo()) {
+            $settled = [];
+
+            foreach ($events as $event) {
+                $settled[$event->id] = ['coverage' => 'demo', 'fee_cents' => 0];
+            }
+
+            $this->eventsByBusiness[$business->id] = $events;
+
+            return [
+                'verified_visits' => 0,
+                'estimated_sales_cents' => 0,
+                'fees_cents' => 0,
+                'settled' => $settled,
+            ];
+        }
+        $this->eventsByBusiness[$business->id] = $events;
 
         $plan = $business->currentPlan;
         // The first-visits-free credit is the one-time allowance
@@ -91,10 +132,10 @@ class VisitValuation
         // this walk's output identical before and after the batch
         // persists it (the dashboard and the batch reconcile
         // exactly, or the figure does not render).
-        $persistedFree = BillingEvent::query()
-            ->where('business_id', $business->id)
-            ->where('coverage', 'free_credit')
-            ->count();
+        // B7 M-3: the walk already holds every event, coverage
+        // column included; the persisted free-credit count is
+        // counted from that collection, not queried again.
+        $persistedFree = $events->where('coverage', 'free_credit')->count();
         $freeAllowance = $persistedFree + (int) $business->free_visits_remaining;
         $cap = $plan !== null ? (int) ($plan->monthly_cap_cents ?? PHP_INT_MAX) : PHP_INT_MAX;
 
@@ -119,7 +160,35 @@ class VisitValuation
 
             $amount = (int) $event->amount_cents;
 
-            if ($event->coverage === 'refunded') {
+            if ($event->coverage === 'demo') {
+                // A demo visit (Amendment 63): it is not a
+                // verified visit for money purposes. It carries
+                // no fee, consumes no free credit and no cap
+                // room, and the walk never promotes it. This
+                // is the coverage leg in this walk; the flag
+                // leg above settles a flagged business's every
+                // event the same way, whatever its stamp.
+                $settled[$event->id] = ['coverage' => 'demo', 'fee_cents' => 0];
+            } elseif ($event->coverage === 'fraud_denied') {
+                // A visit whose reward was denied as fraud in
+                // review (money fix train, audit 1.3): it is not
+                // billable, it consumes no free credit and no
+                // cap room, and the walk never promotes it back.
+                $settled[$event->id] = ['coverage' => 'fraud_denied', 'fee_cents' => 0];
+            } elseif ($event->coverage === 'written_off') {
+                // FE-CANCEL-01: a sub-$1 residual written off
+                // when the program ended. Terminal: no fee, no
+                // free credit, no cap room, never promoted back.
+                $settled[$event->id] = ['coverage' => 'written_off', 'fee_cents' => 0];
+            } elseif ($event->coverage === 'held') {
+                // A visit minted under an anomaly hold (money
+                // fix train, audit 3.4): it settles only when
+                // the review releases the reward. Until then it
+                // consumes no free credit and no cap room, so a
+                // later visit is never billed in its place by
+                // accident of ordering.
+                $settled[$event->id] = ['coverage' => 'held', 'fee_cents' => 0];
+            } elseif ($event->coverage === 'refunded') {
                 // A refunded visit is terminal (Section 9.8): it
                 // carries no fee, but it did consume its month's
                 // cap slot when it was charged, so the cap walk
@@ -158,11 +227,22 @@ class VisitValuation
     {
         $settled = $this->settle($business);
 
-        $events = BillingEvent::query()
-            ->where('business_id', $business->id)
-            ->whereBetween('created_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
-            ->orderBy('id')
-            ->get();
+        // B7 M-4: the settlement walk above already loaded
+        // every event for this business (created_at included,
+        // in id order); the month slice is filtered out of
+        // that collection with the same bounds the query used.
+        // A cold instance whose walk somehow left no retained
+        // collection falls back to the query unchanged.
+        $monthStart = $month->copy()->startOfMonth();
+        $monthEnd = $month->copy()->endOfMonth();
+        $walked = $this->eventsByBusiness[$business->id] ?? null;
+        $events = $walked !== null
+            ? $walked->filter(fn (BillingEvent $event) => $event->created_at->between($monthStart, $monthEnd))->values()
+            : BillingEvent::query()
+                ->where('business_id', $business->id)
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->orderBy('id')
+                ->get();
 
         $fees = 0;
         foreach ($events as $event) {

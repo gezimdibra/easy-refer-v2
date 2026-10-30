@@ -2,8 +2,6 @@
 
 @section('title', 'Business detail')
 
-@section('notices_summary_only', '1')
-@section('notices_banner_keys', 'suspend')
 
 @section('content')
     <p><a class="font-semibold text-link hover:underline" href="{{ route('admin.businesses') }}">Back to businesses</a></p>
@@ -22,6 +20,29 @@
         <h2 class="text-xl font-semibold">Owner</h2>
         <p class="mt-1">{{ $business->owner?->name }} · {{ $business->owner?->email }}</p>
         <p class="text-text-2">Contact: {{ $business->contact_email }} · {{ $business->contact_phone_e164 ? \App\Support\PhoneNumber::formatForDisplay($business->contact_phone_e164) : '' }}</p>
+    </div>
+
+    <div class="card mt-4">
+        <h2 class="text-xl font-semibold">How they heard about us</h2>
+        {{-- SK-6 (Amendment 67): the Friday readout's per-business
+             source. The effective channel resolves claim first
+             (SignupSource precedence): a claimed business reads
+             as its claim channel even if a self-report existed. --}}
+        <ul class="mt-2 space-y-1 text-base">
+            <li>Channel: {{ \App\Support\SignupSource::effectiveLabel($business) }}</li>
+            @if ($business->claim_source)
+                <li>Claim source: {{ $business->claim_source }}@if ($business->claimable_page_id) (page {{ $business->claimable_page_id }})@endif</li>
+            @endif
+            @if ($business->signup_source)
+                <li>They told us: {{ \App\Support\SignupSource::READOUT_LABELS[$business->signup_source] ?? $business->signup_source }}</li>
+            @endif
+            @if ($business->signup_source_detail)
+                <li>Street or area: {{ $business->signup_source_detail }}</li>
+            @endif
+            @if ($business->signup_source_captured_at)
+                <li>Recorded: {{ $business->signup_source_captured_at->format('M j, Y') }}</li>
+            @endif
+        </ul>
     </div>
 
     <div class="card mt-4">

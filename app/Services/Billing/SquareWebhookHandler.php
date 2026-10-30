@@ -7,6 +7,7 @@ use App\Models\BillingEvent;
 use App\Models\BillingRecord;
 use App\Models\BillingRefund;
 use App\Models\Business;
+use App\Models\SmsCampaignRecipient;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -129,9 +130,14 @@ class SquareWebhookHandler
                     ])->save();
 
                     // The charger's definitive-failure
-                    // semantics: the events are released so a
-                    // later run rebuilds the batch.
+                    // semantics: both legs are released so a
+                    // later run rebuilds the batch (money fix
+                    // train, audit 2.3: the campaign recipient
+                    // rows ride the same release as the events).
                     BillingEvent::query()
+                        ->where('billing_record_id', $record->id)
+                        ->update(['billing_record_id' => null]);
+                    SmsCampaignRecipient::query()
                         ->where('billing_record_id', $record->id)
                         ->update(['billing_record_id' => null]);
                 }
@@ -197,17 +203,60 @@ class SquareWebhookHandler
 
         if (in_array($status, ['LOST', 'ACCEPTED'], true)) {
             DB::transaction(function () use ($record, $dispute) {
-                // Section 9.8: a lost dispute runs the same
-                // clawback path as a refund for the attached
-                // visits; the debit itself is Square's, so no
+                // Section 9.8, as corrected by the money fix
+                // train (audit 3.3): a lost dispute claws back
+                // the DISPUTED amount only, never the whole
+                // record by default. The amount comes from the
+                // dispute itself, falling back to the amount
+                // recorded when the dispute opened, and only
+                // then to the full record (the shape deliveries
+                // carried before amounts were recorded). The
+                // debit itself is Square's, so no
                 // billing_refunds row is created.
-                $this->refunds->clawbackAllVisits($record, 'webhook', 'dispute_lost');
-                $record->forceFill(['state' => BillingRecord::STATE_REFUNDED])->save();
+                $disputedAmount = $this->disputedAmount($record, $dispute);
+                $this->refunds->clawbackAmount($record, $disputedAmount, 'webhook', 'dispute_lost');
+
+                $alreadyRefunded = (int) $record->refunds()
+                    ->where('state', BillingRefund::STATE_SUCCEEDED)
+                    ->sum('amount_cents');
+                $record->forceFill([
+                    'state' => $alreadyRefunded + $disputedAmount >= (int) $record->amount_cents
+                        ? BillingRecord::STATE_REFUNDED
+                        : BillingRecord::STATE_PARTIALLY_REFUNDED,
+                ])->save();
                 AuditLog::write('billing.dispute_lost', null, [
                     'square_dispute_id' => (string) ($dispute['id'] ?? ''),
+                    'amount_cents' => $disputedAmount,
                 ], $record->business, $record);
             });
         }
+    }
+
+    /**
+     * The amount a dispute is about: the delivery's own amount,
+     * else the amount recorded at dispute open, else the full
+     * record amount.
+     *
+     * @param  array<string, mixed>  $dispute
+     */
+    private function disputedAmount(BillingRecord $record, array $dispute): int
+    {
+        $amount = (int) ($dispute['amount_money']['amount'] ?? 0);
+
+        if ($amount >= 1) {
+            return $amount;
+        }
+
+        $opened = AuditLog::query()
+            ->where('business_id', $record->business_id)
+            ->where('action', 'billing.dispute_opened')
+            ->where('target_type', $record->getMorphClass())
+            ->where('target_id', $record->id)
+            ->orderByDesc('id')
+            ->first();
+        $recorded = (int) ($opened?->metadata['amount_cents'] ?? 0);
+
+        return $recorded >= 1 ? $recorded : (int) $record->amount_cents;
     }
 
     /** @param array<string, mixed> $dispute */

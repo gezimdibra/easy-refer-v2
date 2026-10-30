@@ -19,15 +19,24 @@ use InvalidArgumentException;
  * blueprint's literal refund_{record}_{cents} shape collides
  * when two equal partial refunds hit one record).
  *
- * Visit selection: the refund is absorbed by the batch's visits
- * in creation order, earliest first; a visit absorbed in full is
- * marked refunded and its reward follows the OD-3 clawback path,
- * a visit absorbed only in part keeps its coverage (the partial
- * remainder lives on the refund row, exact to the cent). This is
- * the reading the sandbox matrix pins (SQ-15: refunding one
- * visit's worth refunds exactly one visit; the others are
- * untouched). Per-visit accounting splits of a refund total use
- * the Section 9.8 rounding rule in ProRata.
+ * Visit selection (money fix train, audit 3.2): a refund that
+ * is about a specific visit names it (the target event) and is
+ * absorbed by that visit alone. An untargeted visit refund is
+ * absorbed by the record's own visits in creation order,
+ * earliest first, and never beyond the record's visit leg: a
+ * visit absorbed in full is marked refunded and its reward
+ * follows the OD-3 clawback path, a visit absorbed only in
+ * part keeps its coverage (the partial remainder lives on the
+ * refund row, exact to the cent). This preserves the reading
+ * the sandbox matrix pins (SQ-15: refunding one visit's worth
+ * refunds exactly one visit; the others are untouched). A
+ * refund named for the text leg absorbs no visits at all:
+ * text cents never claw back a customer's reward. The stated
+ * 30-day window (config billing.refund_window_days) is
+ * enforced on this local path; refunds Square reports by
+ * webhook are already executed and are recorded regardless
+ * of the window. Per-visit accounting splits of a refund
+ * total use the Section 9.8 rounding rule in ProRata.
  */
 class RefundService
 {
@@ -40,7 +49,7 @@ class RefundService
      * @throws InvalidArgumentException on an unrefundable record or an out-of-range amount
      * @throws SquareOutcomeUnknown when Square's answer is unknown (the refund row stays pending)
      */
-    public function refund(BillingRecord $record, ?int $amountCents = null, ?string $reason = null, string $actor = 'owner'): BillingRefund
+    public function refund(BillingRecord $record, ?int $amountCents = null, ?string $reason = null, string $actor = 'owner', ?BillingEvent $targetEvent = null, string $leg = 'visits'): BillingRefund
     {
         if (! in_array($record->state, [BillingRecord::STATE_SUCCEEDED, BillingRecord::STATE_PARTIALLY_REFUNDED], true)) {
             throw new InvalidArgumentException('Billing record '.$record->id.' is not in a refundable state.');
@@ -48,6 +57,45 @@ class RefundService
 
         if ($record->square_payment_id === null) {
             throw new InvalidArgumentException('Billing record '.$record->id.' has no Square payment to refund.');
+        }
+
+        if (! in_array($leg, ['visits', 'texts'], true)) {
+            throw new InvalidArgumentException('Refund leg '.$leg.' is not a known leg.');
+        }
+
+        // The stated window (refund policy: requests within 30
+        // days of the payment). The record's creation is the
+        // payment's local instant; a refund asked for after the
+        // window closes is refused before any Square call.
+        $windowDays = (int) config('billing.refund_window_days', 30);
+
+        if ($record->created_at !== null && now()->greaterThan($record->created_at->copy()->addDays($windowDays))) {
+            throw new InvalidArgumentException(
+                'Billing record '.$record->id.' is outside the '.$windowDays.'-day refund window stated in the refund policy.'
+            );
+        }
+
+        if ($targetEvent !== null) {
+            if ($leg !== 'visits') {
+                throw new InvalidArgumentException('A targeted refund is a visit refund; it cannot be named for the text leg.');
+            }
+
+            // The target is re-read: the caller's model may be
+            // stale, and a visit already refunded (or never
+            // billable under this record) must be refused on
+            // the ledger's current state, not the caller's.
+            $target = $targetEvent->fresh() ?? $targetEvent;
+
+            if ((int) $target->billing_record_id !== (int) $record->id || $target->coverage !== 'billable') {
+                throw new InvalidArgumentException('Billing event '.$target->id.' is not a billable visit of record '.$record->id.'.');
+            }
+
+            if ($amountCents !== null && $amountCents !== (int) $target->amount_cents) {
+                throw new InvalidArgumentException('A targeted refund is for the visit amount '.(int) $target->amount_cents.' in full.');
+            }
+
+            $amountCents ??= (int) $target->amount_cents;
+            $targetEvent = $target;
         }
 
         $alreadyRefunded = (int) $record->refunds()
@@ -79,13 +127,13 @@ class RefundService
             return $refund;
         }
 
-        DB::transaction(function () use ($record, $refund, $result, $amount, $reason, $actor) {
+        DB::transaction(function () use ($record, $refund, $result, $amount, $reason, $actor, $targetEvent, $leg) {
             $refund->forceFill([
                 'state' => BillingRefund::STATE_SUCCEEDED,
                 'square_refund_id' => $result->refundId,
             ])->save();
 
-            $this->applyRefundEffects($record, $amount, $actor, $reason);
+            $this->applyRefundEffects($record, $amount, $actor, $reason, $targetEvent, $leg);
         });
 
         return $refund;
@@ -210,7 +258,19 @@ class RefundService
      */
     public function clawbackAllVisits(BillingRecord $record, string $actor = 'webhook', ?string $reason = null): void
     {
-        $this->markRefundedVisits($record, (int) $record->amount_cents, $actor, $reason);
+        $this->clawbackAmount($record, (int) $record->amount_cents, $actor, $reason);
+    }
+
+    /**
+     * Claw back visits for a stated amount (money fix train,
+     * audit 3.3): a lost dispute debits the disputed amount,
+     * not automatically the whole record, so the clawback walk
+     * runs for exactly that amount and never beyond the
+     * record's remaining visit leg.
+     */
+    public function clawbackAmount(BillingRecord $record, int $amountCents, string $actor = 'webhook', ?string $reason = null): void
+    {
+        $this->markRefundedVisits($record, $amountCents, $actor, $reason);
     }
 
     /**
@@ -222,9 +282,25 @@ class RefundService
      * succeeded first, inside the same transaction. A disputed
      * record keeps its state: the dispute resolution owns it.
      */
-    private function applyRefundEffects(BillingRecord $record, int $amountCents, string $actor, ?string $reason): void
+    private function applyRefundEffects(BillingRecord $record, int $amountCents, string $actor, ?string $reason, ?BillingEvent $targetEvent = null, string $leg = 'visits'): void
     {
-        $this->markRefundedVisits($record, $amountCents, $actor, $reason);
+        if ($targetEvent !== null) {
+            // The refund is about this one visit: it alone is
+            // marked refunded and its reward alone is clawed
+            // back. No other visit of the batch is touched.
+            $fresh = $targetEvent->fresh();
+
+            if ($fresh !== null && $fresh->coverage === 'billable') {
+                $fresh->forceFill(['coverage' => 'refunded'])->save();
+                $this->clawback->clawbackEvent($fresh, $actor, $reason);
+            }
+        } elseif ($leg === 'texts') {
+            // A text-leg refund absorbs no visits: the text
+            // leg's cents are proven by the refund row itself,
+            // and no customer's reward is clawed back for them.
+        } else {
+            $this->markRefundedVisits($record, $amountCents, $actor, $reason);
+        }
 
         if (! in_array($record->state, [
             BillingRecord::STATE_SUCCEEDED,
@@ -250,17 +326,25 @@ class RefundService
      * creation order: fully absorbed visits are marked refunded
      * and clawed back; the first partially absorbed visit ends
      * the walk (its coverage is unchanged; the partial cents are
-     * proven by the refund row itself).
+     * proven by the refund row itself). The walk reads billed
+     * visits only (FE-BILL-01): a record also claims the
+     * month's free and over-cap coverage rows for its
+     * statement, and a visit that was never charged is never
+     * "refunded" and never absorbs refund cents.
      */
     private function markRefundedVisits(BillingRecord $record, int $amountCents, string $actor, ?string $reason): void
     {
-        $remaining = $amountCents;
-
         $events = BillingEvent::query()
             ->where('billing_record_id', $record->id)
-            ->where('coverage', '!=', 'refunded')
+            ->where('coverage', 'billable')
             ->orderBy('id')
             ->get();
+
+        // The walk is capped at the record's own visit leg
+        // (money fix train, audit 3.2): the record amount it
+        // walks against can include text-leg cents, and those
+        // cents never absorb a visit.
+        $remaining = min($amountCents, (int) $events->sum('amount_cents'));
 
         foreach ($events as $event) {
             if ($remaining < (int) $event->amount_cents) {
