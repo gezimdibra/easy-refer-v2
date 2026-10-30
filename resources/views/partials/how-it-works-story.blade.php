@@ -131,7 +131,7 @@
             <div class="hiw-anim lg:order-2">
                 <div class="hiw-num">4</div>
                 <h3 class="type-title-1 mt-4 text-text-1">You pay only for visits</h3>
-                <p class="type-lede mt-3 max-w-[420px] text-text-2">One plan. {{ \App\Support\Money::usd($plan->per_referral_cents) }} when a referred friend visits. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
+                <p class="type-lede mt-3 max-w-[420px] text-text-2">One plan. {{ \App\Support\Money::usd($plan->per_referral_cents) }} when a referred friend visits. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month in visit charges.</p>
                 <ul class="type-body mt-[18px] space-y-2">
                     <li class="flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />First {{ (int) config('billing.free_visits_at_signup') }} visits free</li>
                     <li class="flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />{{ \App\Support\Money::usd($plan->price_cents ?? 0) }}/month, {{ \App\Support\Money::usd($plan->per_referral_cents) }} per referral visit</li>

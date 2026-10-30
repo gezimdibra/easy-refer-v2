@@ -28,13 +28,13 @@ class LoginTest extends TestCase
 
     public function test_login_page_uses_a_short_eyebrow_sentence_case_and_the_approved_stat_labels(): void
     {
-        // Corrections wave (2026-10-24): TY-07 (the eyebrow is a
-        // short label, not the full sentence set in all caps),
-        // CV-01 (sentence case link label), NEW-7 (the brand panel
-        // carries the approved stat labels, matching the home band).
+        // Corrections wave (2026-10-24): CV-01 (sentence case link
+        // label), NEW-7 (the brand panel carries the approved stat
+        // labels, matching the home band). AU-1 (R5 pack) retired
+        // the TY-07 eyebrow: the heading and panel do its job.
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Your one-stop referral platform')
+            ->assertDontSee('Your one-stop referral platform')
             ->assertDontSee('one-stop platform for managing referrals')
             ->assertSee('Forgot password?')
             ->assertDontSee('Forgot Password?')
@@ -79,6 +79,39 @@ class LoginTest extends TestCase
         ])->assertRedirect(route('dashboard'));
 
         $this->assertAuthenticated();
+    }
+
+    public function test_failed_login_keeps_the_forgot_link_directly_under_the_password_field(): void
+    {
+        // Owner Finding 6 companion pin (2026-10-29): in the
+        // FAILED-login state the "Forgot password?" link must stay
+        // visible at 390x664 without scrolling. The error summary
+        // renders ABOVE the form in the auth layout, so its height
+        // (including the listing banner the single-source summary
+        // convergence ships) pushes the form down from the top; the
+        // link's safety comes from sitting directly under the
+        // password field, early in the form. This pin holds the DOM
+        // order that the computed-position proof relies on:
+        // summary region, identifier field, password field, then
+        // the forgot link, with nothing but the remember-me row
+        // between the field and the link.
+        $this->post(route('login'), [
+            'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
+            'password' => 'not the password at all',
+        ])->assertSessionHasErrors('identifier');
+
+        $html = $this->get(route('login'))->assertOk()->getContent();
+
+        $banner = strpos($html, 'data-error-summary');
+        $password = strpos($html, 'name="password"');
+        $forgot = strpos($html, 'Forgot password?');
+        $submit = strpos($html, '>Sign in</button>');
+
+        $this->assertTrue($banner !== false && $password !== false && $forgot !== false && $submit !== false);
+        $this->assertTrue(
+            $banner < $password && $password < $forgot && $forgot < $submit,
+            'DOM order must be: error summary, password field, forgot link, submit button.'
+        );
     }
 
     public function test_wrong_password_and_unknown_identifier_give_the_identical_error(): void

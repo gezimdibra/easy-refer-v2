@@ -18,7 +18,7 @@
         ['Scan the QR code', 'Customers scan your unique QR code at checkout.', ['Instant QR code generation', 'Multiple placement options']],
         ['Share with friends', 'They send their link to friends.', ['Native share sheet and copy link', 'Customizable messages']],
         ['Claim rewards', 'Friends visit your store and receive their welcome reward.', ['Instant validation', 'Flexible reward options']],
-        ['Track and engage', 'See every referral. Send bulk texts.', ['Real-time analytics', 'Bulk SMS campaigns']],
+        ['Track and engage', 'See every referral. Send bulk texts.', ['Every visit, counted and listed', 'Bulk SMS campaigns']],
     ] as $i => [$title, $text, $bullets])
         <li>
             {{-- D-2 (release 08b) put the numeral ink on the

@@ -13,7 +13,9 @@ use App\Http\Controllers\Admin\AdminLoginController;
 use App\Http\Controllers\Admin\AdminTwoFactorController;
 use App\Http\Controllers\ConsentController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\JoinController;
 use App\Http\Controllers\MarketingController;
+use App\Http\Controllers\OgCardController;
 use App\Http\Controllers\ReferController;
 use App\Http\Controllers\StaffRedemptionController;
 use App\Http\Controllers\SquareWebhookController;
@@ -23,7 +25,10 @@ use App\Http\Controllers\Owner\UndoController;
 use App\Http\Controllers\Owner\BillingCardController;
 use App\Http\Controllers\Owner\CampaignsController;
 use App\Http\Controllers\Owner\DashboardController;
+use App\Http\Controllers\Owner\OnboardingController;
 use App\Http\Controllers\Owner\EmailChangeController;
+use App\Http\Controllers\CouponController;
+use App\Http\Controllers\Owner\CouponsController;
 use App\Http\Controllers\Owner\QrPageController;
 use App\Http\Controllers\Owner\ReviewsController;
 use App\Http\Controllers\Owner\RewardTextController;
@@ -54,15 +59,68 @@ Route::post('/refer/verify', [ReferController::class, 'verifyCheck'])->middlewar
 Route::post('/refer/verify/resend', [ReferController::class, 'resend'])->name('refer.verify.resend');
 Route::post('/refer/verify/change', [ReferController::class, 'changeNumber'])->name('refer.verify.change');
 Route::get('/refer/share', [ReferController::class, 'share'])->name('refer.share');
+Route::get('/refer/og/{slug}/{version}.png', [OgCardController::class, 'show'])->name('refer.og.card');
 Route::get('/refer/share/qr', [ReferController::class, 'shareQr'])->name('refer.share.qr');
 Route::get('/refer/r/{token}', [ReferController::class, 'friendLanding'])->name('refer.friend');
 Route::post('/refer/r/{token}', [ReferController::class, 'friendClaim'])->middleware('throttle:30,1')->name('refer.friend.claim');
 Route::get('/refer/redeem/{token}', [ReferController::class, 'redeemPage'])->name('refer.redeem.page');
 Route::get('/refer/redeem/{token}/qr', [ReferController::class, 'redeemQr'])->name('refer.redeem.qr');
+// ID-05 (Amendment 48): the review ask's click routes — the
+// tap is recorded once per receipt, then redirected to the
+// business's current Google review link.
+Route::get('/refer/redeem/{token}/review', [ReferController::class, 'redeemReviewRedirect'])->name('refer.redeem.review');
+Route::get('/refer/claim/{token}/review', [ReferController::class, 'claimReviewRedirect'])->name('refer.claim.review');
 Route::get('/refer/claim/{token}', [ReferController::class, 'claimPage'])->name('refer.claim.page');
 Route::get('/refer/claim/{token}/qr', [ReferController::class, 'claimQr'])->name('refer.claim.qr');
+Route::get('/join/{slug}', [JoinController::class, 'show'])->name('join.show');
+// ID-11 direct coupons (S3): the batch doorway and the claim
+// page. The verification step itself rides the shipped
+// /refer/verify routes with pending kind "coupon".
+Route::get('/coupon/{token}', [CouponController::class, 'landing'])->name('coupon.landing');
+Route::post('/coupon/{token}', [CouponController::class, 'start'])->middleware('throttle:30,1')->name('coupon.start');
+Route::get('/coupon/claim/{token}', [CouponController::class, 'claimPage'])->name('coupon.claim.page');
+Route::get('/coupon/claim/{token}/qr', [CouponController::class, 'claimQr'])->name('coupon.claim.qr');
 Route::get('/refer/{token}', [ReferController::class, 'landing'])->name('refer.landing');
 Route::post('/refer/{token}', [ReferController::class, 'enroll'])->middleware('throttle:30,1')->name('refer.enroll');
+
+// The G6 demo (Amendment 63): the landing-embedded real-flow
+// demo on the flagged fictional business. Its own session, its
+// own gateway, its own guard; it never touches the real flow's
+// routes above.
+Route::get('/demo', [\App\Http\Controllers\DemoController::class, 'show'])->name('demo.show');
+Route::post('/demo/start', [\App\Http\Controllers\DemoController::class, 'start'])->middleware('throttle:60,1')->name('demo.start');
+Route::get('/demo/claim', [\App\Http\Controllers\DemoController::class, 'claim'])->name('demo.claim');
+Route::post('/demo/claim', [\App\Http\Controllers\DemoController::class, 'claimNext'])->name('demo.claim.next');
+Route::get('/demo/form', [\App\Http\Controllers\DemoController::class, 'form'])->name('demo.form');
+Route::post('/demo/form', [\App\Http\Controllers\DemoController::class, 'submitForm'])->middleware('throttle:30,1')->name('demo.form.submit');
+Route::get('/demo/verify', [\App\Http\Controllers\DemoController::class, 'verifyForm'])->name('demo.verify');
+Route::post('/demo/verify', [\App\Http\Controllers\DemoController::class, 'verifyCheck'])->middleware('throttle:30,1')->name('demo.verify.check');
+Route::post('/demo/verify/new-code', [\App\Http\Controllers\DemoController::class, 'newCode'])->name('demo.verify.new');
+Route::post('/demo/verify/change', [\App\Http\Controllers\DemoController::class, 'changeNumber'])->name('demo.verify.change');
+Route::get('/demo/reward', [\App\Http\Controllers\DemoController::class, 'reward'])->name('demo.reward');
+Route::get('/demo/reward/qr/{token}', [\App\Http\Controllers\DemoController::class, 'qr'])->name('demo.qr');
+Route::get('/demo/counter/{token}', [\App\Http\Controllers\DemoController::class, 'counter'])->name('demo.counter');
+Route::post('/demo/counter/{token}/confirm', [\App\Http\Controllers\DemoController::class, 'counterConfirm'])->middleware('throttle:120,1')->name('demo.counter.confirm');
+Route::get('/demo/coda', [\App\Http\Controllers\DemoController::class, 'coda'])->name('demo.coda');
+Route::post('/demo/exit', [\App\Http\Controllers\DemoController::class, 'exit'])->name('demo.exit');
+
+// The G1 claimable shop pages (g1-claimable-design-pass.md):
+// one private token URL per shop, noindex by construction (H10),
+// never linked from any public page. The preview poster's code
+// resolves ONLY to the page itself (H4, inert).
+Route::get('/claim/{token}', [\App\Http\Controllers\ClaimableController::class, 'show'])->name('claimable.show');
+Route::get('/claim/{token}/poster', [\App\Http\Controllers\ClaimableController::class, 'poster'])->name('claimable.poster');
+Route::get('/claim/{token}/qr', [\App\Http\Controllers\ClaimableController::class, 'qr'])->name('claimable.qr');
+Route::get('/claim/{token}/demo', [\App\Http\Controllers\ClaimableController::class, 'demo'])->name('claimable.demo');
+Route::post('/claim/{token}/demo/complete', [\App\Http\Controllers\ClaimableController::class, 'demoComplete'])->name('claimable.demo.complete');
+Route::get('/claim/{token}/claim', [\App\Http\Controllers\ClaimableController::class, 'claimStart'])->name('claimable.claim');
+Route::post('/claim/{token}/gate/send', [\App\Http\Controllers\ClaimableController::class, 'gateSend'])->middleware('throttle:20,1')->name('claimable.gate.send');
+Route::post('/claim/{token}/gate/check', [\App\Http\Controllers\ClaimableController::class, 'gateCheck'])->middleware('throttle:20,1')->name('claimable.gate.check');
+Route::post('/claim/{token}/review', [\App\Http\Controllers\ClaimableController::class, 'reviewRequest'])->middleware('throttle:10,1')->name('claimable.review');
+Route::post('/claim/{token}/remove', [\App\Http\Controllers\ClaimableController::class, 'remove'])->name('claimable.remove');
+Route::get('/claim/{token}/contested', [\App\Http\Controllers\ClaimableController::class, 'contestedForm'])->name('claimable.contested');
+Route::post('/claim/{token}/contested', [\App\Http\Controllers\ClaimableController::class, 'contestedStore'])->middleware('throttle:10,1')->name('claimable.contested.store');
+Route::get('/claim-handoff/{token}', [\App\Http\Controllers\ClaimableController::class, 'handoff'])->name('claimable.handoff');
 
 // The staff scan-and-confirm screens (spec Section 6): no auth, by
 // design; the token and the per-render nonce are the controls.
@@ -167,6 +225,37 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
         ->name('verification.send');
 
     Route::get('auth/dashboard', DashboardController::class)->name('dashboard');
+
+    // The onboarding front door (P4, OB-U1): a focused flow in
+    // the signup wizard's grammar. Welcome and Finish are
+    // bookends outside the five working steps; the card POST is
+    // the flow's own save behind the shared CardOnFileService.
+    Route::get('auth/get-started', [OnboardingController::class, 'welcome'])->name('onboarding.welcome');
+    Route::get('auth/get-started/finish', [OnboardingController::class, 'finish'])->name('onboarding.finish');
+    Route::post('auth/get-started/complete', [OnboardingController::class, 'complete'])
+        ->middleware('origin.check')
+        ->name('onboarding.complete');
+    // RS2-3 (Amendment 44): the Finish screen's optional
+    // first-visit value save (its own small form, never folded
+    // into the door forms).
+    Route::post('auth/get-started/value', [OnboardingController::class, 'storeValue'])
+        ->middleware('origin.check')
+        ->name('onboarding.value');
+    // SK-6 (Amendment 67): the Finish screen's optional
+    // "how did you hear" save (its own small form, like the
+    // value save; never folded into the door forms).
+    Route::post('auth/get-started/source', [OnboardingController::class, 'storeSource'])
+        ->middleware('origin.check')
+        ->name('onboarding.source');
+    Route::post('auth/get-started/card', [OnboardingController::class, 'storeCard'])
+        ->middleware('origin.check')
+        ->name('onboarding.card.store');
+    // RS2-2: the Location step's save (the address that used to
+    // be signup Step 4, collected here since the checkpoint).
+    Route::post('auth/get-started/location', [OnboardingController::class, 'storeLocation'])
+        ->middleware('origin.check')
+        ->name('onboarding.location.store');
+    Route::get('auth/get-started/{step}', [OnboardingController::class, 'step'])->name('onboarding.step');
     Route::post('auth/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist'])
         ->middleware('origin.check')
         ->name('dashboard.checklist.dismiss');
@@ -187,9 +276,37 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
     Route::post('auth/reviews/rewards/{reward}/deny', [ReviewsController::class, 'denyReward'])->name('reviews.rewards.deny');
     Route::get('auth/qr', [QrPageController::class, 'index'])->name('owner.qr');
     Route::get('auth/qr/image', [QrPageController::class, 'image'])->name('owner.qr.image');
+    Route::get('auth/qr/image/{placement}', [QrPageController::class, 'imagePlacement'])->name('owner.qr.image.placement');
     Route::post('auth/qr/download', [QrPageController::class, 'download'])->name('owner.qr.download');
     Route::get('auth/qr/poster/{variant}', [QrPageController::class, 'poster'])->name('owner.qr.poster');
     Route::post('auth/qr/regenerate', [QrPageController::class, 'regenerate'])->name('owner.qr.regenerate');
+    Route::post('auth/qr/placements/{placement}/regenerate', [QrPageController::class, 'regeneratePlacement'])->name('owner.qr.placement.regenerate');
+    Route::post('auth/qr/placements/{placement}/rename', [QrPageController::class, 'renamePlacement'])->name('owner.qr.placement.rename');
+    Route::post('auth/qr/coaching/dismiss', [QrPageController::class, 'dismissCoaching'])->name('owner.qr.coaching.dismiss');
+    // ID-11 coupons (Amendment 53): the secondary Coupons tab
+    // on the QR page. Static segments register before the
+    // {batch} routes so they win; every {batch} and {claim}
+    // parameter is implicit model binding (F-1).
+    Route::get('auth/qr/coupons', [CouponsController::class, 'index'])->name('owner.qr.coupons');
+    Route::post('auth/qr/coupons', [CouponsController::class, 'store'])
+        ->middleware('origin.check')
+        ->name('owner.qr.coupons.store');
+    Route::post('auth/qr/coupons/hint/dismiss', [CouponsController::class, 'dismissHint'])
+        ->middleware('origin.check')
+        ->name('owner.qr.coupons.hint.dismiss');
+    Route::get('auth/qr/coupons/{batch}/done', [CouponsController::class, 'done'])->name('owner.qr.coupons.done');
+    Route::post('auth/qr/coupons/{batch}/kill', [CouponsController::class, 'kill'])
+        ->middleware('origin.check')
+        ->name('owner.qr.coupons.kill');
+    Route::post('auth/qr/coupons/{batch}/flag-dismiss', [CouponsController::class, 'dismissFlag'])
+        ->middleware('origin.check')
+        ->name('owner.qr.coupons.flag.dismiss');
+    Route::get('auth/qr/coupons/{batch}/flyer', [CouponsController::class, 'flyer'])->name('owner.qr.coupons.flyer');
+    Route::get('auth/qr/coupons/{batch}/flyer/image', [CouponsController::class, 'flyerImage'])->name('owner.qr.coupons.flyer.image');
+    Route::get('auth/qr/coupons/{batch}/claims', [CouponsController::class, 'claims'])->name('owner.qr.coupons.claims');
+    Route::post('auth/qr/coupons/{batch}/claims/{claim}/void', [CouponsController::class, 'voidClaim'])
+        ->middleware('origin.check')
+        ->name('owner.qr.coupons.claims.void');
     Route::post('auth/reward-texts', [RewardTextController::class, 'update'])->name('owner.reward-texts');
     Route::post('auth/security/email', [EmailChangeController::class, 'store'])
         ->middleware(['origin.check', 'step-up'])
@@ -204,6 +321,8 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
         ->name('security.two-factor.start');
     Route::get('auth/security/two-factor/confirm', [TwoFactorController::class, 'confirmForm'])
         ->name('security.two-factor.confirm');
+    Route::get('auth/security/two-factor/qr', [TwoFactorController::class, 'qr'])
+        ->name('security.two-factor.qr');
     Route::post('auth/security/two-factor/confirm', [TwoFactorController::class, 'confirm'])
         ->middleware('origin.check')
         ->name('security.two-factor.confirm.store');
@@ -211,7 +330,10 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
         ->middleware('origin.check')
         ->name('security.two-factor.disable');
     Route::put('auth/security/password', [PasswordController::class, 'update'])
-        ->middleware('origin.check')
+        // Throttled like the step-up endpoint above (throttle:5,1):
+        // this route verifies the current password, so failed
+        // attempts must be rate-limited, never unthrottled.
+        ->middleware(['throttle:5,1', 'origin.check'])
         ->name('security.password');
     Route::post('auth/security/sign-out-others', [SecurityController::class, 'signOutOthers'])
         ->middleware('origin.check')
@@ -260,13 +382,29 @@ Route::middleware(['auth', 'session.lifetime', '2fa', 'owner.open'])->group(func
     Route::post('auth/campaigns/preset', [CampaignsController::class, 'preset'])
         ->middleware('origin.check')
         ->name('campaigns.preset');
+    Route::post('auth/campaigns/quiet-day', [CampaignsController::class, 'quietDay'])
+        ->middleware('origin.check')
+        ->name('campaigns.quiet-day');
     Route::post('auth/campaigns/{campaign}/duplicate', [CampaignsController::class, 'duplicate'])
         ->middleware('origin.check')
         ->name('campaigns.duplicate');
+    // ID-02 (Amendment 48): the recognition card's action and
+    // the scoped editor — the only doors a recognition draft
+    // has besides its confirm.
+    Route::post('auth/campaigns/recognition', [CampaignsController::class, 'recognition'])
+        ->middleware('origin.check')
+        ->name('campaigns.recognition');
+    Route::get('auth/campaigns/{campaign}/recognition-edit', [CampaignsController::class, 'recognitionEdit'])->name('campaigns.recognition.edit');
+    Route::post('auth/campaigns/{campaign}/recognition-edit', [CampaignsController::class, 'recognitionUpdate'])
+        ->middleware('origin.check')
+        ->name('campaigns.recognition.update');
     Route::get('auth/campaigns/{campaign}/confirm', [CampaignsController::class, 'confirm'])->name('campaigns.confirm');
     Route::post('auth/campaigns/{campaign}/send', [CampaignsController::class, 'send'])
         ->middleware('origin.check')
         ->name('campaigns.send');
+    Route::post('auth/campaigns/{campaign}/resend', [CampaignsController::class, 'resend'])
+        ->middleware('origin.check')
+        ->name('campaigns.resend');
     Route::get('auth/campaigns/{campaign}', [CampaignsController::class, 'show'])->name('campaigns.show');
     Route::get('auth/campaigns/{campaign}/status', [CampaignsController::class, 'status'])->name('campaigns.status');
     Route::delete('auth/campaigns/{campaign}', [CampaignsController::class, 'destroy'])
@@ -366,4 +504,31 @@ Route::prefix('admin')->group(function () {
         Route::get('holds', [AdminConsoleController::class, 'holds'])->name('admin.holds');
         Route::get('audit', [AdminConsoleController::class, 'audit'])->name('admin.audit');
     });
+});
+
+// Error context (gap pack 06, ERR-3): unmatched paths render the
+// branded 404 from inside the web middleware group, so the session
+// has run and the auth state is real when the view chooses its
+// context (app vs public). Without this, a 404 raised at routing
+// time reaches the exception renderer before any middleware has
+// run, and a signed-in owner's context cannot be known reliably.
+Route::fallback(function (\Illuminate\Http\Request $request) {
+    // A URI that exists under another method is a 405, not a 404:
+    // the fallback must not swallow MethodNotAllowed (pinned by
+    // LogoutTest and MarketingTest).
+    $allowed = [];
+    foreach (app('router')->getRoutes() as $route) {
+        if (str_contains($route->uri(), 'fallbackPlaceholder')) {
+            continue;
+        }
+        if ($route->matches($request, false)) {
+            $allowed = array_merge($allowed, $route->methods());
+        }
+    }
+    $allowed = array_values(array_diff(array_unique($allowed), [$request->method(), 'HEAD']));
+    if ($allowed !== []) {
+        throw new \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException($allowed);
+    }
+
+    return response()->view('errors.404', [], 404);
 });

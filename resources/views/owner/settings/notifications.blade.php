@@ -2,16 +2,11 @@
 
 @section('title', 'Notifications')
 
-@section('notices_summary_only', '1')
 
 @section('content')
     <h1 class="type-title-2 text-text-1">Notifications</h1>
 
-    <nav aria-label="Breadcrumb" class="type-caption mt-2 text-text-2">
-        <a class="text-text-2 hover:text-text-1" href="{{ route('settings') }}">Settings</a>
-        <span aria-hidden="true"> / </span>
-        <span aria-current="page" class="text-text-1">Notifications</span>
-    </nav>
+    <p class="type-body mt-2 max-w-[68ch] text-text-2">The texts and emails Easy Refer sends you about your program.</p>
 
     <div class="mt-6 lg:flex lg:items-start lg:gap-8">
         <div class="lg:w-[220px] lg:flex-none">
@@ -19,10 +14,28 @@
         </div>
         <div class="mt-6 min-w-0 flex-1 lg:mt-0">
 
+    {{-- SN-1 v2 (Amendment 38, Train A3-1): the summary is
+         composed from the ONE real switch (the same old() /
+         business expression the switch renders), so the summary
+         and the switch cannot disagree. The weekly-digest and
+         reminder-nudge toggles were removed: no sender exists
+         for either (their stored opt-out columns stay inert).
+         The summary names what the text switch controls, then
+         the always-on truth: the first-visit email, billing
+         emails, and security emails send in every state. --}}
+    @php($textOn = (bool) old('owner_text_notifications', $business->owner_text_notifications))
+    @php($summaryLine = $textOn
+        ? 'Right now: you get a text and an email when your first referred friend visits. Billing emails and security emails about your account always send.'
+        : 'Right now: no texts about your program. You still get an email when your first referred friend visits. Billing emails and security emails about your account always send.')
+
     <form method="POST" action="{{ route('settings.notifications.update') }}" class="panel [&_input]:max-w-[560px] [&_select]:max-w-[560px] [&_textarea]:max-w-[560px]" data-loading>
         @csrf
 
-        <div class="space-y-5">
+        <p class="type-body text-text-1" data-notifications-summary>{{ $summaryLine }}</p>
+
+        <h2 class="type-title-3 mt-6 text-text-1">About your program</h2>
+
+        <div class="mt-4 space-y-5">
             <div>
                 <label class="flex items-start gap-3">
                     <input type="checkbox" name="owner_text_notifications" value="1" @checked(old('owner_text_notifications', $business->owner_text_notifications)) class="switch mt-1">
@@ -33,22 +46,36 @@
                 </label>
             </div>
 
+        </div>
+
+        <h2 class="type-title-3 mt-6 text-text-1">Email</h2>
+
+        <div class="mt-4 space-y-5">
+            {{-- SN-2: the always-on billing row. The switch is
+                 disabled, checked, and carries NO name attribute,
+                 so it can never be submitted or alter billing mail. --}}
             <div>
-                <label class="flex items-start gap-3">
-                    <input type="checkbox" name="weekly_summary" value="1" @checked(old('weekly_summary', ! $business->weekly_digest_opt_out)) class="switch mt-1">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" checked disabled class="switch mt-1" aria-disabled="true">
                     <span>
-                        <span class="font-semibold">Weekly summary email</span>
-                        <span class="block text-text-2">One email a week with your visits, rewards, and fees. Turn it off to stop the summary. Billing emails always send.</span>
+                        <span class="font-semibold">Billing emails</span>
+                        <span class="block text-text-2">Always on. Receipts, payment problems, and charge notices always send.</span>
                     </span>
-                </label>
+                </div>
             </div>
 
+            {{-- M-5 (Amendment 72, [M5-D1-F]): the setup-reminder
+                 turn-off ships with its sender. It governs the
+                 setup drip only (D1 to D3); payment and security
+                 emails are never turned off, as the drip footer
+                 itself states. The column stores the negative:
+                 checked here means reminders are ON. --}}
             <div>
                 <label class="flex items-start gap-3">
-                    <input type="checkbox" name="nudges" value="1" @checked(old('nudges', ! $business->nudge_opt_out)) class="switch mt-1">
+                    <input type="checkbox" name="setup_reminders" value="1" @checked(old('setup_reminders', ! $business->setup_reminders_opt_out)) class="switch mt-1">
                     <span>
-                        <span class="font-semibold">Referral reminder nudges</span>
-                        <span class="block text-text-2">Occasional emails suggesting a next step for your program, like adding your review link.</span>
+                        <span class="font-semibold">Setup reminder emails</span>
+                        <span class="block text-text-2">Occasional emails about a setup step that is not finished yet. Payment and security emails are never turned off.</span>
                     </span>
                 </label>
             </div>

@@ -2,20 +2,20 @@
     Notices region (design-system.md Section 6.6): page-level status
     and error summaries live in one region labelled "Notices".
 
-    Two error modes. The default lists every message, for pages
-    whose forms do not mark their fields. Summary mode ($summaryOnly,
-    for the F-03 forms: login, register, enrollment, friend claim)
-    renders the design's one summary line (Section 3.2 R1 pattern:
-    "{n} things to fix:") and nothing else: each problem is stated
-    once, at its field, with aria-invalid and aria-describedby
-    wiring (Section 4.4 rule 6). Errors keyed in $bannerKeys are
-    cross-field problems with no field to mark (the register
-    wizard's account errors); those render here, under the summary
-    line, per the wizard's banner rule. In summary mode focus moves
-    to the summary, which is also the aria-live announcement
-    (Section 4.2).
+    Error summaries are a SINGLE-SOURCE component (standing rule,
+    EMPTY ERROR SUMMARY defect class, 2026-10-29): when the error
+    bag is non-empty this partial renders the header count AND the
+    list of every message, both derived from the same bag in the
+    same block, each message as an anchor to its field. Cross-field
+    messages (keyed to no single input, e.g. "account", "card")
+    render in the same list. There is no count-only mode and no
+    per-page error-display flag: a page cannot opt into a header
+    without its messages, because the two cannot diverge here.
+    Focus moves to the summary, which is also the aria-live
+    announcement (Section 4.2). Messages also render at their
+    fields where the form marks them (the summary + field
+    duplication is the RT-3 design, 2026-10-27).
 --}}
-@php($bannerKeys = $bannerKeys ?? [])
 {{-- The status flash is rendered HERE and nowhere else: views in
      layouts that include this partial must not render
      session('status') themselves (the QR and Reviews pages each
@@ -29,7 +29,23 @@
      toast can never attach itself to another page's flash. --}}
 @php($toast = session('toast'))
 @php($toastForStatus = is_array($toast) && ($toast['message'] ?? null) === $statusMessage && (isset($toast['undo']) || isset($toast['view'])) ? $toast : null)
-@if ($statusMessage || $errors->any())
+{{-- The summary reads EVERY error bag, not only the default one:
+     forms that validate into a named bag (password change,
+     two-factor, QR placement rename) were invisible to a
+     default-bag-only summary — their messages rendered at the
+     field with no summary at all. Messages are merged by field
+     key, identical duplicates collapsed, so the count and the
+     list below are two views of this one array. --}}
+@php($summaryByKey = [])
+@foreach ((method_exists($errors, 'getBags') ? $errors->getBags() : ['default' => $errors]) as $summaryBag)
+    @foreach ($summaryBag->keys() as $bagKey)
+        @foreach ($summaryBag->get($bagKey) as $bagMessage)
+            @php($summaryByKey[$bagKey] = array_values(array_unique(array_merge($summaryByKey[$bagKey] ?? [], [$bagMessage]))))
+        @endforeach
+    @endforeach
+@endforeach
+@php($problemCount = count($summaryByKey))
+@if ($statusMessage || $problemCount > 0)
     <div role="region" aria-label="Notices">
         @if ($statusMessage)
             @if ($toastForStatus)
@@ -51,34 +67,25 @@
             @endif
         @endif
 
-        @if ($errors->any())
-            @if ($summaryOnly ?? false)
-                @php($problemCount = count(array_unique($errors->keys())))
-                <div class="banner banner-error" role="alert" tabindex="-1" data-error-summary>
-                    <p>{{ $problemCount === 1 ? 'One thing to fix:' : $problemCount.' things to fix:' }}</p>
-                    @foreach ($bannerKeys as $bannerKey)
-                        @error($bannerKey)
-                            <p class="mt-1">{{ $message }}</p>
-                        @enderror
-                    @endforeach
-                </div>
-                @once
-                    <script>
-                        (function () {
-                            var el = document.querySelector('[data-error-summary]');
-                            if (el) { el.focus(); }
-                        })();
-                    </script>
-                @endonce
-            @else
-                <div class="banner banner-error" role="alert">
-                    <ul class="list-inside list-disc">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
+        @if ($problemCount > 0)
+            <div class="banner banner-error" role="alert" tabindex="-1" data-error-summary>
+                <p>{{ $problemCount === 1 ? 'One thing to fix:' : $problemCount.' things to fix:' }}</p>
+                <ul class="mt-1 list-inside list-disc">
+                    @foreach ($summaryByKey as $summaryKey => $summaryMessages)
+                        @foreach ($summaryMessages as $summaryMessage)
+                            <li><a class="underline" href="#{{ $summaryKey }}">{{ $summaryMessage }}</a></li>
                         @endforeach
-                    </ul>
-                </div>
-            @endif
+                    @endforeach
+                </ul>
+            </div>
+            @once
+                <script>
+                    (function () {
+                        var el = document.querySelector('[data-error-summary]');
+                        if (el) { el.focus(); }
+                    })();
+                </script>
+            @endonce
         @endif
     </div>
 @endif

@@ -18,7 +18,7 @@
                 'heading' => 'Your program',
                 'entries' => [
                     ['settings.rewards', 'gift', 'Rewards', 'What the friend and the person who referred them each get.'],
-                    ['settings.value', 'wallet', 'Value', 'Your average ticket, used for the sales estimates on your Overview.'],
+                    ['settings.value', 'wallet', 'Value', 'Your typical spend per visit, used for the sales estimates on your Overview.'],
                     ['settings.reviews', 'star', 'Reviews', 'Your Google review link, shown to customers after they visit.'],
                     ['settings.limits', 'users', 'Referral limits', 'How many rewards one customer can earn per day and per month.'],
                     ['settings.notifications', 'message-circle', 'Notifications', 'The texts and emails Easy Refer sends you about your program.'],
@@ -30,7 +30,7 @@
                     ['settings.profile', 'layout-dashboard', 'Business profile', 'Your business name, type, and contact details.'],
                     ['security', 'lock', 'Security', 'Your password and two-factor authentication.'],
                     ['settings.billing', 'wallet', 'Billing', 'Your plan, your card on file, and your charges.'],
-                    ['settings.account', 'settings', 'Account', 'Close your account, and what happens when you do.'],
+                    ['settings.account', 'settings', 'Account', 'End your referral program, settle your final bill, and see what happens to rewards.'],
                 ],
             ],
         ] as $group)
@@ -39,13 +39,36 @@
                 <ul class="mt-2 divide-y divide-line">
                     @foreach ($group['entries'] as [$routeName, $icon, $label, $description])
                         <li>
-                            <a href="{{ route($routeName) }}" class="flex min-h-[48px] items-center gap-3 py-3">
+                            <a href="{{ route($routeName) }}" class="flex min-h-[48px] flex-wrap items-center gap-3 py-3">
                                 <span class="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-surface-2 text-text-1" aria-hidden="true"><x-icon :name="$icon" :size="20" /></span>
                                 <span class="min-w-0 flex-1">
                                     <span class="block font-semibold text-text-1">{{ $label }}</span>
                                     <span class="type-body-sm block text-text-2">{{ $description }}</span>
                                 </span>
-                                <x-icon name="chevron-right" :size="20" class="flex-none text-text-3" />
+                                {{-- SI-1/SI-2: the row's current state,
+                                     computed once in the controller from
+                                     the same predicates the row's own
+                                     page uses. State rides inside the
+                                     row link; it is never a control.
+                                     Below lg the state wraps to its
+                                     own line under the text (indented
+                                     past the icon) instead of crushing
+                                     the label column (T2R-01 row
+                                     geometry rule); the chevron stays
+                                     on the first line. --}}
+                                @php($rowState = $indexStates[$routeName] ?? null)
+                                @if ($rowState !== null)
+                                    <span class="flex-none max-lg:order-4 max-lg:w-full max-lg:pl-[52px]">
+                                        @if ($rowState['kind'] === 'pill')
+                                            <span class="pill {{ $rowState['tone'] }}">{{ $rowState['text'] }}</span>
+                                        @elseif ($rowState['kind'] === 'truncated')
+                                            <span class="type-body-sm block max-w-[220px] truncate text-text-2 lg:max-w-[160px]">{{ $rowState['text'] }}</span>
+                                        @else
+                                            <span class="type-body-sm whitespace-nowrap text-text-2">{{ $rowState['text'] }}</span>
+                                        @endif
+                                    </span>
+                                @endif
+                                <x-icon name="chevron-right" :size="20" class="flex-none text-text-3 max-lg:order-3" />
                             </a>
                         </li>
                     @endforeach
@@ -56,7 +79,7 @@
 
     <div class="panel mt-4">
         <h2 class="type-title-3 text-text-1">Setup checklist</h2>
-        @if ($business->checklist_dismissed_at !== null)
+        @if ($checklistDismissed)
             <p class="mt-1 text-text-2">Checklist is hidden. Show it again any time.</p>
             <form method="POST" action="{{ route('settings.checklist.reset') }}" class="mt-3" data-loading>
                 @csrf

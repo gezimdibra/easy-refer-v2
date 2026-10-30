@@ -16,12 +16,17 @@
     <ul class="mt-6 space-y-3">
         <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />Free to start</li>
         <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />First {{ (int) config('billing.free_visits_at_signup') }} visits free</li>
-        {{-- Amendment 12 (release 11): the card requirement is
-             stated on the card itself, before signup (HOME-PRC-02
-             gains its sixth bullet). The free count renders from
-             config like the bullet above. --}}
-        <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />Card on file to activate; first charge after your {{ (int) config('billing.free_visits_at_signup') }} free visits</li>
-        <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }}/month</li>
+        {{-- Amendment 12 (release 11): the activation terms
+             are stated on the card itself, before signup
+             (HOME-PRC-02's sixth bullet). ACT-PUB-01
+             (activation redesign, census C-33): the card
+             clause is re-truthed under the allowance model —
+             the reward activates, the free visits come first,
+             and a card keeps the code going after them. The
+             free count renders from config like the bullet
+             above. --}}
+        <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />Your friend reward set to activate, and your first {{ (int) config('billing.free_visits_at_signup') }} visits are free. A card keeps your code going after that; first charge after your {{ (int) config('billing.free_visits_at_signup') }} free visits</li>
+        <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }}/month in visit charges</li>
         <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />No setup fee</li>
         <li class="type-body flex items-start gap-2 text-text-2"><x-icon name="check" :size="20" class="mt-1 flex-none text-success-strong" />Cancel anytime</li>
     </ul>

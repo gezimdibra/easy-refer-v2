@@ -21,8 +21,8 @@
      standalone section; see the header note.) --}}
 @if ($band ?? false)
     <div id="starter-kit" class="mx-auto mt-16 max-w-[720px] border-t border-on-dark-line pt-16 text-center">
-        <h2 class="type-title-2 text-white">Get the free Referral Program Starter Kit</h2>
-        <p class="type-body mx-auto mt-4 max-w-[68ch] text-dark-muted">We email you the kit and a few short tips. Unsubscribe any time.</p>
+        <h2 class="type-title-2 text-white">Join the list for the free Referral Program Starter Kit</h2>
+        <p class="type-body mx-auto mt-4 max-w-[68ch] text-dark-muted">We are putting the kit together: printable posters explained, reward ideas, and a first-week checklist. Join the list and we will email it when it is ready.</p>
         <div class="mx-auto mt-8 max-w-[560px] rounded-xl border border-line bg-surface-0 text-left shadow-e1" style="padding: 32px">
             @include('partials.starter-kit-form', ['source' => $source ?? 'home'])
         </div>
@@ -31,8 +31,8 @@
     <section id="starter-kit" class="{{ $ground ?? 'bg-surface-0' }}">
         <div class="shell section-pad grid items-start gap-10 lg:grid-cols-2">
             <div>
-                <h2 class="type-title-2 text-text-1">Get the free Referral Program Starter Kit</h2>
-                <p class="type-body mt-4 max-w-[68ch] text-text-2">We email you the kit and a few short tips. Unsubscribe any time.</p>
+                <h2 class="type-title-2 text-text-1">Join the list for the free Referral Program Starter Kit</h2>
+                <p class="type-body mt-4 max-w-[68ch] text-text-2">We are putting the kit together: printable posters explained, reward ideas, and a first-week checklist. Join the list and we will email it when it is ready.</p>
             </div>
             <div class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
                 @include('partials.starter-kit-form', ['source' => $source ?? 'home'])

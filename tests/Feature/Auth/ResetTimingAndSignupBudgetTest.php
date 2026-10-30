@@ -106,13 +106,16 @@ class ResetTimingAndSignupBudgetTest extends TestCase
     {
         $max = (int) config('security.signup_throttle.per_identifier_max_attempts');
 
-        // Every attempt fails an unrelated rule (bad state), so no
-        // account is ever created; the identifier budget still counts
-        // each one, and each arrives from a different address.
+        // Every attempt fails an unrelated rule (a too-short
+        // password; RS2-2: the address rules this test used to
+        // trip live at the onboarding Location step now, not at
+        // signup), so no account is ever created; the identifier
+        // budget still counts each one, and each arrives from a
+        // different address.
         for ($i = 1; $i <= $max; $i++) {
             $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.'.$i])
-                ->post(route('register'), $this->signupPayload(['state' => 'ZZ']))
-                ->assertSessionHasErrors('state');
+                ->post(route('register'), $this->signupPayload(['password' => 'short', 'password_confirmation' => 'short']))
+                ->assertSessionHasErrors('password');
         }
 
         // The next attempt, even fully valid and from a fresh address,
@@ -134,9 +137,10 @@ class ResetTimingAndSignupBudgetTest extends TestCase
             $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.'.$i])
                 ->post(route('register'), $this->signupPayload([
                     'email' => 'person'.$i.'@example.test',
-                    'state' => 'ZZ',
+                    'password' => 'short',
+                    'password_confirmation' => 'short',
                 ]))
-                ->assertSessionHasErrors('state');
+                ->assertSessionHasErrors('password');
         }
 
         // A fresh email does not help: the shared phone is spent.
@@ -154,6 +158,6 @@ class ResetTimingAndSignupBudgetTest extends TestCase
         // Owner A signs up fresh data; owner B's identity is a
         // different budget entirely, so a normal signup still works.
         $this->post(route('register'), $this->signupPayload())
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('onboarding.welcome'));
     }
 }

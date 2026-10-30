@@ -16,7 +16,7 @@
         <div class="joined">
             <input class="form-input" id="lead-email-{{ $source ?? 'home' }}" name="email" type="email" autocomplete="email" value="{{ old('email') }}" required
                 @if ($errors->has('email')) aria-invalid="true" aria-describedby="lead-email-error" @endif>
-            <button type="submit" class="btn btn-secondary">Send me the kit</button>
+            <button type="submit" class="btn btn-secondary">Join the list</button>
         </div>
         @error('email')
             <p class="form-error" id="lead-email-error">{{ $message }}</p>

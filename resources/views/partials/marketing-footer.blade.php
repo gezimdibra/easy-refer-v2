@@ -31,7 +31,7 @@
                         @error('email')
                             <p class="form-error" id="newsletter-email-error">{{ $message }}</p>
                         @enderror
-                        <p class="form-help">We send occasional product updates. Unsubscribe any time.</p>
+                        <p class="form-help">We send occasional product updates.</p>
                     </form>
                 @endif
             </div>

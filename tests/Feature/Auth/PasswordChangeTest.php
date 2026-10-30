@@ -71,13 +71,18 @@ class PasswordChangeTest extends TestCase
         $this->assertTrue(Hash::check(UserFactory::PASSWORD, $user->fresh()->password));
     }
 
-    public function test_wrong_current_password_error_renders_once_under_its_own_form(): void
+    public function test_wrong_current_password_error_renders_in_summary_and_once_under_its_own_form(): void
     {
         // T1-F2: the error was keyed current_password in the shared
         // default bag, and the two-factor panel on the same page
         // carries a current_password field too, so one submit
         // printed the message under both panels. Each form now has
         // its own error bag.
+        // EMPTY ERROR SUMMARY class fix (2026-10-29): the named
+        // "password" bag now also feeds the one page summary, so
+        // the message renders exactly twice by design: once in the
+        // summary list, once under the change-password form — and
+        // never under the two-factor panel.
         $user = User::factory()->create();
 
         $this->actingAs($user)
@@ -89,11 +94,179 @@ class PasswordChangeTest extends TestCase
             ->assertSessionHasErrors('current_password', null, 'password');
 
         $page = $this->actingAs($user)->get(route('security'))->assertOk();
+        $html = $page->getContent();
         $this->assertSame(
-            1,
-            substr_count($page->getContent(), 'The provided password is incorrect.'),
-            'The wrong-current-password message must render exactly once, under the change-password form.'
+            2,
+            substr_count($html, 'The provided password is incorrect.'),
+            'The wrong-current-password message must render in the summary and once under the change-password form.'
         );
+        $this->assertMatchesRegularExpression(
+            '/data-error-summary>(?:(?!<\/div>).)*The provided password is incorrect\./s',
+            $html,
+            'The wrong-current-password message must render inside the error summary.'
+        );
+    }
+
+    /**
+     * The concatenated text of every error-summary region on the
+     * page (elements carrying data-error-summary).
+     */
+    private function summaryRegionText(string $html): string
+    {
+        $dom = new \DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html);
+        libxml_clear_errors();
+
+        $text = '';
+        foreach ((new \DOMXPath($dom))->query('//*[@data-error-summary]') as $node) {
+            $text .= ' '.$node->textContent;
+        }
+
+        return $text;
+    }
+
+    private function fieldErrorText(string $html, string $id): ?string
+    {
+        $dom = new \DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html);
+        libxml_clear_errors();
+
+        $node = $dom->getElementById($id.'-error');
+
+        return $node?->textContent;
+    }
+
+    public function test_password_error_text_renders_inside_the_summary_region_and_at_the_field(): void
+    {
+        // The summary TEXT pin (EMPTY ERROR SUMMARY class rule,
+        // 2026-10-29): for each failure kind, the message TEXT must
+        // render inside the summary region and at its field.
+        // Asserting the refusal alone is not sufficient.
+        $scenarios = [
+            'wrong current password' => [
+                'input' => [
+                    'current_password' => 'not the current password',
+                    'password' => 'a new long phrase 123',
+                    'password_confirmation' => 'a new long phrase 123',
+                ],
+                'message' => 'The provided password is incorrect.',
+                'field' => 'current_password',
+            ],
+            'mismatched confirmation' => [
+                'input' => [
+                    'current_password' => UserFactory::PASSWORD,
+                    'password' => 'a new long phrase 123',
+                    'password_confirmation' => 'a different long phrase 456',
+                ],
+                'message' => 'The password field confirmation does not match.',
+                'field' => 'password',
+            ],
+            'too-short new password' => [
+                'input' => [
+                    'current_password' => UserFactory::PASSWORD,
+                    'password' => 'short123',
+                    'password_confirmation' => 'short123',
+                ],
+                'message' => 'The password field must be at least 12 characters.',
+                'field' => 'password',
+            ],
+        ];
+
+        foreach ($scenarios as $name => $scenario) {
+            $user = User::factory()->create();
+
+            $this->actingAs($user)
+                ->put(route('security.password'), $scenario['input'])
+                ->assertSessionHasErrors(null, 'password');
+
+            $html = $this->actingAs($user)->get(route('security'))->assertOk()->getContent();
+
+            $this->assertStringContainsString(
+                $scenario['message'],
+                $this->summaryRegionText($html),
+                "[{$name}] the message text must render inside the summary region."
+            );
+            $this->assertStringContainsString(
+                $scenario['message'],
+                (string) $this->fieldErrorText($html, $scenario['field']),
+                "[{$name}] the message text must render at its field."
+            );
+        }
+    }
+
+    public function test_failed_password_change_attempts_are_throttled(): void
+    {
+        $user = User::factory()->create();
+
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this->actingAs($user)
+                ->put(route('security.password'), [
+                    'current_password' => 'not the current password',
+                    'password' => 'a new long phrase 123',
+                    'password_confirmation' => 'a new long phrase 123',
+                ])
+                ->assertSessionHasErrors('current_password', null, 'password');
+        }
+
+        $this->actingAs($user)
+            ->put(route('security.password'), [
+                'current_password' => 'not the current password',
+                'password' => 'a new long phrase 123',
+                'password_confirmation' => 'a new long phrase 123',
+            ])
+            ->assertStatus(429);
+    }
+
+    public function test_guests_cannot_reach_the_password_change_endpoint(): void
+    {
+        $this->put(route('security.password'), [
+            'current_password' => 'whatever current 123',
+            'password' => 'a new long phrase 123',
+            'password_confirmation' => 'a new long phrase 123',
+        ])->assertRedirect(route('login'));
+
+        $this->assertGuest();
+    }
+
+    public function test_password_block_sits_beside_the_two_factor_controls(): void
+    {
+        $user = User::factory()->create();
+
+        $html = $this->actingAs($user)->get(route('security'))->assertOk()->getContent();
+
+        $twoFactor = strpos($html, 'Two-factor authentication');
+        $password = strpos($html, '>Password<');
+        $sessions = strpos($html, 'Active sessions');
+
+        $this->assertTrue($twoFactor !== false && $password !== false && $sessions !== false);
+        $this->assertTrue(
+            $twoFactor < $password && $password < $sessions,
+            'The Password block must sit directly after the two-factor block and before Active sessions.'
+        );
+    }
+
+    public function test_password_change_audit_row_carries_no_password_material(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->put(route('security.password'), [
+                'current_password' => UserFactory::PASSWORD,
+                'password' => 'a new long phrase 123',
+                'password_confirmation' => 'a new long phrase 123',
+            ])
+            ->assertSessionHas('status', 'Password updated.');
+
+        $row = AuditLog::query()->where('action', 'owner.password_changed')->where('user_id', $user->id)->first();
+        $this->assertNotNull($row);
+        $this->assertSame([], $row->metadata ?? []);
+        $this->assertSame('127.0.0.1', $row->ip_address);
+        $encoded = json_encode($row->toArray());
+        $this->assertStringNotContainsString('a new long phrase 123', $encoded);
+        $this->assertStringNotContainsString(UserFactory::PASSWORD, $encoded);
+        $this->assertStringNotContainsString($user->fresh()->password, $encoded, 'The audit row must never carry the stored hash.');
     }
 
     public function test_reusing_the_current_password_is_rejected(): void

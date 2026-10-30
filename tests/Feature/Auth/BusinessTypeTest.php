@@ -56,7 +56,7 @@ class BusinessTypeTest extends TestCase
     public function test_a_chosen_business_type_is_stored_on_the_business(): void
     {
         $this->post(route('register'), $this->payload(['business_type' => 'cafe']))
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('onboarding.welcome'));
 
         $this->assertSame('cafe', Business::firstOrFail()->business_type);
     }
@@ -64,7 +64,7 @@ class BusinessTypeTest extends TestCase
     public function test_business_type_is_optional(): void
     {
         $this->post(route('register'), $this->payload())
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('onboarding.welcome'));
 
         $this->assertNull(Business::firstOrFail()->business_type);
     }
@@ -79,6 +79,13 @@ class BusinessTypeTest extends TestCase
 
     public function test_every_specced_type_is_accepted(): void
     {
+        // The register POST is throttled at 5/minute; with
+        // Restaurant the specced list has six entries, so the
+        // loop outruns the limit on its own subject's account.
+        // The throttle has its own pins; this test's subject
+        // is type acceptance, so it lifts the throttle only.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+
         foreach (Business::TYPES as $i => $type) {
             $this->post(route('logout'));
 
@@ -86,7 +93,7 @@ class BusinessTypeTest extends TestCase
                 'business_type' => $type,
                 'email' => 'owner'.$i.'@example.test',
                 'phone' => '(212) 555-02'.$i.'0',
-            ]))->assertRedirect(route('dashboard'));
+            ]))->assertRedirect(route('onboarding.welcome'));
 
             $this->assertSame(
                 $type,

@@ -38,7 +38,7 @@
     @endif
 
     @if (! $emailVerified)
-        <p class="mt-3 text-text-2">Your QR code and billing stay off until this email is verified.</p>
+        <p class="mt-3 text-text-2">This email is not verified yet. Verify it so your receipts and password resets reach you.</p>
         <div class="mt-4 flex flex-wrap items-center gap-3">
             <form method="POST" action="{{ route('verification.send') }}" data-loading>
                 @csrf

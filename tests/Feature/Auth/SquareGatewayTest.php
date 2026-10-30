@@ -188,13 +188,27 @@ class SquareGatewayTest extends TestCase
         $this->assertCount(1, $this->log->errors());
     }
 
-    public function test_signup_stores_the_customer_id_when_the_sdk_gateway_succeeds(): void
+    public function test_location_save_stores_the_customer_id_when_the_sdk_gateway_succeeds(): void
     {
+        // RS2-2: the checkpoint creates no Square customer; the
+        // Location save completes the deferred provisioning
+        // (here the card moment has not happened yet).
         $this->app->instance(SquareCustomerGateway::class, new SdkSquareCustomerGateway($this->successTransport('sq_cust_99')));
 
-        $this->post(route('register'), $this->signupPayload())->assertRedirect(route('dashboard'));
+        $this->post(route('register'), $this->signupPayload())->assertRedirect(route('onboarding.welcome'));
 
-        $this->assertSame('sq_cust_99', Business::firstOrFail()->square_customer_id);
+        $business = Business::firstOrFail();
+        $this->assertNull($business->square_customer_id);
+
+        $this->actingAs($business->owner)->post(route('onboarding.location.store'), [
+            'country' => 'US',
+            'street' => '1 Main Street',
+            'city' => 'New York',
+            'state' => 'NY',
+            'postal_code' => '10001',
+        ])->assertRedirect(route('onboarding.step', 'verify'));
+
+        $this->assertSame('sq_cust_99', $business->fresh()->square_customer_id);
     }
 
     public function test_signup_completes_with_a_null_customer_when_the_sdk_gateway_errors(): void
@@ -204,7 +218,7 @@ class SquareGatewayTest extends TestCase
         ])));
         $this->app->instance(SquareCustomerGateway::class, new SdkSquareCustomerGateway($failing));
 
-        $this->post(route('register'), $this->signupPayload())->assertRedirect(route('dashboard'));
+        $this->post(route('register'), $this->signupPayload())->assertRedirect(route('onboarding.welcome'));
 
         $business = Business::firstOrFail();
         $this->assertNull($business->square_customer_id);

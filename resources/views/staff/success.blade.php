@@ -13,6 +13,8 @@
     @include('partials.success-flood', [
         'rewardText' => $rewardText,
         'businessName' => $businessName,
+        'business' => $business ?? null,
+        'outcome' => $outcome ?? null,
         'confirmedAt' => $confirmedAt,
         'note' => 'Show this screen if anyone asks.',
     ])

@@ -249,7 +249,11 @@ class BillingCardCaptureTest extends TestCase
 
         $response->assertSee('Replace card');
         $response->assertSee('Remove card');
-        $response->assertSee('Remove this card? Visits keep counting and rewards keep working. Charges pause until you add a card, and the amount you owe stays on your account.');
+        // RE-DERIVED (activation redesign, census C-20, R9):
+        // BILL-08's unbranched form is retired; with the full
+        // allowance left the modal renders ACT-BILL-08B with
+        // the count woven in.
+        $response->assertSee('Remove this card? Visits keep counting while your free visits last (5 left). Charges pause until you add a card, and the amount you owe stays on your account.');
         $response->assertSee('action="'.route('settings.billing.card.replace').'"', false);
         $response->assertSee('action="'.route('settings.billing.card.remove').'"', false);
     }
@@ -360,6 +364,8 @@ class BillingCardCaptureTest extends TestCase
             ->assertRedirect(route('settings.billing'));
 
         $page = $this->actingAs($owner)->get(route('settings.billing'));
-        $page->assertSee('No card on file. Visits keep counting, and the amount builds up here. Add a card to restart monthly charges.');
+        // RE-DERIVED (activation redesign, census C-18,
+        // ACT-BILL-03a): the banner names the free visits.
+        $page->assertSee('No card on file. Visits keep counting while your free visits last (5 left), and the amount builds up here.');
     }
 }

@@ -7,7 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Business;
 use App\Models\User;
 use Database\Seeders\TwoBusinessFixtureSeeder;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\VerifyEmailNotification as VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -45,6 +45,9 @@ class RegistrationTest extends TestCase
      */
     private function payload(array $overrides = []): array
     {
+        // RS2-2: the checkpoint payload is Steps 1-3 only. The
+        // address is no longer a signup field; it is collected
+        // by the onboarding Location step.
         return array_merge([
             'business_name' => 'Corner Deli',
             'name' => 'Dana Owner',
@@ -52,22 +55,18 @@ class RegistrationTest extends TestCase
             'phone' => '(212) 555-0147',
             'password' => 'a long phrase nobody else uses 42',
             'password_confirmation' => 'a long phrase nobody else uses 42',
-            'country' => 'US',
-            'street' => '1 Main Street',
-            'city' => 'New York',
-            'state' => 'NY',
-            'postal_code' => '10001',
         ], $overrides);
     }
 
-    public function test_register_page_renders_the_four_wizard_steps(): void
+    public function test_register_page_renders_the_three_wizard_steps(): void
     {
         $this->get(route('register'))
             ->assertOk()
             ->assertSee('Step 1: Business Information')
             ->assertSee('Step 2: Contact Details')
             ->assertSee('Step 3: Create Password')
-            ->assertSee('Step 4: Location');
+            ->assertDontSee('Step 4: Location')
+            ->assertSee('Three short steps to your account. You add your address next, while you set up.');
     }
 
     public function test_successful_registration_creates_business_and_owner(): void
@@ -76,7 +75,7 @@ class RegistrationTest extends TestCase
 
         $response = $this->post(route('register'), $this->payload());
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('onboarding.welcome'));
         $this->assertAuthenticated();
 
         $business = Business::query()->where('name', 'Corner Deli')->first();
@@ -99,29 +98,32 @@ class RegistrationTest extends TestCase
         $this->assertTrue(AuditLog::query()->where('action', 'owner.registered')->where('user_id', $user->id)->exists());
     }
 
-    public function test_square_customer_id_is_stored_when_the_gateway_responds(): void
+    public function test_no_square_customer_is_created_at_the_checkpoint(): void
     {
+        // RS2-2: Square provisioning is deferred past the
+        // checkpoint (to the card moment or the Location save),
+        // so a half-finished signup has NO Square object at all.
         $gateway = new FakeSquareCustomerGateway;
         $this->app->instance(SquareCustomerGateway::class, $gateway);
 
-        $this->post(route('register'), $this->payload())->assertRedirect(route('dashboard'));
+        $this->post(route('register'), $this->payload())->assertRedirect(route('onboarding.welcome'));
 
         $business = Business::query()->where('name', 'Corner Deli')->first();
-        $this->assertSame([$business->id], $gateway->createdForBusinessIds);
-        $this->assertSame('sq_fake_customer_'.$business->id, $business->square_customer_id);
+        $this->assertSame([], $gateway->createdForBusinessIds);
+        $this->assertNull($business->square_customer_id);
     }
 
     public function test_signup_completes_when_the_square_gateway_throws(): void
     {
-        // AUTH-37 as rewritten in the Phase 1 fix wave (Spec 4.1): a
-        // Square provisioning failure, even a gateway that throws,
-        // leaves the signup completed with the customer ID null, in
-        // the pending provisioning state the Section 9.7 sweeper
-        // retries. The SquareGatewayTest covers the API-error leg
-        // through the real SDK gateway.
+        // RS2-2 form of AUTH-37: the checkpoint never calls the
+        // gateway, so even a throwing gateway cannot fail the
+        // signup; the business sits in the pending provisioning
+        // state (square_customer_id null) the card moment and
+        // the Location save retry. The SquareGatewayTest covers
+        // the API-error leg through the real SDK gateway.
         $this->app->instance(SquareCustomerGateway::class, new ThrowingSquareCustomerGateway);
 
-        $this->post(route('register'), $this->payload())->assertRedirect(route('dashboard'));
+        $this->post(route('register'), $this->payload())->assertRedirect(route('onboarding.welcome'));
 
         $business = Business::query()->where('name', 'Corner Deli')->firstOrFail();
         $this->assertNull($business->square_customer_id);

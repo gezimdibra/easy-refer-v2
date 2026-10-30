@@ -2,8 +2,6 @@
 
 @section('title', 'Rewards')
 
-@section('notices_summary_only', '1')
-@section('notices_banner_keys', 'reward')
 
 @section('content')
     {{-- Rewards (spec Section 5.4): the reward text is the
@@ -15,7 +13,7 @@
     {{-- The filters are tabs (design 6.6), same pattern as the
          Referrals list. --}}
     <nav aria-label="Reward filters" class="mt-3">
-        <ul role="tablist" class="flex flex-wrap gap-2"
+        <ul role="tablist" class="flex flex-nowrap gap-2 overflow-x-auto pb-1"
             x-data="{
                 tabKeys(event) {
                     const tabs = Array.from(event.currentTarget.querySelectorAll('[role=tab]'));
@@ -32,7 +30,7 @@
             }"
             @keydown="tabKeys($event)">
             @foreach ($filters as $key => $label)
-                <li role="presentation">
+                <li role="presentation" class="flex-none">
                     <a role="tab" aria-selected="{{ $filter === $key ? 'true' : 'false' }}" href="{{ route('rewards.index', ['filter' => $key]) }}"
                         @if ($filter === $key) class="inline-flex min-h-[48px] items-center rounded-full border border-line-strong bg-brand-50 px-4 text-[15px] font-semibold text-link" @else class="inline-flex min-h-[48px] items-center rounded-full px-4 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" @endif>{{ $label }} ({{ $counts[$key] }})</a>
                 </li>
@@ -52,29 +50,72 @@
                 @endif
             </div>
         @else
-            <div class="overflow-x-auto"><table class="tbl tbl-sticky tbl-stack">
+            {{-- RW-1: below md the reward leads each row at
+                 semibold weight; the customer, friend, and (only
+                 when it exists) the claimed date form one quiet
+                 meta line beneath it. RW-2: a held row carries
+                 its reason and the review-queue link. RW-3: a
+                 failed text is a compact error caption plus the
+                 small retry in the right column. --}}
+            <ul class="divide-y divide-line md:hidden">
+                @foreach ($rewards as $reward)
+                    @php($status = \App\Support\RewardStatus::present($reward))
+                    <li class="flex items-start justify-between gap-3 px-4 py-3 {{ $reward->hold ? 'border-l-[3px] border-warning-strong bg-warning-fill' : '' }}">
+                        <span class="min-w-0 flex-1">
+                            <span class="block font-semibold text-text-1">{{ $reward->reward_text_snapshot }}</span>
+                            <span class="block text-sm text-text-2">{{ $reward->membership->customer->fullName() }} · for {{ $reward->referral?->referredCustomer?->first_name }}@if ($reward->state === \App\Models\Reward::STATE_CLAIMED && $reward->claimed_at !== null) · claimed {{ $business->localTime($reward->claimed_at)->format('M j, Y') }}@endif</span>
+                            @if ($reward->hold)
+                                <span class="mt-1 block text-sm text-warning-text">Held for review: {{ implode(' ', \App\Support\HoldReasons::sentencesForHold($reward->hold_rules ?? [], $business)) }} <a class="font-semibold text-link hover:underline" href="{{ route('reviews') }}">Open the review queue</a></span>
+                            @endif
+                            @if ($reward->notification_state !== 'failed')
+                                <span class="type-caption mt-1 block text-text-3">Text: {{ \App\Support\RewardStatus::notificationLabel($reward) }}</span>
+                            @endif
+                        </span>
+                        <span class="flex flex-none flex-col items-end gap-1">
+                            <span class="pill {{ $status['pill'] }}">{{ $status['label'] }}</span>@if ($readyOn = \App\Support\RewardStatus::readyOn($reward))<span class="type-caption text-text-3">{{ $readyOn }}</span>@endif
+                            @if ($goodUntil = \App\Support\RewardStatus::goodUntil($reward))<span class="type-caption text-text-3">{{ $goodUntil }}</span>@endif
+                            @if ($reward->notification_state === 'failed')
+                                <span class="type-caption text-error-strong">Text: {{ \App\Support\RewardStatus::notificationLabel($reward) }}</span>
+                                <form method="POST" action="{{ route('rewards.resend', $reward) }}" data-loading>
+                                    @csrf
+                                    <button type="submit" class="btn btn-secondary btn-sm">Text again</button>
+                                </form>
+                            @endif
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
+            {{-- RW-4: on desktop the Claimed column folds into
+                 the Status cell as a quiet subline and the
+                 reward cell carries semibold weight. --}}
+            <div class="hidden overflow-x-auto md:block"><table class="tbl tbl-sticky">
                 <thead>
                     <tr>
                         <th scope="col">Customer</th>
                         <th scope="col">Reward</th>
                         <th scope="col">For referral</th>
                         <th scope="col">Status</th>
-                        <th scope="col">Claimed</th>
                         <th scope="col">Text</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($rewards as $reward)
                         @php($status = \App\Support\RewardStatus::present($reward))
-                        <tr>
-                            <td>{{ $reward->membership->customer->first_name }} {{ $reward->membership->customer->last_name }}</td>
-                            <td data-label="Reward">{{ $reward->reward_text_snapshot }}</td>
-                            <td data-label="For referral">{{ $reward->referral?->referredCustomer?->first_name }}</td>
-                            <td data-label="Status"><span class="pill {{ $status['pill'] }}">{{ $status['label'] }}</span></td>
-                            <td class="whitespace-nowrap" data-label="Claimed">{{ $reward->claimed_at?->format('M j, Y') }}</td>
-                            <td data-label="Text">
+                        <tr class="{{ $reward->hold ? 'bg-warning-fill' : '' }}">
+                            <td>
+                                {{ $reward->membership->customer->fullName() }}
+                                @if ($reward->hold)
+                                    <span class="block text-sm text-warning-text">Held for review: {{ implode(' ', \App\Support\HoldReasons::sentencesForHold($reward->hold_rules ?? [], $business)) }} <a class="font-semibold text-link hover:underline" href="{{ route('reviews') }}">Open the review queue</a></span>
+                                @endif
+                            </td>
+                            <td class="font-semibold text-text-1">{{ $reward->reward_text_snapshot }}</td>
+                            <td>{{ $reward->referral?->referredCustomer?->first_name }}</td>
+                            <td><span class="pill {{ $status['pill'] }}">{{ $status['label'] }}</span>@if ($readyOn = \App\Support\RewardStatus::readyOn($reward))<span class="type-caption block text-text-3">{{ $readyOn }}</span>@endif
+                                @if ($goodUntil = \App\Support\RewardStatus::goodUntil($reward))<span class="type-caption block text-text-3">{{ $goodUntil }}</span>@endif
+                                @if ($reward->state === \App\Models\Reward::STATE_CLAIMED && $reward->claimed_at !== null)<span class="type-caption block text-text-3">Claimed {{ $business->localTime($reward->claimed_at)->format('M j, Y') }}</span>@endif</td>
+                            <td>
                                 @if ($reward->notification_state === 'failed')
-                                    <span class="text-error-strong">{{ \App\Support\RewardStatus::notificationLabel($reward) }}</span>
+                                    <span class="type-caption block text-error-strong">{{ \App\Support\RewardStatus::notificationLabel($reward) }}</span>
                                     <form method="POST" action="{{ route('rewards.resend', $reward) }}" class="mt-1" data-loading>
                                         @csrf
                                         <button type="submit" class="btn btn-secondary btn-sm">Text again</button>
@@ -87,7 +128,9 @@
                     @endforeach
                 </tbody>
             </table></div>
-            <div class="border-t border-line px-4 py-3">{{ $rewards->links() }}</div>
+            @if ($rewards->hasPages())
+                <div class="border-t border-line px-4 py-3">{{ $rewards->links() }}</div>
+            @endif
         @endif
     </div>
 @endsection

@@ -81,12 +81,17 @@ class TwoFactorTest extends TestCase
         $this->assertFalse($user->fresh()->hasTwoFactorEnabled());
     }
 
-    public function test_two_factor_panel_error_renders_once_under_its_own_form(): void
+    public function test_two_factor_panel_error_renders_in_summary_and_once_under_its_own_form(): void
     {
         // T1-F2: a wrong current password on the two-factor start
-        // form must print its error once, under the two-factor
-        // panel only (its own error bag), not also under the
+        // form must print its error under the two-factor panel
+        // only (its own error bag), not also under the
         // change-password panel above it.
+        // EMPTY ERROR SUMMARY class fix (2026-10-29): the named
+        // "two_factor" bag now also feeds the one page summary, so
+        // the message renders exactly twice by design: once in the
+        // summary list, once under the two-factor panel — and
+        // never under the change-password panel.
         $user = $this->ownerA();
 
         $this->actingAs($user)->post(route('security.two-factor.start'), [
@@ -94,10 +99,16 @@ class TwoFactorTest extends TestCase
         ])->assertSessionHasErrors('current_password', null, 'two_factor');
 
         $page = $this->actingAs($user)->get(route('security'))->assertOk();
+        $html = $page->getContent();
         $this->assertSame(
-            1,
-            substr_count($page->getContent(), 'The provided password is incorrect.'),
-            'The two-factor panel error must render exactly once.'
+            2,
+            substr_count($html, 'The provided password is incorrect.'),
+            'The two-factor panel error must render in the summary and once under its own panel.'
+        );
+        $this->assertMatchesRegularExpression(
+            '/data-error-summary>(?:(?!<\/div>).)*The provided password is incorrect\./s',
+            $html,
+            'The two-factor panel error must render inside the error summary.'
         );
     }
 
@@ -124,6 +135,10 @@ class TwoFactorTest extends TestCase
 
     public function test_the_confirmation_page_carries_the_provisioning_uri(): void
     {
+        // AU-12/AU-13 (R5 pack A9 pick B): the raw provisioning URL
+        // well is retired. The URI lives only inside the QR image;
+        // the page shows the QR, the step headings, and the secret
+        // grouped in 4s behind the manual-entry disclosure.
         $user = $this->ownerA();
 
         $this->actingAs($user)->post(route('security.two-factor.start'), [
@@ -131,12 +146,33 @@ class TwoFactorTest extends TestCase
         ]);
 
         $secret = (string) $user->fresh()->two_factor_secret;
+        $grouped = implode(' ', str_split($secret, 4));
 
-        $this->actingAs($user->fresh())
+        $page = $this->actingAs($user->fresh())
             ->get(route('security.two-factor.confirm'))
             ->assertOk()
-            ->assertSee('otpauth://totp/', false)
-            ->assertSee($secret);
+            ->assertSee('Scan this code with your authenticator app')
+            ->assertSee('Enter the code the app shows')
+            ->assertSee("Can't scan it? Enter the secret by hand", false)
+            ->assertSee($grouped, false)
+            ->assertDontSee('otpauth://', false);
+
+        // The QR endpoint serves the SVG encoding the same URI,
+        // only while an enrollment is pending.
+        $qr = $this->actingAs($user->fresh())->get(route('security.two-factor.qr'));
+        $qr->assertOk();
+        $this->assertSame('image/svg+xml', $qr->headers->get('Content-Type'));
+        $this->assertStringStartsWith('<?xml', $qr->getContent());
+        // The code field is focused, not the password (AU-13).
+        $this->assertMatchesRegularExpression('/<input id="code"[^>]*autofocus/', $page->getContent());
+    }
+
+    public function test_the_setup_qr_redirects_without_a_pending_enrollment(): void
+    {
+        $user = $this->ownerA();
+
+        $this->actingAs($user)->get(route('security.two-factor.qr'))
+            ->assertRedirect(route('security'));
     }
 
     public function test_confirmation_with_a_wrong_code_activates_nothing(): void
@@ -306,6 +342,41 @@ class TwoFactorTest extends TestCase
 
         $this->get(route('dashboard'))->assertOk();
         $this->assertSame(1, AuditLog::where('action', 'owner.two_factor_challenge_passed')->count());
+    }
+
+    public function test_the_challenge_accepts_the_six_boxes_without_js_and_offers_a_recovery_mode(): void
+    {
+        // AU-9: the challenge renders the shared six-box component;
+        // a boxes-only POST (no composed field, the no-JS path) is
+        // assembled by the controller and passes; the recovery
+        // mode renders its own field and format hint.
+        $this->enrollOwnerA();
+        $this->post(route('logout'));
+        $this->post(route('login'), [
+            'identifier' => TwoBusinessFixtureSeeder::A_EMAIL,
+            'password' => TwoBusinessFixtureSeeder::A_PASSWORD,
+        ]);
+
+        $this->get(route('two-factor.challenge'))
+            ->assertOk()
+            ->assertSee('data-otp', false)
+            ->assertSee('Use a recovery code instead');
+
+        $this->get(route('two-factor.challenge', ['mode' => 'recovery']))
+            ->assertOk()
+            ->assertSee('Recovery codes look like XXXXX-XXXXX.')
+            ->assertSee('Use an authenticator code instead');
+
+        $user = $this->ownerA();
+        $code = Totp::code((string) $user->two_factor_secret, time() + Totp::PERIOD_SECONDS);
+        $boxes = [];
+        foreach (str_split($code) as $i => $digit) {
+            $boxes['code_'.($i + 1)] = $digit;
+        }
+
+        $this->post(route('two-factor.challenge.store'), $boxes)
+            ->assertRedirect(route('dashboard'));
+        $this->get(route('dashboard'))->assertOk();
     }
 
     public function test_a_recovery_code_opens_the_challenge_once_and_only_once(): void

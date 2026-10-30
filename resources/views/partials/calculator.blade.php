@@ -48,7 +48,7 @@
             <input class="form-input" id="calc-weekly" type="number" min="0" max="100000" x-model.number="weekly">
         </div>
         <div>
-            <label class="form-label" for="calc-ticket">Your average ticket</label>
+            <label class="form-label" for="calc-ticket">Typical spend per visit</label>
             <input class="form-input" id="calc-ticket" type="number" min="0" max="100000" x-model.number="ticket">
         </div>
         <div>
@@ -63,7 +63,7 @@
     <div class="mt-6 space-y-2" aria-live="polite">
         <p class="type-body-lg text-text-1">About <strong class="type-stat-sm" x-text="customers">22</strong> new customers a month</p>
         <p class="type-body-lg text-text-1">Your Easy Refer fee: about $<strong class="type-stat-sm" x-text="fee">44</strong> a month</p>
-        <p class="type-body-lg text-text-1">Worth about $<strong class="type-stat-sm" x-text="value">880</strong> in first-visit sales</p>
+        <p class="type-body-lg text-text-1">Worth about $<strong class="type-stat-sm" x-text="value">880</strong> in estimated sales</p>
     </div>
     <p class="form-help mt-4">Estimates from your own numbers, not our results.</p>
     {{-- Amendment 12 (release 11, LAND-CALC-01): the honesty
@@ -72,7 +72,7 @@
          hands out, and the monthly fee estimate does not
          subtract the one-time free visits. The free count
          renders from config. --}}
-    <p class="form-help mt-2">The sales figure is before the rewards you hand out. Our fee, shown above, is the only charge from us.</p>
+    <p class="form-help mt-2">The sales figure is before the rewards you hand out. Our visit fee, shown above, is the only per-visit charge from us. Bulk texts, if you send them, cost 2 cents per segment for each customer.</p>
     <p class="form-help mt-2">Your first {{ (int) config('billing.free_visits_at_signup') }} visits are free. This monthly estimate does not subtract them.</p>
 
     {{-- C-02: this anchor IS the primary signup action, so it carries

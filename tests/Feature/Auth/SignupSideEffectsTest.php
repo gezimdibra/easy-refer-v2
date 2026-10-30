@@ -52,7 +52,7 @@ class SignupSideEffectsTest extends TestCase
 
     public function test_signup_creates_one_active_qr_code_and_grants_five_free_visits(): void
     {
-        $this->post(route('register'), $this->payload())->assertRedirect(route('dashboard'));
+        $this->post(route('register'), $this->payload())->assertRedirect(route('onboarding.welcome'));
 
         $business = Business::firstOrFail();
 

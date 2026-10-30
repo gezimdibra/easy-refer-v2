@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Notifications\EmailChangedNotification;
 use App\Services\Auth\StepUpService;
 use Database\Seeders\TwoBusinessFixtureSeeder;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\VerifyEmailNotification as VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
@@ -99,13 +99,14 @@ class EmailChangeTest extends TestCase
             'hash' => sha1('new.a@example.test'),
         ]);
 
-        // Business A has billing_status 'none', so this
-        // verification transition routes to the billing setup
-        // page under the BU-5 rule, which keys on the transition
-        // itself and so also fires for an email-change
-        // re-verification; the gate assertions below are the
-        // email-change substance and are unchanged.
-        $this->actingAs($user->fresh())->get($url)->assertRedirect(route('settings.billing'));
+        // P4 (OB-U2): the verification transition branch checks
+        // the onboarding flow first, and Business A has not
+        // completed it, so an email-change re-verification
+        // returns into the flow's Verify step (the BU-5 billing
+        // detour now applies only after the flow). The gate
+        // assertions below are the email-change substance and
+        // are unchanged.
+        $this->actingAs($user->fresh())->get($url)->assertRedirect(route('onboarding.step', 'verify'));
 
         $user->refresh();
         $this->assertNotNull($user->email_verified_at);

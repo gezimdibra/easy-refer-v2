@@ -34,7 +34,12 @@ class AuthCoverageTest extends TestCase
         $this->actingAs($user)
             ->get(route('verification.notice'))
             ->assertOk()
-            ->assertSee('Verify your email address');
+            // AU-4 (R5 pack, spec Section 3.3): the gate headline
+            // is 'Check your email'; the consequence is its own
+            // sentence under the address well.
+            ->assertSee('Check your email')
+            ->assertSee('Your email is not verified yet. Verify it so your receipts and password resets reach you.')
+            ->assertDontSee('stay off');
     }
 
     public function test_verified_user_hitting_the_verification_prompt_is_sent_to_the_dashboard(): void

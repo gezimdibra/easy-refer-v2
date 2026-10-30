@@ -56,11 +56,8 @@ class LongInputBatteryTest extends TestCase
 
         return [
             'business name' => [['business_name' => $huge], 'business_name'],
-            'street' => [['street' => $huge], 'street'],
-            'city' => [['city' => $huge], 'city'],
             'owner name' => [['name' => $huge], 'name'],
             'email' => [['email' => $huge.'@example.test'], 'email'],
-            'postal code' => [['postal_code' => $huge], 'postal_code'],
         ];
     }
 
@@ -76,6 +73,41 @@ class LongInputBatteryTest extends TestCase
         $this->assertGuest();
         $this->assertSame(0, Business::count());
         $this->assertSame(0, User::count());
+    }
+
+    /**
+     * RS2-2: the address fields the wizard used to collect are
+     * collected by the onboarding Location step now, under the
+     * same extracted rules; the battery follows them there.
+     *
+     * @return iterable<string, array{0: string}>
+     */
+    public static function oversizedAddressFields(): iterable
+    {
+        $huge = str_repeat('x', 10000);
+
+        return [
+            'street' => [['street' => $huge], 'street'],
+            'city' => [['city' => $huge], 'city'],
+            'postal code' => [['postal_code' => $huge], 'postal_code'],
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $override
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('oversizedAddressFields')]
+    public function test_oversized_location_fields_are_rejected_cleanly(array $override, string $field): void
+    {
+        $business = Business::factory()->create([
+            'country' => null, 'street' => null, 'city' => null, 'state' => null, 'postal_code' => null,
+        ]);
+        $owner = User::factory()->create(['business_id' => $business->id, 'role' => 'owner']);
+
+        $response = $this->actingAs($owner)->post(route('onboarding.location.store'), $this->payload($override));
+
+        $response->assertSessionHasErrors($field);
+        $this->assertNull($business->fresh()->street);
     }
 
     public function test_an_oversized_password_is_rejected_by_the_policy_maximum(): void

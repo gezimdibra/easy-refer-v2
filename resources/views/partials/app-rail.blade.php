@@ -6,39 +6,54 @@
     an 18px icon and a 15px label; the current page takes the
     brand-50 fill with brand-700 text at 600 and a brand-600 icon.
     The Review count badge keeps the .pill-danger component.
+    Portal refresh U4: the nine items group under two quiet
+    labels, Program and Needs you, with QR Code and Settings
+    ungrouped below; labels are visual only, and routes, order,
+    and badges are unchanged (pinned by PortalRailGroupingTest).
 --}}
 @php
-    $railItems = [
-        ['dashboard', 'dashboard', 'layout-dashboard', 'Overview'],
-        ['customers.index', 'customers.*', 'users', 'Customers'],
-        ['referrals.index', 'referrals.*', 'share-2', 'Referrals'],
-        ['rewards.index', 'rewards.*', 'gift', 'Rewards'],
-        ['campaigns.index', 'campaigns.*', 'message-circle', 'Campaigns'],
-        ['actions.index', 'actions.*', 'circle-alert', 'Action Center'],
-        ['reviews', 'reviews*', 'clipboard-check', 'Review'],
-        ['owner.qr', 'owner.qr', 'qr-code', 'QR Code'],
-        ['settings', 'settings*', 'settings', 'Settings'],
+    $railGroups = [
+        ['Program', [
+            ['dashboard', 'dashboard', 'layout-dashboard', 'Overview'],
+            ['customers.index', 'customers.*', 'users', 'Customers'],
+            ['referrals.index', 'referrals.*', 'share-2', 'Referrals'],
+            ['rewards.index', 'rewards.*', 'gift', 'Rewards'],
+            ['campaigns.index', 'campaigns.*', 'message-circle', 'Campaigns'],
+        ]],
+        ['Needs you', [
+            ['actions.index', 'actions.*', 'circle-alert', 'Action Center'],
+            ['reviews', 'reviews*', 'clipboard-check', 'Review'],
+        ]],
+        [null, [
+            ['owner.qr', 'owner.qr', 'qr-code', 'QR Code'],
+            ['settings', 'settings*', 'settings', 'Settings'],
+        ]],
     ];
 @endphp
 <a href="{{ route('dashboard') }}" aria-label="Easy Refer home"><x-logo variant="auto" :size="32" /></a>
 
-<ul class="mt-8 space-y-1">
-    @foreach ($railItems as [$routeName, $pattern, $icon, $label])
-        @php($active = $pattern === 'settings*' ? (request()->routeIs('settings*') || request()->routeIs('security*')) : request()->routeIs($pattern))
-        <li>
-            <a href="{{ route($routeName) }}" @if ($active) aria-current="page" @endif class="flex min-h-[48px] items-center gap-2.5 rounded-md px-3 text-[15px] {{ $active ? 'bg-brand-50 font-semibold text-link' : 'font-medium text-text-2 hover:bg-surface-1 hover:text-text-1' }}">
-                <span class="{{ $active ? 'text-link' : '' }}"><x-icon name="{{ $icon }}" :size="20" /></span>
-                {{ $label }}
-                @if ($routeName === 'reviews' && ($reviewQueueCount ?? 0) > 0)
-                    <span class="pill pill-danger ml-auto">{{ $reviewQueueCount }}</span>
-                @endif
-                @if ($routeName === 'actions.index' && ($actionCenterCount ?? 0) > 0)
-                    <span class="pill pill-danger ml-auto" data-action-center-badge>{{ $actionCenterCount }}</span>
-                @endif
-            </a>
-        </li>
-    @endforeach
-</ul>
+@foreach ($railGroups as [$groupLabel, $groupItems])
+    @if ($groupLabel !== null)
+        <p class="mt-8 px-3 text-[12px] font-semibold tracking-[0.06em] text-text-3 uppercase">{{ $groupLabel }}</p>
+    @endif
+    <ul class="{{ $groupLabel === null ? 'mt-6' : 'mt-2' }} space-y-1">
+        @foreach ($groupItems as [$routeName, $pattern, $icon, $label])
+            @php($active = $pattern === 'settings*' ? (request()->routeIs('settings*') || request()->routeIs('security*')) : request()->routeIs($pattern))
+            <li>
+                <a href="{{ route($routeName) }}" @if ($active) aria-current="page" @endif class="flex min-h-[48px] items-center gap-2.5 rounded-md px-3 text-[15px] {{ $active ? 'bg-brand-50 font-semibold text-link' : 'font-medium text-text-2 hover:bg-surface-1 hover:text-text-1' }}">
+                    <span class="{{ $active ? 'text-link' : '' }}"><x-icon name="{{ $icon }}" :size="20" /></span>
+                    {{ $label }}
+                    @if ($routeName === 'reviews' && ($reviewQueueCount ?? 0) > 0)
+                        <span class="pill pill-danger ml-auto">{{ $reviewQueueCount }}</span>
+                    @endif
+                    @if ($routeName === 'actions.index' && ($actionCenterCount ?? 0) > 0)
+                        <span class="pill pill-danger ml-auto" data-action-center-badge>{{ $actionCenterCount }}</span>
+                    @endif
+                </a>
+            </li>
+        @endforeach
+    </ul>
+@endforeach
 
 @auth
     <div class="mt-auto border-t border-line pt-4">
