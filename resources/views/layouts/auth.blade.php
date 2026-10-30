@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="portal-theme bg-surface-0">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="color-scheme" content="light dark">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
+    {{-- SEAM-01: theme-color = the top band's token (surface-0 here), pinned by ThemeColorSeamTest against app.css. --}}
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161B22">
     <title>@yield('title', config('app.name'))</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
@@ -31,14 +32,10 @@
             </p>
 
             <main id="main" class="ui-scope auth-scope mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-10">
-                {{-- The login and register views mark their fields
-                     inline, so they opt into the summary-only error
-                     mode (F-03); the other auth pages keep the
-                     message list their forms rely on. --}}
-                @include('partials.notices', [
-                    'summaryOnly' => trim($__env->yieldContent('notices_summary_only')) === '1',
-                    'bannerKeys' => array_filter(array_map('trim', explode(',', trim($__env->yieldContent('notices_banner_keys'))))),
-                ])
+                {{-- One notices contract app-wide (EMPTY ERROR
+                     SUMMARY class rule, 2026-10-29): the summary
+                     counts AND lists every problem, on every page. --}}
+                @include('partials.notices')
                 @yield('content')
             </main>
 

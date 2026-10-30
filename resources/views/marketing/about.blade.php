@@ -80,22 +80,27 @@
         </ul>
     </section>
 
-    {{-- Our Impact (ABOUT-07): the OD-6 approved counters,
-         rendered from the single-source claims values (AP-07). --}}
+    {{-- Our Impact (ABOUT-07): the approved per-business
+         outcomes, rendered from the single-source claims
+         values (AP-07). The platform count claims that used
+         to render here (businesses empowered, successful
+         referrals) were removed pre-launch in the money fix
+         train: at launch the platform has no real businesses
+         yet, so those counts would be false as rendered. --}}
     <section class="shell section-pad">
         <h2 class="type-title-1 text-text-1">Our impact</h2>
         <div class="mt-8 grid gap-8 sm:grid-cols-3">
             <div>
-                <p class="type-stat text-text-1">{{ config('claims.businesses') }}</p>
-                <p class="mt-1 text-sm text-text-2">Businesses Empowered</p>
+                <p class="type-stat text-text-1">{{ config('claims.new_customers_per_year') }}</p>
+                <p class="mt-1 text-sm text-text-2">new customers per year on average</p>
             </div>
             <div>
-                <p class="type-stat text-text-1">{{ config('claims.successful_referrals') }}</p>
-                <p class="mt-1 text-sm text-text-2">Successful Referrals</p>
+                <p class="type-stat text-text-1">{{ config('claims.higher_purchase') }}</p>
+                <p class="mt-1 text-sm text-text-2">higher purchase amount</p>
             </div>
             <div>
                 <p class="type-stat text-text-1">{{ config('claims.first_visits_free') }}</p>
-                <p class="mt-1 text-sm text-text-2">visits free</p>
+                <p class="mt-1 text-sm text-text-2">first visits free</p>
             </div>
         </div>
     </section>

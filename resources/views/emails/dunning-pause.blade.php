@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <meta name="supported-color-schemes" content="light dark">
-    <title>Your Easy Refer billing pauses on {{ $pauseDate }}</title>
+    <title>{{ ($flowOff || ($flowPaused ?? false) || ($flowTextless ?? false)) ? 'Your Easy Refer payment is still due' : 'Your Easy Refer billing pauses on '.$pauseDate }}</title>
     <style>
         /* The well (PE-05, PE-06): one cascade, so the rendered
            color is deterministic in every client. The light value
@@ -22,10 +22,25 @@
         }
         @media (prefers-color-scheme: dark) {
             .em-outer { background-color: #16130e !important; }
-            .em-card { background-color: #16130e !important; border-color: #453d31 !important; }
+            .em-card { background-color: #221d17 !important; border-color: #453d31 !important; }
             .em-text { color: #faf6ef !important; }
             .em-muted { color: #b4a88f !important; }
             .em-well { background-color: #29231a !important; }
+            /* EU-S1 (R5 pack E1): the dark repair. The card lifts
+               one step above the outer ground (#221d17 over
+               #16130e); the wordmark flips to the cream text
+               token; links take the light-amber token; the footer
+               takes the dark muted token and hairline; the button
+               goes amber with ink text (the app's dark action),
+               so it can never vanish into the card again; the
+               header rule goes amber. */
+            .em-wordmark { color: #faf6ef !important; }
+            .em-a { color: #f0b64a !important; }
+            .em-foot { color: #b4a88f !important; border-top-color: #453d31 !important; }
+            .em-btn { background-color: #f5a300 !important; }
+            .em-btn a { color: #16130e !important; }
+            .em-rule { border-top-color: #f5a300 !important; }
+            .em-eyebrow { color: #f0b64a !important; }
         }
     </style>
 </head>
@@ -38,9 +53,52 @@
                         <td class="em-card" style="background-color: #FFFFFF; border: 1px solid #e7dfce; border-radius: 16px; padding: 32px">
                             @include('emails.partials.header')
                             <div style="padding-top: 24px">
-{{-- Dunning day 6 (spec Section 9.6; subject DUN-04, body DUN-02 + the DUN-05 line, verbatim). --}}
-                                <p class="em-text" style="margin: 0; font-size: 16px; line-height: 26px; color: #16130e">Your Easy Refer charge of {{ $amount }} did not go through. Your QR code keeps working until {{ $graceEndDate }}. Update your card to keep billing current: <a href="{{ $billingUrl }}" style="color: #0d0b08; text-decoration: underline">{{ $billingUrl }}</a></p>
+{{-- Dunning day 6 (spec Section 9.6; subject DUN-04, body DUN-02 + the DUN-05 line, verbatim). B1: the E3 grammar; the DUN-05 line stays verbatim as the closing paragraph (it is this episode's own pinned consequence). --}}
+                                @include('emails.partials.eyebrow', ['label' => 'Payment problem'])
+                                <h1 class="em-text" style="margin: 12px 0 0; font-size: 24px; line-height: 30px; font-weight: 650; letter-spacing: -0.02em; color: #16130e">Your charge did not go through</h1>
+{{-- F-03 / Amendment 36: the off branch for a business that is not active (closed or disabled), as in the day 0 template; the DUN-05 pause line is valid only for an active business. --}}
+                                @if ($flowOff)
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your Easy Refer charge of {{ $amount }} did not go through. {{ \App\Support\BillingCopy::offLine() }}</p>
+                                @include('emails.partials.fact-well', ['rows' => [
+                                    ['Amount due', $amount],
+                                    ['Your QR code', 'Off'],
+                                ]])
+                                @elseif ($flowTextless ?? false)
+                                {{-- TS3-05 (Sweep-03, Amendment 52): past grace the business is paused, so setting the friend reward alone does NOT turn the code on; the past-grace form names both steps (reward + card) via a conditional echo; in grace the shipped single-step sentence renders byte-identically. TS3-04: this template's <title> carries the flowTextless leg its envelope already had (reminder/pause templates). --}}
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your Easy Refer charge of {{ $amount }} did not go through. This code is not active yet. Set your friend reward{{ ($flowPaused ?? false) ? ' and update your card' : '' }} to turn it on.</p>
+                                @include('emails.partials.fact-well', ['rows' => [
+                                    ['Amount due', $amount],
+                                    ['Your QR code', 'Off'],
+                                ]])
+                                @elseif ($flowPaused ?? false)
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your Easy Refer charge of {{ $amount }} did not go through. {{ \App\Support\BillingCopy::pausedLine() }}</p>
+                                @include('emails.partials.fact-well', ['rows' => [
+                                    ['Amount due', $amount],
+                                    ['Your QR code', 'Paused until you update your card'],
+                                ]])
+                                @else
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your Easy Refer charge of {{ $amount }} did not go through. Your QR code keeps working until {{ $graceEndDate }}.</p>
+                                @include('emails.partials.fact-well', ['rows' => [
+                                    ['Amount due', $amount],
+                                    ['Update your card by', $graceEndDate],
+                                    ['Your QR code', 'Keeps working until then'],
+                                ]])
+                                @endif
+                                @if ($canUpdateCard)
+                                @include('emails.partials.button', ['url' => $billingUrl, 'label' => 'Update your card'])
+                                <p class="em-muted" style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Or open this link: <a href="{{ $billingUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">{{ $billingUrl }}</a></p>
+                                @endif
+                                @if ($flowOff || ($flowPaused ?? false) || ($flowTextless ?? false))
+                                @if ($hasCard ?? false)
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">This amount is still due. We will try the card on file again on {{ $nextChargeDate }}.</p>
+                                @elseif ($canUpdateCard)
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">This amount is still due. Add a card so we can collect it.</p>
+                                @else
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">This amount is still due.</p>
+                                @endif
+                                @else
                                 <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">If the charge does not succeed, new signups pause on {{ $pauseDate }}. Customers who already earned rewards can still redeem them.</p>
+                                @endif
                             </div>
                             @include('emails.partials.footer')
                         </td>

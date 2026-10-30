@@ -22,10 +22,25 @@
         }
         @media (prefers-color-scheme: dark) {
             .em-outer { background-color: #16130e !important; }
-            .em-card { background-color: #16130e !important; border-color: #453d31 !important; }
+            .em-card { background-color: #221d17 !important; border-color: #453d31 !important; }
             .em-text { color: #faf6ef !important; }
             .em-muted { color: #b4a88f !important; }
             .em-well { background-color: #29231a !important; }
+            /* EU-S1 (R5 pack E1): the dark repair. The card lifts
+               one step above the outer ground (#221d17 over
+               #16130e); the wordmark flips to the cream text
+               token; links take the light-amber token; the footer
+               takes the dark muted token and hairline; the button
+               goes amber with ink text (the app's dark action),
+               so it can never vanish into the card again; the
+               header rule goes amber. */
+            .em-wordmark { color: #faf6ef !important; }
+            .em-a { color: #f0b64a !important; }
+            .em-foot { color: #b4a88f !important; border-top-color: #453d31 !important; }
+            .em-btn { background-color: #f5a300 !important; }
+            .em-btn a { color: #16130e !important; }
+            .em-rule { border-top-color: #f5a300 !important; }
+            .em-eyebrow { color: #f0b64a !important; }
         }
     </style>
 </head>
@@ -38,8 +53,19 @@
                         <td class="em-card" style="background-color: #FFFFFF; border: 1px solid #e7dfce; border-radius: 16px; padding: 32px">
                             @include('emails.partials.header')
                             <div style="padding-top: 24px">
-{{-- Expiry guard email (RK-03; inventory BILL-FC-03 body, verbatim). --}}
-                                <p class="em-text" style="margin: 0; font-size: 16px; line-height: 26px; color: #16130e">The card on file for {{ $business->name }} expires {{ $expiryMonthYear }}, before your next charge on {{ $chargeDate }}. Replace it so the charge goes through. Update your card: <a href="{{ $billingUrl }}" style="color: #0d0b08; text-decoration: underline">{{ $billingUrl }}</a></p>
+{{-- Expiry guard email (RK-03; inventory BILL-FC-03 body).
+     B1 (E3 grammar): headline is the subject verbatim; the lead
+     keeps BILL-FC-03's first two sentences; its bare-URL tail
+     becomes the 'Update your card' button (PROPOSED label). --}}
+                                <h1 class="em-text" style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 650; letter-spacing: -0.02em; color: #16130e">Your card expires before your next charge</h1>
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">The card on file for {{ $business->name }} expires {{ $expiryMonthYear }}, before your next charge on {{ $chargeDate }}. Replace it so the charge goes through.</p>
+                                @include('emails.partials.fact-well', ['rows' => [
+                                    ['Card', $cardLabel],
+                                    ['Expires', $expiryMonthYear],
+                                    ['Next charge', $chargeDate],
+                                ]])
+                                @include('emails.partials.button', ['url' => $billingUrl, 'label' => 'Update your card'])
+                                <p class="em-muted" style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Or open this link: <a href="{{ $billingUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">{{ $billingUrl }}</a></p>
                             </div>
                             @include('emails.partials.footer')
                         </td>

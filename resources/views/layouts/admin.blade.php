@@ -1,17 +1,18 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="portal-theme bg-surface-0">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="color-scheme" content="light dark">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
+    {{-- SEAM-01: theme-color = the top band's token (surface-0 here), pinned by ThemeColorSeamTest against app.css. --}}
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161B22">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Platform console')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-surface-1 text-text-1">
+<body class="min-h-dvh bg-surface-1 text-text-1">
     <a class="skip-link" href="#main">Skip to content</a>
 
     {{-- The platform console shell (spec Section 15): its own
@@ -35,10 +36,7 @@
     </header>
 
     <main id="main" aria-label="@yield('title')" class="ui-scope mx-auto max-w-[1200px] px-5 py-6">
-        @include('partials.notices', [
-            'summaryOnly' => trim($__env->yieldContent('notices_summary_only')) === '1',
-            'bannerKeys' => array_filter(array_map('trim', explode(',', trim($__env->yieldContent('notices_banner_keys'))))),
-        ])
+        @include('partials.notices')
         @yield('content')
     </main>
 </body>

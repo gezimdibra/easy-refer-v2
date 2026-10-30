@@ -10,11 +10,12 @@
 
 @section('content')
     {{-- A flashed status (e.g. a customer bounced here from a
-         closed flow step, T4-F4) renders in the notices region;
-         with no flash this block renders nothing at all. --}}
-    @if (session('status'))
+         closed flow step, T4-F4) or a lead-form error renders in
+         the notices region; with neither, this block renders
+         nothing at all. --}}
+    @if (session('status') || $errors->any())
         <div class="shell pt-6">
-            @include('partials.notices', ['summaryOnly' => true])
+            @include('partials.notices')
         </div>
     @endif
 
@@ -52,7 +53,27 @@
                 <div class="mkt-hero-actions mt-8 flex flex-wrap items-center justify-center gap-3">
                     <a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a>
                     <a class="btn btn-secondary btn-lg" href="#how-it-works">See how it works</a>
+                    {{-- G6 demo entry (Amendment 63, owner-ordered
+                         2026-10-29 17:06; form per the landing
+                         integration design pass, Variant D): ONE
+                         door in two forms. At 640px and up the
+                         ghost "Try it live" sits in the action row
+                         AFTER the frozen pair, so "Start free" and
+                         "See how it works" stay adjacent. Below
+                         640px there is no third button: the
+                         tertiary text link under the row carries
+                         the door (the full-width button cost a
+                         whole row in the compact hero). Both forms
+                         share the .demo-hero-entry hook; one tap
+                         scrolls to the demo block AND starts the
+                         demo (the script at the demo block posts
+                         the start into the frame once the frame is
+                         loaded). Nothing else in the hero moves. --}}
+                    <a class="btn btn-demo-ghost btn-lg demo-hero-entry hidden sm:inline-flex" href="#demo-block" id="demo-hero-entry"><span class="demo-play" aria-hidden="true">▶</span>Try it live</a>
                 </div>
+                <p class="mt-2 text-center sm:hidden">
+                    <a class="demo-hero-link demo-hero-entry" href="#demo-block" id="demo-hero-entry-mobile"><span class="demo-play" aria-hidden="true">▶</span>Try it live</a>
+                </p>
                 <ul class="mkt-hero-trust mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                     <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />First {{ (int) config('billing.free_visits_at_signup') }} visits free</li>
                     <li class="type-caption flex items-center gap-2 text-text-2"><x-icon name="check" :size="16" class="text-success-strong" />Then {{ \App\Support\Money::usd($plan->per_referral_cents) }} a visit</li>
@@ -261,7 +282,7 @@
                     </div>
                     <div class="px-2 text-center lg:border-l lg:border-line">
                         <p class="type-stat text-text-1">{{ config('claims.first_visits_free') }}</p>
-                        <p class="type-caption mt-2 text-text-2">visits free</p>
+                        <p class="type-caption mt-2 text-text-2">first visits free</p>
                     </div>
                 </div>
             </div>
@@ -289,7 +310,7 @@
             <h2 class="type-title-1 text-text-1">Success stories</h2>
             <div class="mt-12 grid gap-6 md:grid-cols-2">
                 <figure class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
-                    <blockquote class="type-quote text-text-1">We used to spend a lot of money on Google Ads. Now our customers do the marketing for us.</blockquote>
+                    <blockquote class="type-quote story-quote text-text-1">We used to spend a lot of money on Google Ads. Now our customers do the marketing for us.</blockquote>
                     <figcaption class="mt-6 flex items-start justify-between gap-4">
                         <span class="flex items-center gap-3">
                             <span class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand-50 text-text-1" aria-hidden="true"><span class="type-caption" style="font-weight: 650">NR</span></span>
@@ -299,7 +320,7 @@
                     </figcaption>
                 </figure>
                 <figure class="rounded-xl border border-line bg-surface-0 shadow-e1" style="padding: 32px">
-                    <blockquote class="type-quote text-text-1">I would have used Easy Refer since day 1 if it was available.</blockquote>
+                    <blockquote class="type-quote story-quote text-text-1">I would have used Easy Refer since day 1 if it was available.</blockquote>
                     <figcaption class="mt-6 flex items-start justify-between gap-4">
                         <span class="flex items-center gap-3">
                             <span class="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-brand-50 text-text-1" aria-hidden="true"><span class="type-caption" style="font-weight: 650">TH</span></span>
@@ -350,90 +371,88 @@
         </div>
     </section>
 
-    {{-- Proof, part 2 (release 08b, D-2/DG-1): the real-store
-         photos as their own section after the mechanism, each
-         photo paired with its own business (AP-07), mobile crops
-         held to about 60% of a viewport. --}}
-    <section class="bg-surface-0">
-        {{-- R-3 (release 08d): compact bottom step on mobile.
-             08f (contrast audit F-10): section grounds alternate.
-             Copy release (2026-10-24): with Stories ahead of How
-             It Works, this section takes the white ground so the
-             alternation holds; lede and captions take the
-             slim-down wording, and the eyebrow-to-H2 and
-             H2-to-lede gaps take the PROSE-GAP floors (mt-4). --}}
-        <div class="shell section-pad section-pad-compact-b">
-            <p class="type-eyebrow text-link">In store now</p>
-            <h2 class="type-title-1 mt-4 text-text-1">Running in real stores</h2>
-            <p class="type-lede mt-4 max-w-[56ch] text-text-2">Real counters. Real customers. The same code your customers scan.</p>
-            <div class="mt-12 grid gap-6 md:grid-cols-3">
-                <figure>
-                    <picture>
-                        <source type="image/webp" srcset="{{ asset('images/photos/ungaro-counter-480.webp') }} 480w, {{ asset('images/photos/ungaro-counter-768.webp') }} 768w, {{ asset('images/photos/ungaro-counter-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <source type="image/jpeg" srcset="{{ asset('images/photos/ungaro-counter-480.jpg') }} 480w, {{ asset('images/photos/ungaro-counter-768.jpg') }} 768w, {{ asset('images/photos/ungaro-counter-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <img src="{{ asset('images/photos/ungaro-counter-768.jpg') }}" width="1020" height="1275" alt="A printed Easy Refer referral sign with a QR code on the counter at Ungaro Coal Fired Pizza Cafe." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
-                    </picture>
-                    <figcaption class="type-caption mt-4 text-text-2">Ungaro Coal Fired Pizza Cafe, with its code at the register.</figcaption>
-                </figure>
-                <figure>
-                    <picture>
-                        <source type="image/webp" srcset="{{ asset('images/photos/reception-desk-480.webp') }} 480w, {{ asset('images/photos/reception-desk-768.webp') }} 768w, {{ asset('images/photos/reception-desk-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <source type="image/jpeg" srcset="{{ asset('images/photos/reception-desk-480.jpg') }} 480w, {{ asset('images/photos/reception-desk-768.jpg') }} 768w, {{ asset('images/photos/reception-desk-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <img src="{{ asset('images/photos/reception-desk-768.jpg') }}" width="1020" height="1230" alt="A printed Easy Refer referral sign with a QR code in an acrylic holder on the reception desk at Focus Vision clinic." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
-                    </picture>
-                    <figcaption class="type-caption mt-4 text-text-2">Focus Vision clinic, where patients join at check-in.</figcaption>
-                </figure>
-                <figure>
-                    <picture>
-                        <source type="image/webp" srcset="{{ asset('images/photos/pharmacy-counter-480.webp') }} 480w, {{ asset('images/photos/pharmacy-counter-768.webp') }} 768w, {{ asset('images/photos/pharmacy-counter-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <source type="image/jpeg" srcset="{{ asset('images/photos/pharmacy-counter-480.jpg') }} 480w, {{ asset('images/photos/pharmacy-counter-768.jpg') }} 768w, {{ asset('images/photos/pharmacy-counter-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
-                        <img src="{{ asset('images/photos/pharmacy-counter-768.jpg') }}" width="1020" height="1275" alt="A printed Easy Refer referral poster with a QR code at a pharmacy counter in Europe." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
-                    </picture>
-                    <figcaption class="type-caption mt-4 text-text-2">A pharmacy counter in Europe. The same program, in Albanian.</figcaption>
-                </figure>
-            </div>
-            <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
-        </div>
-    </section>
-
-    {{-- Benefits render as text blocks without card chrome (AP-03);
-         the approved stats live in the proof section above.
-         Redesign: each column leads with an icon tile (Section
-         10.1 item 5). --}}
-    {{-- Copy release (2026-10-24): the section takes the cream
-         ground in the post-reorder alternation; the three bodies
-         take the slim-down wording (the pricing column stops
-         restating the cap, which stands in the hero row, the
-         pricing lede and card, and FAQ-03: the full offer is
-         stated at most three times page-wide, hero, pricing,
-         closing), and the gaps take the PROSE-GAP floors
-         (eyebrow to H2 mt-4, H3 to body mt-3). --}}
-    <section id="benefits" class="bg-surface-1">
+    {{-- G6 demo block (Amendment 63, owner-ordered): immediately
+         after How It Works. The frame hosts the embedded demo
+         surface; it renders its start card on page load without
+         creating a session. The Phase 2 text-demo slot under
+         the frame renders NOTHING in Phase 1: no element, no
+         line, no placeholder. --}}
+    <section id="demo-block" class="on-dark bg-ink-950">
         <div class="shell section-pad">
-            <p class="type-eyebrow text-link">Benefits</p>
-            <h2 class="type-title-1 mt-4 text-text-1">Why use Easy Refer?</h2>
-            <div class="mt-12 grid gap-10 md:grid-cols-3">
-                <div>
-                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="users" :size="24" /></p>
-                    <h3 class="type-title-3 mt-4 text-text-1">Attract new customers</h3>
-                    <p class="type-body mt-3 max-w-[68ch] text-text-2">Happy customers tell their friends. Easy Refer gives them a code to scan and a link to send.</p>
+            <div class="lg:grid lg:grid-cols-2 lg:items-center lg:gap-12">
+                <div class="mx-auto max-w-[560px] text-center lg:mx-0 lg:text-left">
+                    <h2 class="type-title-1 text-white">See it work</h2>
+                    <p class="mt-4 text-dark-muted">Be the customer for a minute. Tap through the flow your customers use, step by step.</p>
+                    <p class="type-caption mt-3 text-dark-muted">The shop in the demo, Juniper Café, is made up. What you tap through follows the real flow's shape, labeled as a demo on every screen, with the code shown on screen instead of texted.</p>
                 </div>
-                <div>
-                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="trending-up" :size="24" /></p>
-                    <h3 class="type-title-3 mt-4 text-text-1">Increase revenue</h3>
-                    <p class="type-body mt-3 max-w-[68ch] text-text-2">Friends come in for a reward. Your customers come back for theirs. Both sides win.</p>
-                </div>
-                <div>
-                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="wallet" :size="24" /></p>
-                    <h3 class="type-title-3 mt-4 text-text-1">Affordable pricing</h3>
-                    <p class="type-body mt-3 max-w-[68ch] text-text-2">You pay only when a referred friend walks in. No monthly fee, no setup fee.</p>
+                <div class="mt-10 lg:mt-0">
+                    @if ($demoResting ?? false)
+                        <p class="mx-auto max-w-[420px] text-center text-white">The demo is resting right now. Please check back later today.</p>
+                    @else
+                        <div class="demo-frame">
+                            <iframe id="demo-frame" src="{{ route('demo.show') }}" title="Try Easy Refer live: the demo" loading="lazy" height="640"></iframe>
+                        </div>
+                    @endif
                 </div>
             </div>
-            {{-- S-04: on mobile this section ran about 1,250px with no
-                 action and no proof, a dead stretch; it now closes
-                 with the primary action like every other block. --}}
-            <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
         </div>
+        <script>
+            (function () {
+                var frame = document.getElementById('demo-frame');
+                // F-C reliability (landing integration pass): the
+                // start is a load-aware handshake, NOT timed
+                // retries. The frame is loading="lazy" and sits a
+                // page below the hero, so posts fired on a timer
+                // can all land before its listener exists and be
+                // lost, silently costing a second tap. Instead a
+                // hero tap records a start intent; the intent is
+                // honoured exactly when the frame signals it is
+                // ready (its load event, or already loaded), and
+                // the demo layout's once-guard makes duplicate
+                // delivery harmless. One tap starts the demo,
+                // cold or warm.
+                var startIntent = false;
+                var frameReady = false;
+                var postStart = function () {
+                    if (frame && frame.contentWindow) {
+                        frame.contentWindow.postMessage({ type: 'er-demo-start' }, window.location.origin);
+                    }
+                };
+                var honourIntent = function () {
+                    if (startIntent && frameReady) {
+                        startIntent = false;
+                        postStart();
+                    }
+                };
+                if (frame) {
+                    try {
+                        var alreadyLoaded = frame.contentWindow
+                            && frame.contentWindow.location.href !== 'about:blank'
+                            && frame.contentDocument
+                            && frame.contentDocument.readyState !== 'loading';
+                        if (alreadyLoaded) { frameReady = true; }
+                    } catch (e) { /* not loaded yet; the load event will say so */ }
+                    frame.addEventListener('load', function () {
+                        frameReady = true;
+                        honourIntent();
+                    });
+                }
+                var entries = document.querySelectorAll('.demo-hero-entry');
+                for (var i = 0; i < entries.length; i++) {
+                    entries[i].addEventListener('click', function () {
+                        startIntent = true;
+                        honourIntent();
+                    });
+                }
+                window.addEventListener('message', function (event) {
+                    if (event.origin !== window.location.origin) { return; }
+                    if (!frame || event.source !== frame.contentWindow) { return; }
+                    if (event.data && event.data.type === 'er-demo-height' && event.data.height > 0) {
+                        frame.style.height = event.data.height + 'px';
+                    }
+                });
+            })();
+        </script>
     </section>
 
     {{-- Copy release (2026-10-24): the section takes the white
@@ -502,7 +521,7 @@
                     <ul class="mt-3 space-y-2">
                         <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Native share sheet and copy link</li>
                         <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Customizable messages</li>
-                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Real-time analytics</li>
+                        <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Every visit, counted and listed</li>
                         <li class="type-body-sm flex items-start gap-2 text-text-2"><x-icon name="check" :size="16" class="mt-0.5 flex-none text-success-strong" />Bulk SMS campaigns</li>
                     </ul>
                     <div class="window mt-6" style="border-radius: var(--radius-lg)">
@@ -522,6 +541,94 @@
         </div>
     </section>
 
+    {{-- Proof, part 2 (release 08b, D-2/DG-1): the real-store
+         photos as their own section after the features, each
+         photo paired with its own business (AP-07), mobile crops
+         held to about 60% of a viewport. --}}
+    <section class="bg-surface-1">
+        {{-- R-3 (release 08d): compact bottom step on mobile.
+             08f (contrast audit F-10): section grounds alternate.
+             MOVE-01 (2026-10-25): Features moved up between How
+             It Works and this section, so this section takes the
+             cream ground to hold the alternation (white under the
+             copy release, 2026-10-24); lede and captions take the
+             slim-down wording, and the eyebrow-to-H2 and
+             H2-to-lede gaps take the PROSE-GAP floors (mt-4). --}}
+        <div class="shell section-pad section-pad-compact-b">
+            <p class="type-eyebrow text-link">In store now</p>
+            <h2 class="type-title-1 mt-4 text-text-1">Running in real stores</h2>
+            <p class="type-lede mt-4 max-w-[56ch] text-text-2">Real counters. Real customers. The same code your customers scan.</p>
+            <div class="mt-12 grid gap-6 md:grid-cols-3">
+                <figure>
+                    <picture>
+                        <source type="image/webp" srcset="{{ asset('images/photos/ungaro-counter-480.webp') }} 480w, {{ asset('images/photos/ungaro-counter-768.webp') }} 768w, {{ asset('images/photos/ungaro-counter-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
+                        <source type="image/jpeg" srcset="{{ asset('images/photos/ungaro-counter-480.jpg') }} 480w, {{ asset('images/photos/ungaro-counter-768.jpg') }} 768w, {{ asset('images/photos/ungaro-counter-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
+                        <img src="{{ asset('images/photos/ungaro-counter-768.jpg') }}" width="1020" height="1275" alt="A printed Easy Refer referral sign with a QR code on the counter at Ungaro Coal Fired Pizza Cafe." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover object-[50%_30%] md:aspect-[4/5]">
+                    </picture>
+                    <figcaption class="type-caption mt-4 text-text-2">Ungaro Coal Fired Pizza Cafe, with its code at the register.</figcaption>
+                </figure>
+                <figure>
+                    <picture>
+                        <source type="image/webp" srcset="{{ asset('images/photos/reception-desk-480.webp') }} 480w, {{ asset('images/photos/reception-desk-768.webp') }} 768w, {{ asset('images/photos/reception-desk-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
+                        <source type="image/jpeg" srcset="{{ asset('images/photos/reception-desk-480.jpg') }} 480w, {{ asset('images/photos/reception-desk-768.jpg') }} 768w, {{ asset('images/photos/reception-desk-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
+                        <img src="{{ asset('images/photos/reception-desk-768.jpg') }}" width="1020" height="1230" alt="A printed Easy Refer referral sign with a QR code in an acrylic holder on the reception desk at Focus Vision clinic." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
+                    </picture>
+                    <figcaption class="type-caption mt-4 text-text-2">Focus Vision clinic, where patients join at check-in.</figcaption>
+                </figure>
+                <figure>
+                    <picture>
+                        <source type="image/webp" srcset="{{ asset('images/photos/pharmacy-counter-480.webp') }} 480w, {{ asset('images/photos/pharmacy-counter-768.webp') }} 768w, {{ asset('images/photos/pharmacy-counter-1020.webp') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
+                        <source type="image/jpeg" srcset="{{ asset('images/photos/pharmacy-counter-480.jpg') }} 480w, {{ asset('images/photos/pharmacy-counter-768.jpg') }} 768w, {{ asset('images/photos/pharmacy-counter-1020.jpg') }} 1020w" sizes="(min-width: 768px) 33vw, 100vw">
+                        <img src="{{ asset('images/photos/pharmacy-counter-768.jpg') }}" width="1020" height="1275" alt="A printed Easy Refer referral poster with a QR code at a pharmacy counter in Europe." loading="lazy" decoding="async" class="aspect-[5/4] w-full rounded-xl object-cover md:aspect-[4/5]">
+                    </picture>
+                    <figcaption class="type-caption mt-4 text-text-2">A pharmacy counter in Europe. The same program, in Albanian.</figcaption>
+                </figure>
+            </div>
+            <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
+        </div>
+    </section>
+
+    {{-- Benefits render as text blocks without card chrome (AP-03);
+         the approved stats live in the proof section above.
+         Redesign: each column leads with an icon tile (Section
+         10.1 item 5). --}}
+    {{-- MOVE-01 (2026-10-25): the section takes the white
+         ground in the new alternation (cream under the copy
+         release, 2026-10-24); the three bodies
+         take the slim-down wording (the pricing column stops
+         restating the cap, which stands in the hero row, the
+         pricing lede and card, and FAQ-03: the full offer is
+         stated at most three times page-wide, hero, pricing,
+         closing), and the gaps take the PROSE-GAP floors
+         (eyebrow to H2 mt-4, H3 to body mt-3). --}}
+    <section id="benefits" class="bg-surface-0">
+        <div class="shell section-pad">
+            <p class="type-eyebrow text-link">Benefits</p>
+            <h2 class="type-title-1 mt-4 text-text-1">Why use Easy Refer?</h2>
+            <div class="mt-12 grid gap-10 md:grid-cols-3">
+                <div>
+                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="users" :size="24" /></p>
+                    <h3 class="type-title-3 mt-4 text-text-1">Attract new customers</h3>
+                    <p class="type-body mt-3 max-w-[68ch] text-text-2">Happy customers tell their friends. Easy Refer gives them a code to scan and a link to send.</p>
+                </div>
+                <div>
+                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="trending-up" :size="24" /></p>
+                    <h3 class="type-title-3 mt-4 text-text-1">Increase revenue</h3>
+                    <p class="type-body mt-3 max-w-[68ch] text-text-2">Friends come in for a reward. Your customers come back for theirs. Both sides win.</p>
+                </div>
+                <div>
+                    <p class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-2 text-text-1"><x-icon name="wallet" :size="24" /></p>
+                    <h3 class="type-title-3 mt-4 text-text-1">Affordable pricing</h3>
+                    <p class="type-body mt-3 max-w-[68ch] text-text-2">You pay only when a referred friend walks in. No monthly fee, no setup fee.</p>
+                </div>
+            </div>
+            {{-- S-04: on mobile this section ran about 1,250px with no
+                 action and no proof, a dead stretch; it now closes
+                 with the primary action like every other block. --}}
+            <p class="mt-10 text-center"><a class="btn btn-primary btn-lg" href="{{ route('register') }}">Start free</a></p>
+        </div>
+    </section>
+
     {{-- Release 08b (item 2.2, DG-5): pricing and the calculator
          are sibling sections, not one stack inside #pricing. The
          pricing card keeps its accepted desktop co-visibility
@@ -534,7 +641,7 @@
             <h2 class="type-title-1 text-center text-text-1">Simple, transparent pricing</h2>
             {{-- Copy release (Amendment 11): slim-down lede;
                  PROSE-GAP floor lifts it to mt-4. --}}
-            <p class="type-lede mx-auto mt-4 max-w-[56ch] text-center text-text-2">One plan. {{ \App\Support\Money::usd($plan->per_referral_cents) }} when a referred friend visits. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
+            <p class="type-lede mx-auto mt-4 max-w-[56ch] text-center text-text-2">One plan. {{ \App\Support\Money::usd($plan->per_referral_cents) }} when a referred friend visits. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month in visit charges.</p>
             <div class="mt-12">
                 @include('partials.pricing-plan')
             </div>

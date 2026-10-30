@@ -4,8 +4,14 @@
 @section('flow_label', 'Verification')
 
 @section('step_number', '2')
+@section('step_total', $stepTotal)
 @section('step')
-    <span class="type-caption text-text-2">Step 2 of 3</span>
+    {{-- RC-3 (VOL-3): the total branches on the pending's kind
+         (the controller's $stepTotal): enrollment is 2 of 3
+         (share is Step 3); a friend claim is 2 of 2 — its Step 1
+         is the claim form and the visit page after this screen
+         is the completion, not a step. --}}
+    <span class="type-caption text-text-2">Step 2 of {{ $stepTotal }}</span>
 @endsection
 
 @section('content')
@@ -15,6 +21,12 @@
          message is wired to the boxes with aria-describedby and
          announced (Section 6.6). --}}
     <h1 class="type-display-xs">Enter the verification code we sent to {{ $maskedPhone }}.</h1>
+
+    @if (($pendingKind ?? null) === 'coupon')
+        {{-- ID-11 [COUP-22]: the coupon path's verify delta
+             line, replacing any referral-context line. --}}
+        <p class="type-body mt-2 text-text-2">We will text you a code to unlock your coupon. This keeps it one per person.</p>
+    @endif
 
     @if ($channel === 'call')
         <p class="status status-info mt-3">That number cannot receive text messages, so we are calling it with your code instead.</p>
@@ -47,7 +59,20 @@
         <form method="POST" action="{{ route('refer.verify.resend') }}" class="flex items-center gap-2" data-loading>
             @csrf
             <span class="type-caption text-text-2">Did not get a code?</span>
-            <button type="submit" class="btn btn-ghost btn-sm">Resend code</button>
+            {{-- RC-6 (VOL-3): inside the resend cooldown the
+                 button renders disabled with the real remaining
+                 wait stated below (the verify-email screen's
+                 disabled-with-wait pattern), because a tap in
+                 that state sends nothing. The caption stands
+                 down while a notice is on screen: a resend tap
+                 from a stale render flashes the same wait
+                 sentence as the notice, so the wait is never
+                 stated twice. --}}
+            @if ($resendWaitSeconds > 0)
+                <button type="submit" class="btn btn-ghost btn-sm" disabled>Resend code</button>
+            @else
+                <button type="submit" class="btn btn-ghost btn-sm">Resend code</button>
+            @endif
         </form>
 
         <form method="POST" action="{{ route('refer.verify.change') }}" data-loading>
@@ -55,6 +80,10 @@
             <button type="submit" class="btn btn-ghost btn-sm">Use a different number</button>
         </form>
     </div>
+
+    @if ($resendWaitSeconds > 0 && ! $notice)
+        <p class="type-caption mt-2 text-text-2">{{ $resendWaitMessage }}</p>
+    @endif
 @endsection
 
 @section('action')

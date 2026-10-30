@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"{!! trim($__env->yieldContent('theme_lock')) === 'light' ? ' class="landing-light-lock"' : '' !!}>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"{!! trim($__env->yieldContent('theme_lock')) === 'light' ? ' class="landing-light-lock bg-surface-0"' : ' class="bg-surface-0"' !!}>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,11 +18,12 @@
     <meta name="description" content="{{ $metaDescription }}">
     <title>{{ $metaTitle }}</title>
     <link rel="canonical" href="{{ $metaUrl }}">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
+    {{-- SEAM-01: theme-color = the top band's token (surface-0 here), pinned by ThemeColorSeamTest against app.css. --}}
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF">
     {{-- A light-locked page (theme_lock section) never presents
          the dark chrome tint: it renders light at any setting. --}}
     @if (trim($__env->yieldContent('theme_lock')) !== 'light')
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#221D17">
     @endif
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
@@ -95,8 +96,8 @@
             @else
                 <nav aria-label="Site" class="hidden items-center gap-1 md:flex">
                     <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#how-it-works">How it works</a>
-                    <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#benefits">Benefits</a>
                     <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#features">Features</a>
+                    <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#benefits">Benefits</a>
                     <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('home') }}#pricing">Pricing</a>
                     <a class="inline-flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-text-2 hover:bg-surface-1 hover:text-text-1" href="{{ route('about') }}">About us</a>
                     <span class="ml-3 flex items-center gap-2">
@@ -109,8 +110,8 @@
                     <button type="button" class="menu-toggle inline-flex h-12 w-12 items-center justify-center rounded-md text-text-1 hover:bg-surface-1" aria-label="Open menu" aria-haspopup="true" :aria-expanded="open.toString()" @click="open = ! open"><x-icon name="menu" :size="24" /></button>
                     <nav aria-label="Site menu" x-show="open" x-cloak class="absolute right-0 z-40 mt-2 w-60 rounded-lg border border-line bg-surface-0 p-2 shadow-e2">
                         <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#how-it-works">How it works</a>
-                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#benefits">Benefits</a>
                         <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#features">Features</a>
+                        <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#benefits">Benefits</a>
                         <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('home') }}#pricing">Pricing</a>
                         <a class="block rounded-md px-3 py-3 text-base hover:bg-surface-1" href="{{ route('about') }}">About us</a>
                         {{-- C-04: the open mobile menu carries the primary

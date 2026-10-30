@@ -1,15 +1,21 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="bg-surface-1">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="color-scheme" content="light dark">
+    {{-- SEAM-01: theme-color = the top band's token (surface-1 here: no band, the body is the top), pinned by ThemeColorSeamTest against app.css. --}}
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF6EF">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161310">
     {{-- The customer flow is never an acquisition audience: no
          analytics tags load here (spec Section 16). --}}
     <meta name="robots" content="noindex">
+    {{-- RS-N1 (Train B): Open Graph tags are pushed ONLY by the
+         friend landing, the one flow page that is shared into
+         chats. The stack is empty everywhere else, so every
+         other flow page stays tag-free exactly as before. --}}
+    @stack('og_tags')
     <title>@yield('title', config('app.name'))</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
@@ -28,9 +34,15 @@
             @yield('step')
         </div>
         @php($stepNumber = (int) trim($__env->yieldContent('step_number')))
-        @if ($stepNumber >= 1 && $stepNumber <= 3)
+        {{-- RC-3 (VOL-3): the segment count is the flow's own
+             step total (step_total section; 3 where a flow does
+             not declare one), so the bar can never promise a
+             step the flow does not have — the friend claim's
+             bar has 2 segments, enrollment's has 3. --}}
+        @php($stepTotal = (int) trim($__env->yieldContent('step_total')) ?: 3)
+        @if ($stepNumber >= 1 && $stepNumber <= $stepTotal && $stepTotal <= 3)
             <div class="mt-3 flex gap-1.5 px-1" aria-hidden="true">
-                @foreach ([1, 2, 3] as $n)
+                @foreach (range(1, $stepTotal) as $n)
                     <span class="segment {{ $n <= $stepNumber ? 'segment-on' : '' }}"></span>
                 @endforeach
             </div>

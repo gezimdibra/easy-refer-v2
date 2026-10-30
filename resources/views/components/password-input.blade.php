@@ -55,6 +55,7 @@
         <input
             id="{{ $id }}"
             name="{{ $name }}"
+            type="password"
             :type="show ? 'text' : 'password'"
             autocomplete="{{ $autocomplete }}"
             @if ($required) required @endif

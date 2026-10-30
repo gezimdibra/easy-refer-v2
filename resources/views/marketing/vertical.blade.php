@@ -30,7 +30,7 @@
                  line to offer mt-3; the offer takes the slim-down
                  wording (Amendment 11). --}}
             <p class="v-line type-lede mt-4 text-text-2">{{ $vertical['line'] }}</p>
-            <p class="v-offer type-lede mt-3 font-semibold text-text-1">Free to start. {{ \App\Support\Money::usd($plan->per_referral_cents) }} only when a brand-new customer visits and redeems. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month.</p>
+            <p class="v-offer type-lede mt-3 font-semibold text-text-1">Free to start. {{ \App\Support\Money::usd($plan->per_referral_cents) }} only when a brand-new customer visits and redeems. Never more than {{ \App\Support\Money::usd($plan->monthly_cap_cents) }} a month in visit charges.</p>
             <div class="mt-5 flex flex-wrap items-center gap-4">
                 <a class="btn btn-primary" href="{{ route('register', ['type' => $vertical['type']]) }}">Start free</a>
                 <a class="btn btn-secondary" href="#how-it-works">See how it works</a>

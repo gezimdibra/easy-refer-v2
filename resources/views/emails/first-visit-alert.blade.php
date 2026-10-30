@@ -21,10 +21,25 @@
         }
         @media (prefers-color-scheme: dark) {
             .em-outer { background-color: #16130e !important; }
-            .em-card { background-color: #16130e !important; border-color: #453d31 !important; }
+            .em-card { background-color: #221d17 !important; border-color: #453d31 !important; }
             .em-text { color: #faf6ef !important; }
             .em-muted { color: #b4a88f !important; }
             .em-well { background-color: #29231a !important; }
+            /* EU-S1 (R5 pack E1): the dark repair. The card lifts
+               one step above the outer ground (#221d17 over
+               #16130e); the wordmark flips to the cream text
+               token; links take the light-amber token; the footer
+               takes the dark muted token and hairline; the button
+               goes amber with ink text (the app's dark action),
+               so it can never vanish into the card again; the
+               header rule goes amber. */
+            .em-wordmark { color: #faf6ef !important; }
+            .em-a { color: #f0b64a !important; }
+            .em-foot { color: #b4a88f !important; border-top-color: #453d31 !important; }
+            .em-btn { background-color: #f5a300 !important; }
+            .em-btn a { color: #16130e !important; }
+            .em-rule { border-top-color: #f5a300 !important; }
+            .em-eyebrow { color: #f0b64a !important; }
         }
     </style>
 </head>
@@ -40,14 +55,11 @@
 
                                 <h1 class="em-text" style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 650; letter-spacing: -0.02em; color: #16130e">Your first referred customer just visited</h1>
                                 <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Good news: your first referred customer just visited {{ $business->name }}. That is Easy Refer working.</p>
-                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 24px">
-                                    <tr>
-                                        <td class="em-well" bgcolor="#faf6ef" style="border-radius: 12px; padding: 16px">
-                                            <p style="margin: 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: #66594a">Business</p>
-                                            <p class="em-text" style="margin: 4px 0 0; font-size: 16px; line-height: 26px; font-weight: 600; color: #16130e">{{ $business->name }}</p>
-                                        </td>
-                                    </tr>
-                                </table>
+                                {{-- B1 (R5 pack): the one-row "detail table"
+                                     is retired; the lead line already
+                                     names the business, and a table
+                                     built for facts it does not have
+                                     only padded the celebration. --}}
                                 @include('emails.partials.button', ['url' => $dashboardUrl, 'label' => 'See your results'])
 
                             </div>

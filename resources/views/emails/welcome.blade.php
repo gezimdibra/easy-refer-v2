@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <meta name="supported-color-schemes" content="light dark">
-    <title>Welcome to Easy Refer: one step left before your code works</title>
+    <title>{{ $mailTitle ?? 'Welcome to Easy Refer' }}</title>
     <style>
         /* The well (PE-05, PE-06): one cascade, so the rendered
            color is deterministic in every client. The light value
@@ -22,10 +22,25 @@
         }
         @media (prefers-color-scheme: dark) {
             .em-outer { background-color: #16130e !important; }
-            .em-card { background-color: #16130e !important; border-color: #453d31 !important; }
+            .em-card { background-color: #221d17 !important; border-color: #453d31 !important; }
             .em-text { color: #faf6ef !important; }
             .em-muted { color: #b4a88f !important; }
             .em-well { background-color: #29231a !important; }
+            /* EU-S1 (R5 pack E1): the dark repair. The card lifts
+               one step above the outer ground (#221d17 over
+               #16130e); the wordmark flips to the cream text
+               token; links take the light-amber token; the footer
+               takes the dark muted token and hairline; the button
+               goes amber with ink text (the app's dark action),
+               so it can never vanish into the card again; the
+               header rule goes amber. */
+            .em-wordmark { color: #faf6ef !important; }
+            .em-a { color: #f0b64a !important; }
+            .em-foot { color: #b4a88f !important; border-top-color: #453d31 !important; }
+            .em-btn { background-color: #f5a300 !important; }
+            .em-btn a { color: #16130e !important; }
+            .em-rule { border-top-color: #f5a300 !important; }
+            .em-eyebrow { color: #f0b64a !important; }
         }
     </style>
 </head>
@@ -40,18 +55,39 @@
                             <div style="padding-top: 24px">
 
                                 <h1 class="em-text" style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 650; letter-spacing: -0.02em; color: #16130e">Welcome to Easy Refer</h1>
-                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your referral program for {{ $business->name }} is set up, on the Pay Per Visit plan: you pay $2 only when a referred friend actually visits your store and redeems. There is no monthly fee, your first 5 visits are free, and you never pay more than $99 in a month. Nothing is charged today.</p>
-                                @if ($verified)
+                                @if (! $verified)
+                                    {{-- B1 (R5 pack, welcome verdict): the one
+                                         ask moves above the plan pitch, in
+                                         its own callout well; every string
+                                         is the shipped string, verbatim. --}}
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 24px">
+                                        <tr>
+                                            <td class="em-well" bgcolor="#faf6ef" style="border-radius: 12px; padding: 16px">
+                                                <p class="em-text" style="margin: 0; font-size: 16px; line-height: 26px; color: #16130e">@if (($stepsLeft ?? 1) === 0)No steps left before your code works.@elseif (($stepsLeft ?? 1) === 1)One step left before your code works: {{ $nextActivationStep ?? 'set your rewards' }}.@else{{ $stepsLeft }} steps left before your code works: {{ $nextActivationStep ?? 'set your rewards' }}.@endif Verify this email address so your receipts and password resets reach you.</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    @include('emails.partials.button', ['url' => $actionUrl, 'label' => $actionLabel])
+                                    <p class="em-muted" style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Or open this link: <a href="{{ $actionUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">{{ $actionUrl }}</a></p>
+                                @endif
+                                <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your referral program for {{ $business->name }} is set up, on the Pay Per Visit plan: you pay $2 only when a referred friend actually visits your store and redeems. There is no monthly fee, your first 5 visits are free, and you never pay more than $99 in a month in visit charges. Nothing is charged today.</p>
+                                @if ($verified && ($rewardsMissing ?? false))
+                                    {{-- Train F2 (Amendment 40, F2-WEL-01): card on file but no friend reward set — the code is NOT ready; the one step left is the rewards. --}}
+                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your email address is confirmed. {{ ($stepsLeft ?? 1) === 1 ? 'One step left' : ($stepsLeft ?? 1).' steps left' }} before your code works: set your rewards.</p>
+                                    @include('emails.partials.button', ['url' => $actionUrl, 'label' => $actionLabel])
+                                    <p class="em-text" style="margin: 24px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Then print your poster and tent card from the QR page and put them out. Everything runs from <a href="{{ $dashboardUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
+                                @elseif ($verified && ($flowActive ?? false))
                                     <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your email address is confirmed, so your code is ready to go out.</p>
                                     @include('emails.partials.button', ['url' => $actionUrl, 'label' => $actionLabel])
-                                    <p class="em-text" style="margin: 24px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Set your two rewards, then print your poster and tent card from the QR page and put them out. Everything runs from <a href="{{ $dashboardUrl }}" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
-                                @else
-                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">One step left before your code works: verify this email address.</p>
+                                    <p class="em-text" style="margin: 24px 0 0; font-size: 16px; line-height: 26px; color: #16130e">{{ $trailingLine ?? 'Your reward is set. Then print your poster and tent card from the QR page and put them out.' }} Everything runs from <a href="{{ $dashboardUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
+                                @elseif ($verified)
+                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Your email address is confirmed. {{ ($stepsLeft ?? 1) === 1 ? 'One step left' : ($stepsLeft ?? 1).' steps left' }} before your code works: add your card.</p>
                                     @include('emails.partials.button', ['url' => $actionUrl, 'label' => $actionLabel])
-                                    <p class="em-muted" style="margin: 24px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Or open this link: <a href="{{ $actionUrl }}" style="color: #0d0b08; text-decoration: underline">{{ $actionUrl }}</a></p>
-                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">Once your email is confirmed, set your two rewards, then print your poster and tent card from the QR page and put them out. Everything runs from <a href="{{ $dashboardUrl }}" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
+                                    <p class="em-text" style="margin: 24px 0 0; font-size: 16px; line-height: 26px; color: #16130e">{{ $trailingLine ?? 'Set your reward, then print your poster and tent card from the QR page and put them out.' }} Everything runs from <a href="{{ $dashboardUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
+                                @else
+                                    <p class="em-text" style="margin: 16px 0 0; font-size: 16px; line-height: 26px; color: #16130e">{{ $trailingLine ?? 'Set your reward, then print your poster and tent card from the QR page and put them out.' }} Everything runs from <a href="{{ $dashboardUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">your dashboard</a>.</p>
                                 @endif
-                                <p class="em-muted" style="margin: 16px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Questions? The <a href="{{ $faqUrl }}" style="color: #0d0b08; text-decoration: underline">FAQ page</a> is a good place to start.</p>
+                                <p class="em-muted" style="margin: 16px 0 0; font-size: 14px; line-height: 22px; color: #453d31">Questions? The <a href="{{ $faqUrl }}" class="em-a" style="color: #0d0b08; text-decoration: underline">FAQ page</a> is a good place to start.</p>
 
                             </div>
                             @include('emails.partials.footer')

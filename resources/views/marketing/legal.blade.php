@@ -47,7 +47,7 @@
             <p class="mt-3 text-base text-text-2">Card payments are handled by Square; card details never touch our servers, and we do not store payment information ourselves. Our data practices are the ones described in the Privacy Policy above.</p>
 
             <h2 class="mt-10 type-title-1 text-text-1">Refunds</h2>
-            <p class="mt-3 text-base text-text-2">Refund requests must be made within 30 days of payment. Approved refunds are issued within 7 business days. Contact <a class="font-semibold text-link underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>.</p>
+            <p class="mt-3 text-base text-text-2">Refund requests under our refund policy must be made within 30 days of payment. Approved refunds are issued within 7 business days. Contact <a class="font-semibold text-link underline" href="mailto:support@easy-refer.com">support@easy-refer.com</a>.</p>
             <p class="mt-3 text-base"><a class="font-semibold text-link underline" href="{{ route('refund') }}">Refund Policy</a></p>
         </div>
     </section>

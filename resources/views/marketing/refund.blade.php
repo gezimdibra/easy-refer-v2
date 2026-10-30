@@ -26,7 +26,7 @@
             <p class="mt-3 text-base text-text-2">A visit charge is refundable when a platform error prevented verification, or for proven fraudulent referrals. Disputes must be raised within 30 days with transaction details.</p>
 
             <h2 class="mt-10 type-title-1 text-text-1">Text campaign charges</h2>
-            <p class="mt-3 text-base text-text-2">Text campaigns cost {{ (int) config('billing.sms_segment_price_cents') }} cents per segment for each customer, charged through Twilio. Text charges are non-refundable except for failed delivery caused by a system problem on our side.</p>
+            <p class="mt-3 text-base text-text-2">Text campaigns cost {{ (int) config('billing.sms_segment_price_cents') }} cents per segment for each customer, sent through Twilio and charged on your monthly bill. Text charges are non-refundable except for failed delivery caused by a system problem on our side.</p>
 
             <h2 class="mt-10 type-title-1 text-text-1">Disputes</h2>
             <p class="mt-3 text-base text-text-2">We acknowledge disputes within 2 business days and typically resolve them within 10 business days (complex cases may take up to 30 days). Approved refunds are issued within 7 business days.</p>
