@@ -25,6 +25,15 @@ class SecurityController extends Controller
         $user = $request->user();
         $currentSessionId = $request->session()->getId();
 
+        // Amendment 38 (Train A3-3, D10): session times render in
+        // the business's local time, the frame every other owner
+        // surface uses; the raw session timestamp is UTC and read
+        // hours wrong in every state. No user timezone is stored,
+        // so the business frame is the one consistent choice; a
+        // business-less account falls back to the unconverted
+        // value (localTime itself falls back to the app zone).
+        $business = $user->business;
+
         $sessions = DB::table('sessions')
             ->where('user_id', $user->id)
             ->orderByDesc('last_activity')
@@ -32,7 +41,10 @@ class SecurityController extends Controller
             ->map(fn ($row) => [
                 'ip_address' => $row->ip_address,
                 'user_agent' => $row->user_agent,
-                'last_active' => Carbon::createFromTimestamp($row->last_activity),
+                'device' => \App\Support\DeviceSummary::of($row->user_agent),
+                'last_active' => $business !== null
+                    ? $business->localTime(Carbon::createFromTimestamp($row->last_activity))
+                    : Carbon::createFromTimestamp($row->last_activity),
                 'is_current' => $row->id === $currentSessionId,
             ]);
 

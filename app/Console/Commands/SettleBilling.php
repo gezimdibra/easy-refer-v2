@@ -24,7 +24,12 @@ class SettleBilling extends Command
     {
         $settled = 0;
 
-        Business::query()->chunkById(100, function ($businesses) use ($settlement, &$settled) {
+        // Demo double exclusion (A-18 Finding 3): the nightly
+        // settle never selects the demo business (flag leg in
+        // the sweep query); the walk it would have run carries
+        // both legs regardless, so this is belt and braces, in
+        // the open.
+        Business::query()->where('is_demo', false)->chunkById(100, function ($businesses) use ($settlement, &$settled) {
             foreach ($businesses as $business) {
                 $settlement->settleAndPersist($business);
                 $settled++;

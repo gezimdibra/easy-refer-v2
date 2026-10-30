@@ -5,7 +5,10 @@ namespace App\Contracts;
 use App\Models\Business;
 
 /**
- * Creates the Square Customer for a business at signup (spec Section 4.1).
+ * Creates the Square Customer for a business (spec Section 4.1).
+ * Since RS2-2 the signup checkpoint creates none: provisioning
+ * happens at the card moment (CardOnFileService) or at the
+ * onboarding Location save, whichever comes first.
  *
  * The binding is the configured access token: with one, the SDK
  * gateway (App\Services\Square\SdkSquareCustomerGateway) provisions

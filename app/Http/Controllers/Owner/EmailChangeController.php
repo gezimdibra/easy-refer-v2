@@ -15,12 +15,15 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Account email change (spec Section 8.5; matrix AUTH-30). The change
- * takes effect immediately and the new address starts unverified:
- * the Section 8.5 gate reapplies (dashboard banner, QR activation and
- * billing held) until the signed link sent to the new address is
- * used, which is what proves control of it. A notification goes to
- * the old address in the same request, and the action sits behind the
- * Section 8.7 step-up (wired as middleware on the route).
+ * takes effect immediately and the new address starts unverified.
+ * Verification proves control of the new address and is what makes
+ * receipts and password resets reach it; it does NOT gate the QR
+ * code or billing (flowIsActive reads business status and billing
+ * status only, Train A2 / Amendment 37: the earlier copy claiming
+ * a verification gate was false and has been reworded everywhere).
+ * A notification goes to the old address in the same request, and
+ * the action sits behind the Section 8.7 step-up (wired as
+ * middleware on the route).
  */
 class EmailChangeController extends Controller
 {

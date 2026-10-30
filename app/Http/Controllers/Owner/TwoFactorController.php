@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Services\Auth\TwoFactorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
@@ -49,6 +50,26 @@ class TwoFactorController extends Controller
         return view('owner.two-factor-confirm', [
             'user' => $user,
             'provisioningUri' => $twoFactor->provisioningUri($user),
+        ]);
+    }
+
+    /**
+     * AU-12 (R5 pack A9 pick B): the setup QR. The provisioning URI
+     * is never printed on the page as text again; it lives only
+     * inside this SVG, served per request to the signed-in owner
+     * with a pending enrollment, exactly like the flow QR images.
+     */
+    public function qr(Request $request, TwoFactorService $twoFactor): Response|RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->hasPendingTwoFactorEnrollment()) {
+            return redirect()->route('security');
+        }
+
+        return response(\App\Support\QrImage::svg($twoFactor->provisioningUri($user), 232), 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Cache-Control' => 'no-store',
         ]);
     }
 

@@ -20,10 +20,15 @@ class ActionCenterController extends Controller
     public function index(Request $request, ActionCenter $center): View
     {
         $user = $request->user();
+        $state = $center->pageState($user->business, $user);
 
         return view('owner.actions', [
             'business' => $user->business,
-            'items' => $center->items($user->business, $user),
+            'items' => $state['items'],
+            // G3/Q3: true when states are open but every row
+            // stands dismissed — the page then carries the
+            // honest quiet line (AC-10), never "good standing".
+            'quiet' => $state['quiet'],
         ]);
     }
 

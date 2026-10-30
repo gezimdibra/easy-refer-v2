@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActionCenterDismissal;
 use App\Models\AuditLog;
 use App\Models\Membership;
 use App\Models\Referral;
@@ -11,6 +12,7 @@ use App\Models\Reward;
 use App\Models\SmsMessage;
 use App\Services\Billing\SettlementService;
 use App\Services\Billing\VisitValuation;
+use App\Services\Owner\ActionCenter;
 use App\Support\SetupChecklist;
 use App\Support\StarterPacks;
 use Carbon\Carbon;
@@ -45,39 +47,80 @@ class DashboardController extends Controller
         // state the last sweeper happened to leave behind.
         Referral::applyExpiryForBusiness($business);
         Reward::applyVestingForBusiness($business);
+        Reward::applyClosureExpiryForBusiness($business);
+        // M-4: an expired reward leaves the waiting tile at the
+        // same read that expires it (pass Section 2.2).
+        Reward::applyTimeExpiryForBusiness($business);
 
         $todayStart = now($timezone)->startOfDay()->utc();
         $yesterdayStart = now($timezone)->subDay()->startOfDay()->utc();
 
+        // B7 M-2: the chart's pluck of every redeemed referral's
+        // redeemed_at (below) is a superset of the tiles' today
+        // and yesterday windows, so it runs once, up here, and
+        // both tile counts are derived from it instead of being
+        // counted by two further queries. Stored timestamps are
+        // UTC wall time in Y-m-d H:i:s format, so comparing the
+        // stored strings against the same bounds the count
+        // queries used, formatted the same way, is an identical
+        // comparison — never a local-time string comparison.
+        // Demo double exclusion (A-18 Finding 3): the
+        // business_id scoping is the flag leg (the owner's own
+        // business; the demo business has no owner account),
+        // and the source condition is the stamp leg. Every
+        // referral and reward read below routes through
+        // App\Support\DemoExclusion for the same two legs.
+        $redeemedDates = DB::table('referrals')
+            ->where('business_id', $business->id)
+            ->where('source', '!=', 'demo')
+            ->where('state', Referral::STATE_REDEEMED)
+            ->whereNotNull('redeemed_at')
+            ->orderBy('redeemed_at')
+            ->pluck('redeemed_at');
+
+        $todayStartText = $todayStart->format('Y-m-d H:i:s');
+        $yesterdayStartText = $yesterdayStart->format('Y-m-d H:i:s');
+        $referralsToday = 0;
+        $referralsYesterday = 0;
+        foreach ($redeemedDates as $redeemedAt) {
+            $redeemedAtText = (string) $redeemedAt;
+            if ($redeemedAtText >= $todayStartText) {
+                $referralsToday++;
+            } elseif ($redeemedAtText >= $yesterdayStartText) {
+                $referralsYesterday++;
+            }
+        }
+
+        // B7 M-1: the held row sets are read by three consumers
+        // in this request — the tiles' review_waiting count, the
+        // shell's review-queue badge, and the Action Center's
+        // reviewHolds row (which ages and fingerprints these
+        // exact rows). Fetch both collections once, here, after
+        // the on-read transitions and before anything renders,
+        // and hand them over below; each consumer's number is
+        // these collections' counts, so they cannot disagree.
+        $heldReferrals = \App\Support\DemoExclusion::referrals(Referral::query())
+            ->where('business_id', $business->id)
+            ->where('hold', true)
+            ->get(['id', 'held_at']);
+        $heldRewards = \App\Support\DemoExclusion::rewards(Reward::query())
+            ->where('business_id', $business->id)
+            ->where('hold', true)
+            ->get(['id', 'held_at']);
+
         $tiles = [
-            'scans_today' => ReferralEvent::query()
+            'scans_today' => \App\Support\DemoExclusion::referralEvents(ReferralEvent::query())
                 ->where('business_id', $business->id)
                 ->where('event_type', 'scan')
                 ->where('created_at', '>=', $todayStart)
                 ->count(),
-            'referrals_today' => Referral::query()
+            'referrals_today' => $referralsToday,
+            'referrals_yesterday' => $referralsYesterday,
+            'rewards_waiting' => \App\Support\DemoExclusion::rewards(Reward::query())
                 ->where('business_id', $business->id)
-                ->where('state', Referral::STATE_REDEEMED)
-                ->where('redeemed_at', '>=', $todayStart)
+                ->readyToClaim()
                 ->count(),
-            'referrals_yesterday' => Referral::query()
-                ->where('business_id', $business->id)
-                ->where('state', Referral::STATE_REDEEMED)
-                ->where('redeemed_at', '>=', $yesterdayStart)
-                ->where('redeemed_at', '<', $todayStart)
-                ->count(),
-            'rewards_waiting' => Reward::query()
-                ->where('business_id', $business->id)
-                ->where('state', Reward::STATE_AVAILABLE)
-                ->count(),
-            'review_waiting' => Referral::query()
-                    ->where('business_id', $business->id)
-                    ->where('hold', true)
-                    ->count()
-                + Reward::query()
-                    ->where('business_id', $business->id)
-                    ->where('hold', true)
-                    ->count(),
+            'review_waiting' => $heldReferrals->count() + $heldRewards->count(),
         ];
 
         $hasEnrollments = Membership::query()->where('business_id', $business->id)->exists();
@@ -88,11 +131,11 @@ class DashboardController extends Controller
         // is the trailing 5-day window; promotional messages sent
         // is delivered campaign recipients.
         $counters = [
-            'completed_total' => Referral::query()
+            'completed_total' => \App\Support\DemoExclusion::referrals(Referral::query())
                 ->where('business_id', $business->id)
                 ->where('state', Referral::STATE_REDEEMED)
                 ->count(),
-            'pending_total' => Referral::query()
+            'pending_total' => \App\Support\DemoExclusion::referrals(Referral::query())
                 ->where('business_id', $business->id)
                 ->where('state', Referral::STATE_PENDING)
                 ->count(),
@@ -105,10 +148,10 @@ class DashboardController extends Controller
                 ->where('business_id', $business->id)
                 ->whereNull('removed_at')
                 ->count(),
-            'rewards_issued' => Reward::query()
+            'rewards_issued' => \App\Support\DemoExclusion::rewards(Reward::query())
                 ->where('business_id', $business->id)
                 ->count(),
-            'rewards_claimed' => Reward::query()
+            'rewards_claimed' => \App\Support\DemoExclusion::rewards(Reward::query())
                 ->where('business_id', $business->id)
                 ->where('state', Reward::STATE_CLAIMED)
                 ->count(),
@@ -140,13 +183,8 @@ class DashboardController extends Controller
         $perDay = [];
         $zone = new DateTimeZone($timezone);
         $utc = new DateTimeZone('UTC');
-        $redeemedDates = DB::table('referrals')
-            ->where('business_id', $business->id)
-            ->where('state', Referral::STATE_REDEEMED)
-            ->whereNotNull('redeemed_at')
-            ->orderBy('redeemed_at')
-            ->pluck('redeemed_at');
-
+        // $redeemedDates was plucked once above the tiles (B7
+        // M-2); this loop buckets the same collection per day.
         foreach ($redeemedDates as $redeemedAt) {
             $day = (new DateTimeImmutable((string) $redeemedAt, $utc))->setTimezone($zone)->format('Y-m-d');
             $perDay[$day] = ($perDay[$day] ?? 0) + 1;
@@ -201,7 +239,7 @@ class DashboardController extends Controller
         // applies before the limit exactly as the old ORDER BY
         // did (a blind LIMIT 5 on the counts alone would pick an
         // arbitrary member of a boundary tie).
-        $weeklyCounts = Referral::query()
+        $weeklyCounts = \App\Support\DemoExclusion::referrals(Referral::query())
             ->whereIn('referrer_membership_id', Membership::query()
                 ->where('business_id', $business->id)
                 ->whereNull('removed_at')
@@ -239,10 +277,34 @@ class DashboardController extends Controller
         // about how far setup has come.
         $checklist = SetupChecklist::for($business, $user);
 
-        // The shell's Action Center badge reads the same
-        // checklist for its setup row; hand this request's
-        // computation over instead of running it twice.
+        // B7 M-5: the dismissal state is read once, as the full
+        // per-item fingerprint map. This panel's dismissed flag
+        // is the map's setup_checklist entry, and the Action
+        // Center's visibleItems() plucks this same map when it
+        // runs in this request instead of querying it again.
+        $dismissals = ActionCenterDismissal::query()
+            ->where('business_id', $business->id)
+            ->pluck('state_fingerprint', 'item_key');
+        $dismissedFingerprint = $dismissals->get('setup_checklist');
+        $checklistDismissed = $dismissedFingerprint !== null
+            && $dismissedFingerprint === ActionCenter::setupFingerprint($checklist);
+
+        // Hand this request's computations to the shell's view
+        // composers and the Action Center instead of running
+        // them twice: the checklist (RK-01), the held
+        // collections and their count (B7 M-1), the dismissal
+        // map (B7 M-5), and the counters' redeemed total as the
+        // has-any-redemption fact (B7 M-7). These are plain
+        // statements on purpose: setting an attribute inside a
+        // boolean expression lets an empty map short-circuit the
+        // chain and silently skip the hand-over (the B7
+        // profiling lane's documented trap).
         $request->attributes->set('action_center_checklist', $checklist);
+        $request->attributes->set('action_center_held_referrals', $heldReferrals);
+        $request->attributes->set('action_center_held_rewards', $heldRewards);
+        $request->attributes->set('review_queue_count', $heldReferrals->count() + $heldRewards->count());
+        $request->attributes->set('action_center_dismissals', $dismissals);
+        $request->attributes->set('has_redeemed_referral', $counters['completed_total'] > 0);
 
         return view('owner.dashboard', [
             'business' => $business,
@@ -258,12 +320,59 @@ class DashboardController extends Controller
             // RK-03's forecast line renders from the accrued
             // preview of THIS settlement pass: the settlement
             // runs once per dashboard load, not once per panel.
-            'forecastPreview' => $settlement->accruedPreview($business, $allTimeSettlement),
+            // Train A2: the preview is the gated FORECAST
+            // preview (the visit leg of this same settlement
+            // pass plus the text leg), so the Overview quotes
+            // the same combined total as Billing and the email.
+            // The gate's card fact comes from the checklist
+            // computed above (its card_on_file entry IS the
+            // defaultFor check), and both text figures come
+            // from one conditional-sum query, so the train
+            // adds exactly one measured query to this page.
+            'forecastPreview' => \App\Support\BillingForecast::gatedPreview(
+                $business,
+                $allTimeSettlement,
+                $checklist['card_on_file'],
+                ($textFigures = $settlement->textFigures($business, now()))['all'],
+            ),
+            // VAL-02's conditional text line: this month's
+            // accrued text charges, the same UTC month scope
+            // as the panel's visit figure, from the same
+            // textFigures query as the forecast leg above.
+            'monthTextCents' => $textFigures['month'],
             'emailVerified' => $user->hasVerifiedEmail(),
-            'showStarterPack' => $business->friend_reward_text === null && $packs !== [],
+            'showStarterPack' => ! $business->hasFriendRewardText() && $packs !== [],
             'packs' => $packs,
             'checklist' => $checklist,
-            'checklistDismissed' => $business->checklist_dismissed_at !== null,
+            // G6 (coherence Phase 2): ONE dismissal domain.
+            // The card is dismissed exactly while the Action
+            // Center's setup row is dismissed — the stored
+            // fingerprint matches the checklist's current
+            // composition fingerprint. The legacy
+            // checklist_dismissed_at column no longer decides
+            // anything (pre-unification dismissals stored in
+            // it simply stop matching, the safe direction: the
+            // card resurfaces once).
+            'checklistDismissed' => $checklistDismissed,
+            // M-4 DASH-13 fix (Amendment 71 addendum, [M4-DASH-01]):
+            // the closed banner's in-window line [DASH-13 closed
+            // banner v3] names the exact closed_at + 30 days date
+            // unconditionally, which is false for a live reward
+            // whose own use-by date falls before that date. Same
+            // conditional branch as [M4-ACCT-04] on the account
+            // page, against the ACTUAL window end, computed after
+            // the on-read transitions above so it reads live
+            // state only; past the window the ended form needs
+            // none (closure expiry has ended claimability for
+            // every live reward, held or not).
+            'closedRewardOwnDateInsideWindow' => $business->isClosed() && $business->closed_at !== null && ! $business->closureWindowEnded()
+                ? \App\Support\DemoExclusion::rewards(Reward::query())
+                    ->where('business_id', $business->id)
+                    ->whereIn('state', [Reward::STATE_PENDING_VESTING, Reward::STATE_AVAILABLE])
+                    ->whereNotNull('expires_at')
+                    ->where('expires_at', '<', $business->closed_at->copy()->addDays(30))
+                    ->exists()
+                : false,
             'chart' => $chart,
             'chartRange' => $range,
             'chartTotal' => $counters['completed_total'],
@@ -276,14 +385,42 @@ class DashboardController extends Controller
      * dismissible, and resettable from Settings). The dismissal is
      * server state, not a browser preference, so it holds on every
      * device the owner signs in from.
+     *
+     * Phase 2 (G6): the dismissal is stored in the Action
+     * Center's dismissal domain at the checklist's current
+     * composition fingerprint — the same record that hides the
+     * Action Center's setup row — so the two surfaces can never
+     * disagree, and the Action Center's "Finish setup" link
+     * never lands on a checklist-less dashboard.
      */
-    public function dismissChecklist(Request $request): RedirectResponse
+    public function dismissChecklist(Request $request, ActionCenter $center): RedirectResponse
     {
-        $business = $request->user()->business;
+        $user = $request->user();
+        $business = $user->business;
 
-        $business->forceFill(['checklist_dismissed_at' => now()])->save();
+        $center->dismiss($business, $user, 'setup_checklist');
 
-        AuditLog::write('business.checklist_dismissed', $request->user(), [], $business);
+        // OV-5 (post-r26): the Action Center's setup source
+        // exists only while a step is open, so dismissing the
+        // finished checklist's slim row has no source row to
+        // record against. Record that dismissal directly, at
+        // the complete checklist's own fingerprint in the same
+        // G6 domain: the slim row hides, the Settings reset
+        // reopens it, and a step reopening changes the
+        // fingerprint and resurfaces it, exactly like an
+        // open-step dismissal.
+        $checklist = SetupChecklist::for($business, $user);
+        // ON-SET-2: the slim row renders on REQUIRED completion,
+        // so its direct dismissal keys on the same definition —
+        // an unset optional review link does not strand it.
+        if (SetupChecklist::requiredComplete($checklist)) {
+            ActionCenterDismissal::query()->updateOrCreate(
+                ['business_id' => $business->id, 'item_key' => 'setup_checklist'],
+                ['state_fingerprint' => ActionCenter::setupFingerprint($checklist)],
+            );
+        }
+
+        AuditLog::write('business.checklist_dismissed', $user, [], $business);
 
         return redirect()->route('dashboard');
     }

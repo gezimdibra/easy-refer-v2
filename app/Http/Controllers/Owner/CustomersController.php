@@ -38,6 +38,14 @@ class CustomersController extends Controller
         $business = $request->user()->business;
         $search = trim((string) $request->query('q', ''));
 
+        // Demo double exclusion, ruled out here in code
+        // (A-18 Finding 3): memberships carry no demo stamp,
+        // so there is no second leg to apply on this list;
+        // the flag leg is the business_id scoping itself (the
+        // demo business has no owner account, so its
+        // memberships can never be selected), and the detail
+        // page's referral reads below apply the stamp leg
+        // through DemoExclusion. Pinned in DemoPhase1FixTest.
         $memberships = Membership::query()
             ->where('business_id', $business->id)
             ->whereNull('removed_at')
@@ -102,6 +110,37 @@ class CustomersController extends Controller
         // can still be added, without consent.
         $optedOut = SmsOptOut::optedOut($phone);
 
+        // CF-5 duplicate slot (Amendment 29 [CF-4]): the store
+        // path already detects an active membership for this
+        // business (resolveMembership's 'active' state), but it
+        // used to answer with a redirect and a status line. The
+        // designed answer is a field error at the phone, naming
+        // the existing record, with a link to their page (the
+        // link rides the session to the form's phone slot). The
+        // one exception is the F-06 path: a re-add that asserts
+        // consent for a member who does not have it yet performs
+        // a real consent write below, so it is not a pure
+        // duplicate and keeps its shipped behavior.
+        $existingCustomer = Customer::query()->where('phone_e164', $phone)->first();
+        if ($existingCustomer !== null) {
+            $existingMembership = Membership::query()
+                ->where('business_id', $business->id)
+                ->where('customer_id', $existingCustomer->id)
+                ->whereNull('removed_at')
+                ->first();
+            if ($existingMembership !== null) {
+                $assertionWouldApply = $asserted && ! $optedOut && ! $existingMembership->sms_consent;
+                if (! $assertionWouldApply) {
+                    $existingName = trim($existingCustomer->first_name.' '.$existingCustomer->last_name);
+
+                    return back()
+                        ->withErrors(['phone' => 'This number is already on '.($existingName !== '' ? $existingName : 'a customer')."'s customer record."])
+                        ->withInput()
+                        ->with('duplicate_membership', $existingMembership->id);
+                }
+            }
+        }
+
         try {
             [$membership, $state, $alreadyUses] = $this->resolveMembership($business, $phone, $data);
         } catch (QueryException) {
@@ -154,7 +193,7 @@ class CustomersController extends Controller
 
         $message = $alreadyUses
             ? 'This customer already uses Easy Refer. They are now connected to your store.'
-            : ($assertionApplied ? 'Customer added. Their referral link is on its way by text.' : 'Customer added.');
+            : ($assertionApplied ? 'Customer added. A confirmation text is on its way; their referral link follows when they reply YES.' : 'Customer added.');
 
         return redirect()->route('customers.index')->with('status', $message);
     }
@@ -230,14 +269,16 @@ class CustomersController extends Controller
 
         $membership->load('customer');
 
-        $referralsMade = Referral::query()
+        // Demo double exclusion (A-18 Finding 3): owner
+        // scoping is the flag leg; the helper adds the stamp leg.
+        $referralsMade = \App\Support\DemoExclusion::referrals(Referral::query())
             ->where('business_id', $business->id)
             ->where('referrer_membership_id', $membership->id)
             ->with(['referredCustomer', 'reward'])
             ->orderByDesc('created_at')
             ->get();
 
-        $visits = Referral::query()
+        $visits = \App\Support\DemoExclusion::referrals(Referral::query())
             ->where('business_id', $business->id)
             ->where('referred_customer_id', $membership->customer_id)
             ->with(['referrerMembership.customer'])
@@ -256,7 +297,7 @@ class CustomersController extends Controller
             'business' => $business,
             'membership' => $membership,
             'referralsMade' => $referralsMade,
-            'rewards' => $membership->rewards()->with('referral.referredCustomer')->orderByDesc('created_at')->get(),
+            'rewards' => $membership->rewards()->with(['referral.referredCustomer', 'business'])->orderByDesc('created_at')->get(),
             'visits' => $visits,
             'consentChangedAt' => $consentChangedAt !== null ? \Illuminate\Support\Carbon::parse($consentChangedAt) : null,
         ]);

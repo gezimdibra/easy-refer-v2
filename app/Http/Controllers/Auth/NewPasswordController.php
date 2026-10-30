@@ -20,7 +20,19 @@ class NewPasswordController extends Controller
 {
     public function create(Request $request): View
     {
-        return view('auth.reset-password', ['request' => $request]);
+        // AU-6: the reset form presents the account identity (the
+        // pack's GitHub/Google pattern) instead of re-asking for
+        // the email. The lookup is canonical, matching store()'s
+        // resolution; an unknown address yields no name and the
+        // view falls back to the address alone.
+        $account = $request->email
+            ? User::query()->where('canonical_email', CanonicalEmail::of((string) $request->email))->first()
+            : null;
+
+        return view('auth.reset-password', [
+            'request' => $request,
+            'accountName' => $account?->name,
+        ]);
     }
 
     /**

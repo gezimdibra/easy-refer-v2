@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\CanonicalEmail;
 use App\Support\PasswordPolicy;
 use App\Support\PhoneNumber;
+use App\Support\UsState;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
@@ -15,9 +16,14 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 
 /**
- * Signup validation for the four-step wizard (spec Section 4.1). The
- * wizard pages client-side; the server receives one submission and
- * validates every field here.
+ * Signup validation for the wizard's identity checkpoint
+ * (spec Section 4.1; RS2-2 Variant A). The wizard pages
+ * client-side; the server receives one submission at Step 3
+ * (Password) and validates the identity fields here, and the
+ * account is created from this submission. The address is NOT
+ * part of signup any more: it is collected by the onboarding
+ * Location step under App\Support\AddressRules, the rule set
+ * extracted from this request.
  */
 class RegisterBusinessRequest extends FormRequest
 {
@@ -28,17 +34,10 @@ class RegisterBusinessRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $country = strtoupper(trim((string) $this->input('country', '')));
-
         $merge = [
             'canonical_email' => CanonicalEmail::of((string) $this->input('email', '')),
             'phone_e164' => PhoneNumber::normalizeToE164($this->input('phone')),
-            'country' => $country,
         ];
-
-        if ($country === 'US') {
-            $merge['state'] = strtoupper(trim((string) $this->input('state', '')));
-        }
 
         $this->merge($merge);
 
@@ -93,38 +92,6 @@ class RegisterBusinessRequest extends FormRequest
                 }
             }],
             'password' => ['required', 'confirmed', PasswordPolicy::rule()],
-            // Address validation against application data (spec Section
-            // 4.1): the country must be a known ISO code; a US address
-            // must name a real state, carry a well-formed ZIP, and put
-            // the ZIP in that state's region.
-            'country' => ['required', 'string', Rule::in(config('countries.codes'))],
-            'street' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:100'],
-            'state' => ['required', 'string', 'max:100', function (string $attribute, mixed $value, Closure $fail) {
-                if ($this->input('country') === 'US'
-                    && ! array_key_exists(strtoupper((string) $value), (array) config('countries.us_states'))) {
-                    $fail('Select the state from the list.');
-                }
-            }],
-            'postal_code' => ['required', 'string', 'max:20', function (string $attribute, mixed $value, Closure $fail) {
-                if ($this->input('country') !== 'US') {
-                    return;
-                }
-
-                $zip = (string) $value;
-
-                if (preg_match('/^\d{5}(-\d{4})?$/', $zip) !== 1) {
-                    $fail('Enter a valid ZIP code.');
-
-                    return;
-                }
-
-                $region = config('countries.zip_regions.'.substr($zip, 0, 1));
-
-                if (! in_array(strtoupper((string) $this->input('state')), (array) $region, true)) {
-                    $fail('That ZIP code is not in the selected state.');
-                }
-            }],
         ];
     }
 
@@ -150,12 +117,6 @@ class RegisterBusinessRequest extends FormRequest
             'password.confirmed' => 'The passwords do not match. Enter the same password twice.',
             'password.min' => 'Use at least 12 characters.',
             'password.max' => 'That password is too long. Shorten it and try again.',
-            'country.required' => 'Select your country.',
-            'country.in' => 'Select your country from the list.',
-            'street.required' => 'Enter your street address.',
-            'city.required' => 'Enter your city.',
-            'state.required' => 'Enter your state or province.',
-            'postal_code.required' => 'Enter your postal code.',
             'max' => 'That entry is too long. Shorten it and try again.',
         ];
     }

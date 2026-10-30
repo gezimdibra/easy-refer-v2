@@ -31,14 +31,22 @@ class ChargeBilling extends Command
 
         Business::query()->chunkById(100, function ($businesses) use ($charger, &$charged, &$simulated, &$skipped) {
             foreach ($businesses as $business) {
-                $record = $charger->charge($business);
+                // Arrears settle month by month (money fix
+                // train): one run drains every owed month as
+                // its own record, never one combined charge.
+                $records = $charger->chargeAllMonths($business);
 
-                if ($record === null) {
+                if ($records === []) {
                     $skipped++;
-                } elseif ($record->state === BillingRecord::STATE_SIMULATED) {
-                    $simulated++;
-                } else {
-                    $charged++;
+                    continue;
+                }
+
+                foreach ($records as $record) {
+                    if ($record->state === BillingRecord::STATE_SIMULATED) {
+                        $simulated++;
+                    } else {
+                        $charged++;
+                    }
                 }
             }
         });

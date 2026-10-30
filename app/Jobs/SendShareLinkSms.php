@@ -42,7 +42,12 @@ class SendShareLinkSms implements ShouldQueue
         }
 
         $url = route('refer.friend', ['token' => $membership->plainShareToken()]);
-        $body = MessageCopy::shareLink($business, $url);
+        // OB-05 (Amendment 45): the earning promise is checked
+        // against the flow at handle time; while the flow is
+        // inactive the link still goes out, without it.
+        $body = $business->flowIsActive()
+            ? MessageCopy::shareLink($business, $url)
+            : MessageCopy::shareLinkFlowInactive($business, $url);
 
         $record = SmsMessage::create([
             'business_id' => $business->id,

@@ -30,18 +30,29 @@ class AdminConsoleController extends Controller
     {
         $admin = $request->user('admin');
 
+        // The demo business (Amendment 63, Section 13.2) is
+        // excluded from every platform count and aggregate on
+        // this console. BOTH legs, per surface (A-18 Finding
+        // 3, App\Support\DemoExclusion): business counts carry
+        // the flag leg (they count businesses, the flag is
+        // their stamp), and every visit, hold and aggregate
+        // query routes through the helper, which applies the
+        // flag leg AND the source/coverage stamp leg, so a
+        // stamp mismatch row counts nowhere. The demo's own
+        // readout lives in its event ledger, counted as demo,
+        // forever separate.
         $data = [
-            'businessTotal' => Business::query()->count(),
-            'businessActive' => Business::query()->where('status', 'active')->count(),
-            'businessDisabled' => Business::query()->where('status', 'disabled')->count(),
-            'businessClosed' => Business::query()->where('status', 'closed')->count(),
-            'businessNewThisWeek' => Business::query()->where('created_at', '>=', now()->subDays(7))->count(),
-            'visitsToday' => Referral::query()
+            'businessTotal' => Business::query()->where('is_demo', false)->count(),
+            'businessActive' => Business::query()->where('is_demo', false)->where('status', 'active')->count(),
+            'businessDisabled' => Business::query()->where('is_demo', false)->where('status', 'disabled')->count(),
+            'businessClosed' => Business::query()->where('is_demo', false)->where('status', 'closed')->count(),
+            'businessNewThisWeek' => Business::query()->where('is_demo', false)->where('created_at', '>=', now()->subDays(7))->count(),
+            'visitsToday' => \App\Support\DemoExclusion::referrals(Referral::query())
                 ->where('state', Referral::STATE_REDEEMED)
                 ->where('redeemed_at', '>=', now()->startOfDay())
                 ->count(),
-            'openHolds' => Referral::query()->where('hold', true)->count()
-                + Reward::query()->where('hold', true)->count(),
+            'openHolds' => \App\Support\DemoExclusion::referrals(Referral::query())->where('hold', true)->count()
+                + \App\Support\DemoExclusion::rewards(Reward::query())->where('hold', true)->count(),
             'recentAudit' => AuditLog::query()->orderByDesc('id')->limit(10)->get(),
         ];
 
@@ -56,10 +67,15 @@ class AdminConsoleController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $businesses = Business::query()
+            ->where('is_demo', false)
             ->with('owner')
             ->withCount('memberships')
             ->withCount(['referrals as completed_referrals' => function ($query) {
-                $query->where('state', Referral::STATE_REDEEMED);
+                // Stamp leg on top of this list's flag leg
+                // (A-18 Finding 3): a source='demo' referral
+                // on a real business is not a completed visit.
+                $query->where('source', '!=', 'demo')
+                    ->where('state', Referral::STATE_REDEEMED);
             }])
             ->when($search !== '', function ($query) use ($search) {
                 $digits = preg_replace('/\D+/', '', $search);
@@ -93,6 +109,11 @@ class AdminConsoleController extends Controller
 
     public function business(Request $request, Business $business, \App\Services\Billing\VisitValuation $valuation): View
     {
+        // The demo business (Amendment 63) has no admin surface.
+        if ($business->isDemo()) {
+            abort(404);
+        }
+
         $admin = $request->user('admin');
 
         $business->load('owner');
@@ -198,7 +219,10 @@ class AdminConsoleController extends Controller
         $admin = $request->user('admin');
         $search = trim((string) $request->query('q', ''));
 
-        $events = ReferralEvent::query()
+        // Both demo legs (A-18 Finding 3): the risk feed is a
+        // platform aggregate, so demo events count nowhere in
+        // it, flag leg and referral-stamp leg alike.
+        $events = \App\Support\DemoExclusion::referralEvents(ReferralEvent::query())
             ->where(function ($query) {
                 $query->where('event_type', 'flag_raised')
                     ->orWhere('event_type', 'redemption_rejected')
@@ -239,13 +263,15 @@ class AdminConsoleController extends Controller
     {
         $admin = $request->user('admin');
 
-        $referrals = Referral::query()
+        // Both demo legs (A-18 Finding 3), as on the home
+        // surface's open-holds count above.
+        $referrals = \App\Support\DemoExclusion::referrals(Referral::query())
             ->where('hold', true)
             ->with(['business', 'referrerMembership.customer', 'referredCustomer'])
             ->orderByDesc('held_at')
             ->get();
 
-        $rewards = Reward::query()
+        $rewards = \App\Support\DemoExclusion::rewards(Reward::query())
             ->where('hold', true)
             ->with(['business', 'membership.customer', 'referral.referredCustomer'])
             ->orderByDesc('held_at')

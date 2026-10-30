@@ -28,10 +28,12 @@ class Referral extends Model
      */
     protected $fillable = [
         'business_id',
+        'source',
         'referrer_membership_id',
         'referred_customer_id',
         'redeem_token_hash',
         'redeem_token_encrypted',
+        'friend_reward_text_snapshot',
         'state',
         'hold',
         'hold_rules',
@@ -40,6 +42,7 @@ class Referral extends Model
         'hold_resolved_by',
         'risk_score',
         'risk_rules',
+        'pair_superseded_at',
         'redeemed_at',
         'redeemed_by_user_id',
         'attribution_state',
@@ -60,6 +63,7 @@ class Referral extends Model
             'redeem_token_encrypted' => 'encrypted',
             'held_at' => 'datetime',
             'hold_resolved_at' => 'datetime',
+            'pair_superseded_at' => 'datetime',
             'redeemed_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
@@ -78,6 +82,48 @@ class Referral extends Model
     public function referredCustomer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'referred_customer_id');
+    }
+
+    /**
+     * F-UP-1 (truth sweep 2026-10-29 PM, Known Item 1): the
+     * friend reward text this referral SNAPSHOTTED at claim
+     * creation (EnrollmentService::completeClaim is the column's
+     * only writer), trimmed, or null when no snapshot was saved.
+     */
+    public function friendRewardSnapshotText(): ?string
+    {
+        $text = trim((string) $this->friend_reward_text_snapshot);
+
+        return $text === '' ? null : $text;
+    }
+
+    /**
+     * Whether this referral's friend reward is HISTORY: the
+     * visit completed, or the window closed without one
+     * (expired / voided). Historical claims render their
+     * snapshot; a claim still in flight (pending) is not
+     * history and its record surfaces keep rendering live
+     * config, exactly as before F-UP-1.
+     */
+    public function friendRewardIsHistorical(): bool
+    {
+        return in_array($this->state, [self::STATE_REDEEMED, self::STATE_EXPIRED, self::STATE_VOIDED], true);
+    }
+
+    /**
+     * The friend reward text a historical or counter surface
+     * must render for this referral: the claim-time snapshot
+     * when one was saved. When the snapshot is null the row
+     * predates the snapshot column (or was minted outside the
+     * claim flow) and there is no other truth for it, so this
+     * method applies the LEGACY LIVE-CONFIG FALLBACK: it reads
+     * the business's CURRENT reward text (Business::rewardText()).
+     * The fallback is deliberate and named here (and in the
+     * F-UP-1 build report); it is never a silent second source.
+     */
+    public function promisedFriendRewardText(): ?string
+    {
+        return $this->friendRewardSnapshotText() ?? $this->business?->rewardText();
     }
 
     public function reward(): HasOne
@@ -117,7 +163,19 @@ class Referral extends Model
 
     public function applyExpiry(): bool
     {
-        if ($this->state !== self::STATE_PENDING || $this->expires_at->isFuture()) {
+        // SA-03 (coordinator ruling, Amendment 35): a referral
+        // held for owner review does not expire. The hold is the
+        // owner's own pause, so the visit clock cannot run out
+        // silently underneath it; on release, releaseReferral
+        // restores at least the fresh minimum window. Expiry
+        // creates no billing event and touches no money state
+        // (billing events are minted only at redemption), so
+        // holding the clock changes nothing on the money side.
+        if ($this->hold) {
+            return false;
+        }
+
+        if ($this->state !== self::STATE_PENDING || $this->expires_at === null || $this->expires_at->isFuture()) {
             return false;
         }
 

@@ -31,14 +31,26 @@ class VerifyEmailController extends Controller
             app(\App\Services\Attribution\AttributionService::class)
                 ->record('E4', $user->business);
 
-            // Post-verification routing (spec Sections 9.6 and
-            // 4.1; billing UI build unit BU-5): an owner whose
-            // business has not started billing routes once, at
-            // this transition, to the billing page's setup state.
-            // The detour lives only in this branch, so every
-            // later visit, including a repeat click on the link,
-            // lands on the dashboard as before.
-            if ($user->business?->billing_status === 'none') {
+            // Post-verification routing: while onboarding is
+            // open, the link returns into the flow's Verify step
+            // (P4, OB-U2), which shows the done state and the way
+            // on. After the flow, the BU-5 rule stands in its
+            // activation-redesign form (census C-36): the detour
+            // to the billing page fires only when the business
+            // needs a card to keep its code on — its block
+            // reason is the exhausted allowance. A cardless
+            // owner whose code is live on its free visits owes
+            // nothing and lands on the dashboard; verification
+            // itself still gates nothing, and this is a routing
+            // surface, not a gate. Both detours live only in
+            // this branch, so every later visit, including a
+            // repeat click on the link, lands on the dashboard
+            // as before.
+            if ($user->business !== null && $user->business->onboarding_completed_at === null) {
+                return redirect()->intended(route('onboarding.step', 'verify'));
+            }
+
+            if ($user->business?->flowBlockReason() === 'allowance_exhausted') {
                 return redirect()->intended(route('settings.billing'));
             }
         }

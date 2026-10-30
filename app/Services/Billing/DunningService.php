@@ -25,15 +25,29 @@ use Illuminate\Support\Facades\Mail;
  *   day 6  DunningPauseWarningMail   (DUN-04 / DUN-02 + DUN-05)
  *   on reactivation  DunningRecoveredMail  (DUN-06 / DUN-07)
  *
- * The grace end is the episode start plus
+ * The grace end is Business::dunningGraceEndsAt() — the ONE
+ * derivation the in-app surfaces read (two-key re-review
+ * Finding 1, 2026-10-30): the episode start (the
+ * billing.past_due audit row) plus
  * config('billing.dunning_grace_days'); the day 6 pause date
  * is that same instant, because enrollment pauses when the
- * grace window closes. Every send writes a billing.dunning_email
+ * grace window closes. An episode the derivation cannot date
+ * (no audit row) is undatable here too: nothing is sent and
+ * the divergence is logged Critical — this service never
+ * invents a date from a failed record, because failed records
+ * are not bound to the episode (MonthlyCharger and
+ * PendingRecordSweeper write them without ever setting
+ * past_due). Every send writes a billing.dunning_email
  * audit row keyed by episode (or reactivation) and stage, and
  * those rows are the idempotency record: a stage is never sent
  * twice for one episode however often the run executes. Stage
  * mail goes only to businesses still past_due; a recovered
- * business hears only the success email. The amount comes from
+ * business hears only the success email. The audience is NOT
+ * filtered by business status (F-03, Amendment 36): a closed
+ * or disabled business still owes the episode amount and owed
+ * months still drain after closure, so it keeps receiving the
+ * stage schedule, but the stage mails branch on the status at
+ * send time and never claim its code keeps working. The amount comes from
  * the failed record tied to the episode (the audit row's
  * target, else the business's latest failed record); when no
  * record exists anywhere the amount cannot be stated, nothing
@@ -74,10 +88,19 @@ class DunningService
             ->orderByDesc('id')
             ->first();
 
-        if ($episode === null) {
-            // past_due without its audit row cannot be dated;
-            // the handler writes both in one transaction, so
-            // this is a divergence, never a state to invent from.
+        // The ONE derivation, shared with every in-app surface
+        // (two-key re-review Finding 1): the grace end comes
+        // from Business::dunningGraceEndsAt(), never from a
+        // local recomputation or a failed-record anchor. Null
+        // is the fail-closed state — past_due without its audit
+        // row cannot be dated; the handler writes both in one
+        // transaction, so this is a divergence, never a state
+        // to invent from — and the episode id below remains the
+        // idempotency key, so a null derivation skips the run
+        // for this business exactly as the missing row did.
+        $graceEnd = $business->dunningGraceEndsAt();
+
+        if ($episode === null || $graceEnd === null) {
             Log::critical('Dunning: business is past_due with no billing.past_due audit row; no episode can be dated.', [
                 'business_id' => $business->id,
             ]);
@@ -109,13 +132,28 @@ class DunningService
             return;
         }
 
-        $graceEnd = $episode->created_at->copy()->addDays((int) config('billing.dunning_grace_days', 7));
         $now = now();
+        // The episode start on the shared derivation's clock:
+        // the grace end minus the same config window the
+        // derivation added, so stage due-dates and the grace
+        // end can never drift apart.
+        $episodeStart = $graceEnd->copy()->subDays((int) config('billing.dunning_grace_days', 7));
+
+        // Train A2 (sweep-2 F-05): the grace-end check on the
+        // episode clock. A first run delayed past the grace end
+        // (scheduler outage, deploy gap) must not send the
+        // in-grace stage form carrying a grace date that is
+        // already past: every stage due at this run is built
+        // with the paused state, and the stage mails render
+        // their paused form (the in-app paused line, no grace
+        // date anywhere). The amount and the schedule are
+        // unchanged; only the form branches.
+        $pausedAtSend = $business->isActive() && $now->gte($graceEnd);
 
         foreach (self::STAGE_DAYS as $day) {
             $stage = 'day'.$day;
 
-            if ($now->lt($episode->created_at->copy()->addDays($day))) {
+            if ($now->lt($episodeStart->copy()->addDays($day))) {
                 continue;
             }
 
@@ -124,9 +162,9 @@ class DunningService
             }
 
             $mail = match ($day) {
-                0 => new DunningPaymentFailedMail($business, $record, $graceEnd),
-                3 => new DunningReminderMail($business, $record, $graceEnd),
-                6 => new DunningPauseWarningMail($business, $record, $graceEnd),
+                0 => new DunningPaymentFailedMail($business, $record, $graceEnd, $pausedAtSend),
+                3 => new DunningReminderMail($business, $record, $graceEnd, $pausedAtSend),
+                6 => new DunningPauseWarningMail($business, $record, $graceEnd, $pausedAtSend),
             };
 
             Mail::to($owner->email)->send($mail);

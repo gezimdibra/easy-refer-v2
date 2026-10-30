@@ -19,13 +19,31 @@ use Illuminate\View\View;
  */
 class TwoFactorChallengeController extends Controller
 {
-    public function show(): View
+    public function show(Request $request): View
     {
-        return view('owner.two-factor-challenge');
+        // AU-9: the recovery mode is a server-rendered mode of the
+        // same screen (a presentation toggle that works without
+        // JS); both modes post the one 'code' field.
+        return view('owner.two-factor-challenge', [
+            'mode' => $request->query('mode') === 'recovery' ? 'recovery' : 'code',
+        ]);
     }
 
     public function store(Request $request, TwoFactorService $twoFactor): RedirectResponse
     {
+        // AU-9: without JS the six boxes arrive as code_1..code_6
+        // and are assembled here, exactly as the flow verify step
+        // assembles its boxes; with JS the composed 'code' field
+        // carries the same value.
+        if (! $request->filled('code')) {
+            $assembled = collect(range(1, 6))
+                ->map(fn (int $i) => (string) $request->input('code_'.$i, ''))
+                ->implode('');
+            if ($assembled !== '') {
+                $request->merge(['code' => $assembled]);
+            }
+        }
+
         $request->validate([
             'code' => ['required', 'string'],
         ]);

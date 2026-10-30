@@ -41,8 +41,11 @@ class CardExpiryGuardMail extends Mailable
 
         return new Content(view: 'emails.card-expiry-guard', with: [
             'business' => $this->business,
+            // B1: the fact well's Card row (brand + last4, the only
+            // card facts the server holds).
+            'cardLabel' => trim(((string) $this->card->card_brand).' ···· '.((string) $this->card->last4)),
             'expiryMonthYear' => $expiry->format('F Y'),
-            'chargeDate' => BillingForecast::nextChargeDate()->format('F j'),
+            'chargeDate' => BillingForecast::nextChargeDateFor($this->business)->format('F j'),
             'billingUrl' => route('settings.billing'),
         ]);
     }

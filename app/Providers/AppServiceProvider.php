@@ -92,6 +92,14 @@ class AppServiceProvider extends ServiceProvider
                 ? $app->make(TwilioPhoneLookupGateway::class)
                 : $app->make(NullPhoneLookupGateway::class);
         });
+
+        // G6 demo Phase 1 (Amendment 63): the demo verification
+        // gateway is bound under its OWN class name, scoped so
+        // one request shares one pending-code store. It is never
+        // bound to the PhoneVerificationGateway contract, so no
+        // non-demo path can resolve it and no demo path can
+        // resolve the Twilio gateway through it.
+        $this->app->scoped(\App\Services\Demo\DemoVerificationGateway::class);
     }
 
     /**
@@ -117,11 +125,18 @@ class AppServiceProvider extends ServiceProvider
 
         // The review queue badge in the dashboard shell: held
         // referrals plus held rewards for the signed-in business.
+        // B7 M-1: a controller that already counted the held
+        // collections this request (the dashboard) hands the
+        // count over; every other page counts as before.
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
             $user = auth()->user();
             $count = 0;
 
-            if ($user !== null && $user->business_id !== null) {
+            $handedCount = request()->attributes->get('review_queue_count');
+
+            if (is_int($handedCount)) {
+                $count = $handedCount;
+            } elseif ($user !== null && $user->business_id !== null) {
                 $count = \App\Models\Referral::query()
                     ->where('business_id', $user->business_id)
                     ->where('hold', true)
@@ -145,8 +160,30 @@ class AppServiceProvider extends ServiceProvider
 
             if ($user !== null && $user->business !== null) {
                 $checklist = request()->attributes->get('action_center_checklist');
+                // B7: forward any of this request's already
+                // fetched Action Center inputs the controller
+                // handed over (held collections, dismissal map,
+                // redeemed-referral fact), so the badge's read
+                // model does not fetch any of them a second time.
+                $shared = [];
+                $heldReferrals = request()->attributes->get('action_center_held_referrals');
+                if ($heldReferrals instanceof \Illuminate\Support\Collection) {
+                    $shared['held_referrals'] = $heldReferrals;
+                }
+                $heldRewards = request()->attributes->get('action_center_held_rewards');
+                if ($heldRewards instanceof \Illuminate\Support\Collection) {
+                    $shared['held_rewards'] = $heldRewards;
+                }
+                $dismissals = request()->attributes->get('action_center_dismissals');
+                if ($dismissals instanceof \Illuminate\Support\Collection) {
+                    $shared['dismissals'] = $dismissals;
+                }
+                $hasRedeemed = request()->attributes->get('has_redeemed_referral');
+                if (is_bool($hasRedeemed)) {
+                    $shared['has_redeemed_referral'] = $hasRedeemed;
+                }
                 $count = app(\App\Services\Owner\ActionCenter::class)
-                    ->openCount($user->business, $user, is_array($checklist) ? $checklist : null);
+                    ->openCount($user->business, $user, is_array($checklist) ? $checklist : null, $shared === [] ? null : $shared);
             }
 
             $view->with('actionCenterCount', $count);

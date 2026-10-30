@@ -54,10 +54,10 @@ class ReferController extends Controller
         $business = $qr->business;
 
         if (! $this->flowIsLive($business)) {
-            return $this->message('not_active');
+            return $this->message('not_active', $business);
         }
 
-        [$flow, $newToken] = $this->beginFlow($request, $business);
+        [$flow, $newToken] = $this->beginFlow($request, $business, $qr);
 
         return $this->respond(response()->view('flow.landing', [
             'business' => $business,
@@ -102,7 +102,7 @@ class ReferController extends Controller
     {
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:80'],
-            'last_name' => ['required', 'string', 'max:80'],
+            'last_name' => ['nullable', 'string', 'max:80'],
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:254'],
             'consent' => ['nullable'],
@@ -123,7 +123,7 @@ class ReferController extends Controller
         $business = $qr->business;
 
         if (! $this->flowIsLive($business)) {
-            return $this->message('not_active');
+            return $this->message('not_active', $business);
         }
 
         if (! $this->turnstile->passes($request->input('cf-turnstile-response'), (string) $request->ip())) {
@@ -155,13 +155,16 @@ class ReferController extends Controller
         $this->flows->put($flow, [
             'qr_business_id' => $business->id,
             'scan_business_id' => $business->id,
+            // QRK-05: the code this enrollment arrived through
+            // (already resolved above, grace window included).
+            'qr_code_id' => $qr->id,
         ]);
 
         return $this->startVerification($request, $flow, $newToken, $business, [
             'kind' => 'enroll',
             'business_id' => $business->id,
             'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
+            'last_name' => $data['last_name'] ?? '',
             'phone_e164' => $phone,
             'email' => $data['email'] ?? null,
             'consent' => $request->boolean('consent'),
@@ -172,7 +175,13 @@ class ReferController extends Controller
     /**
      * The enrollment forms' validation voice (design Section 4.4,
      * F-03): plain language that says what to enter, never a
-     * framework default.
+     * framework default. F-6 (effectiveness audit, 2026-10-29):
+     * the last name is OPTIONAL on both flow forms (enroll and
+     * friend claim) — no downstream surface spends it (staff
+     * confirm reads first name only), so there is deliberately
+     * no last_name.required message; an omitted last name is
+     * stored as '' (the customers.last_name convention the
+     * owner-add path already uses).
      *
      * @return array<string, string>
      */
@@ -181,7 +190,6 @@ class ReferController extends Controller
         return [
             'first_name.required' => 'Enter your first name.',
             'first_name.max' => 'That first name is too long.',
-            'last_name.required' => 'Enter your last name.',
             'last_name.max' => 'That last name is too long.',
             'phone.required' => 'Enter your mobile phone number.',
             'phone.max' => 'That phone number is too long.',
@@ -199,12 +207,31 @@ class ReferController extends Controller
             return $this->flowBounce($request, $flow);
         }
 
+        // RC-3 (VOL-3): the step count branches on the pending's
+        // kind. Enrollment genuinely has 3 steps (landing, code,
+        // share); a friend claim has 2 (claim form, code) — the
+        // visit page after it is the completion, not a step, so
+        // "Step 2 of 3" on this path promised a Step 1 the friend
+        // never saw and a Step 3 that does not exist.
+        // RC-6 (VOL-3): the resend cooldown state rides to the
+        // template so the button can render disabled with the
+        // real remaining wait, instead of inviting a tap whose
+        // send is suppressed (see resend()).
+        $resendWaitSeconds = $this->resendWaitSeconds($pending);
+
         return response()->view('flow.verify', [
             'business' => Business::query()->find($pending['business_id']),
             'maskedPhone' => PhoneNumber::mask($pending['phone_e164']),
             'channel' => $pending['channel'] ?? 'sms',
             'error' => session('verify_error'),
             'notice' => session('verify_notice'),
+            // ID-11: a coupon pending is a 2-step flow like a
+            // friend claim (landing form, code), and its verify
+            // screen carries the coupon delta line (COUP-22).
+            'pendingKind' => $pending['kind'] ?? 'enroll',
+            'stepTotal' => in_array($pending['kind'] ?? 'enroll', ['claim', 'coupon'], true) ? 2 : 3,
+            'resendWaitSeconds' => $resendWaitSeconds,
+            'resendWaitMessage' => $resendWaitSeconds > 0 ? $this->resendWaitMessage($resendWaitSeconds) : null,
         ]);
     }
 
@@ -232,6 +259,29 @@ class ReferController extends Controller
         $request->validate(['code' => ['required', 'string', 'max:10']]);
 
         $business = Business::query()->findOrFail($pending['business_id']);
+
+        // CB-B1 (closed-business billing audit, 2026-10-27): the
+        // completion step re-checks liveness. Every entry step
+        // (landing, enroll, friend claim) gates on flowIsLive,
+        // but a verification started while the business was live
+        // could previously complete after the owner closed the
+        // account: the completion created a referral closeAccount
+        // never voided (it did not exist at closure), and its
+        // redemption minted a new billing event — a closed
+        // business accruing a brand-new charge. A pending flow
+        // for a business that is no longer live completes
+        // nothing; the answer is the same generic page the
+        // flow's entry steps give for that business.
+        // ID-11 exception: a coupon pending is NOT gated here.
+        // Its activation predicate is couponFlowActive (no
+        // friend-text leg), and its completion (mintClaim)
+        // re-reads every gate and answers with the coupon
+        // channel's own closed and limit pages, which are more
+        // specific than this generic page in every state.
+        if (($pending['kind'] ?? null) !== 'coupon' && ! $this->flowIsLive($business)) {
+            return $this->message('not_active', $business);
+        }
+
         $checks = (int) ($pending['checks'] ?? 0) + 1;
 
         if ($checks > (int) config('referrals.verify.checks_per_pending')) {
@@ -282,11 +332,62 @@ class ReferController extends Controller
         // number; completing a second verification links them.
         $prior = $this->flows->get($flow, 'verified');
 
+        if (($pending['kind'] ?? null) === 'coupon') {
+            // ID-11 (S3): the coupon completion. No membership,
+            // no referral, no reward, no billing: mintClaim
+            // mints the claim itself, immediately, or names the
+            // gate that stopped it. The verified marker is the
+            // claim's customer, for session continuity only.
+            $batch = \App\Models\CouponBatch::query()->findOrFail($pending['batch_id']);
+            $result = app(\App\Services\Coupons\CouponService::class)->mintClaim($batch, $pending);
+
+            if ($result['kind'] === 'minted') {
+                $claim = $result['claim'];
+                $this->flows->put($flow, ['verified' => [
+                    'customer_id' => $claim->customer_id,
+                    'business_id' => $business->id,
+                    'phone_e164' => $pending['phone_e164'],
+                ]]);
+                [, $rotated] = $this->flows->rotate($flow);
+
+                return $this->respond(redirect()->route('coupon.claim.page', ['token' => $claim->plainToken()]), $rotated);
+            }
+
+            if ($result['kind'] === 'limit' && $result['limit_claim'] !== null) {
+                $limitClaim = $result['limit_claim'];
+                $limitClaim->applyExpiry();
+
+                return response()->view('coupon.limit', [
+                    'business' => $business,
+                    'claim' => $limitClaim,
+                    'claimUrl' => $limitClaim->state === \App\Models\CouponClaim::STATE_READY && $limitClaim->plainToken() !== null
+                        ? route('coupon.claim.page', ['token' => $limitClaim->plainToken()])
+                        : null,
+                ]);
+            }
+
+            return response()->view('coupon.closed', [
+                'business' => $business,
+                'form' => $result['kind'] === 'full' ? 'full' : ($result['kind'] === 'ended' ? 'ended' : 'paused'),
+                'batch' => $batch,
+            ]);
+        }
+
         if ($pending['kind'] === 'enroll') {
             $scan = (int) ($this->flows->get($flow, 'scan_business_id') ?? 0) === $business->id;
             $this->flows->forget($flow, 'scan_business_id');
 
-            $done = $this->enrollment->completeEnrollment($business, $pending, $request->ip(), $this->deviceSignal($request), $scan);
+            // QRK-05: the code this flow arrived through stamps
+            // the scan event (id + placement). The row may have
+            // been revoked inside the grace window since; its
+            // placement is still the truth about the scan.
+            $scanQr = null;
+            $scanQrCodeId = $this->flows->get($flow, 'qr_code_id');
+            if ($scan && $scanQrCodeId !== null) {
+                $scanQr = QrCode::query()->find((int) $scanQrCodeId);
+            }
+
+            $done = $this->enrollment->completeEnrollment($business, $pending, $request->ip(), $this->deviceSignal($request), $scan, $scanQr?->id, $scanQr?->placement);
 
             $this->linkIfNeeded($flow, $prior, $pending, $done['customer'], $business, $request);
 
@@ -366,9 +467,18 @@ class ReferController extends Controller
 
         $business = Business::query()->findOrFail($pending['business_id']);
 
-        if (($pending['last_start_at'] ?? 0) + (int) config('referrals.verify.resend_cooldown_seconds') > now()->timestamp) {
+        $resendWaitSeconds = $this->resendWaitSeconds($pending);
+
+        if ($resendWaitSeconds > 0) {
+            // RC-6 (VOL-3, STATE-BLIND COPY): inside the cooldown
+            // the sender suppresses the send — nothing is sent —
+            // so the flash must not claim a new code was. It
+            // states the wait instead, with the real remaining
+            // seconds from the pending's own last_start_at. The
+            // rate-limit behaviour is unchanged: no provider
+            // call, no budget consumed, same redirect.
             return redirect()->route('refer.verify')
-                ->with('verify_notice', 'We sent you a new code. It can take a minute to arrive.');
+                ->with('verify_notice', $this->resendWaitMessage($resendWaitSeconds));
         }
 
         if ((int) ($pending['starts'] ?? 1) >= (int) config('referrals.verify.starts_per_flow_session')) {
@@ -392,6 +502,35 @@ class ReferController extends Controller
 
         return redirect()->route('refer.verify')
             ->with('verify_notice', 'We sent you a new code. It can take a minute to arrive.');
+    }
+
+    /**
+     * The resend cooldown's remaining seconds for a pending
+     * verification (RC-6): the pending's own last_start_at plus
+     * the configured cooldown, against now. Zero once the
+     * cooldown has elapsed. This is the one calculation both
+     * the verify screen's disabled state and the resend tap's
+     * flash read, so the two surfaces can never disagree about
+     * whether a send is available.
+     *
+     * @param  array<string, mixed>  $pending
+     */
+    private function resendWaitSeconds(array $pending): int
+    {
+        $remaining = (int) ($pending['last_start_at'] ?? 0)
+            + (int) config('referrals.verify.resend_cooldown_seconds')
+            - now()->timestamp;
+
+        return max(0, $remaining);
+    }
+
+    /**
+     * The cooldown state's true sentence (RC-6): no code was
+     * sent, and this is how long the wait actually is.
+     */
+    private function resendWaitMessage(int $seconds): string
+    {
+        return 'Please wait '.$seconds.' '.($seconds === 1 ? 'second' : 'seconds').' before asking for a new code.';
     }
 
     public function changeNumber(Request $request): RedirectResponse
@@ -439,10 +578,113 @@ class ReferController extends Controller
         }
 
         $business = $membership->business;
+
+        // SIM-1 residual (PM review 2026-10-27, B3): a member who
+        // already earned a reward sees it on this page, the page
+        // the product tells them to bookmark. Before this, the
+        // claim URL existed only inside SMS jobs, so the most
+        // valuable state in the product was invisible on its home
+        // page. Vesting and the closure wind-down are applied on
+        // this read, exactly as on the claim page, so the block
+        // never shows a state the claim page would contradict.
+        // The single most relevant reward is shown: an available
+        // reward beats a vesting one, and within a state the
+        // nearest unlock comes first.
+        $earnedRewards = $membership->rewards()
+            ->whereIn('state', [Reward::STATE_PENDING_VESTING, Reward::STATE_AVAILABLE])
+            ->get()
+            ->filter(function (Reward $reward) {
+                $reward->applyVesting();
+                $reward->applyClosureExpiry();
+                // M-4: a just-expired reward must not appear as
+                // ready here while the claim page calls it
+                // expired (the SIM-1 coherence rule).
+                $reward->applyTimeExpiry();
+
+                return in_array($reward->state, [Reward::STATE_PENDING_VESTING, Reward::STATE_AVAILABLE], true);
+            })
+            ->sort(fn (Reward $a, Reward $b) => [
+                $a->state === Reward::STATE_AVAILABLE ? 0 : 1,
+                $a->available_at?->timestamp ?? PHP_INT_MAX,
+                $a->id,
+            ] <=> [
+                $b->state === Reward::STATE_AVAILABLE ? 0 : 1,
+                $b->available_at?->timestamp ?? PHP_INT_MAX,
+                $b->id,
+            ])
+            ->values();
+        $topReward = $earnedRewards->first();
+        $rewardClaimUrl = $topReward !== null && $topReward->claim_token_encrypted
+            ? route('refer.claim.page', ['token' => $topReward->claim_token_encrypted])
+            : null;
+
+        // SA-02 (Train B, Amendment 39): every additional live
+        // reward is reachable from this page, not just counted.
+        // Each row carries that reward's own claim URL, built
+        // from its own sealed token exactly as the top block's
+        // is; the collection order (ready first, then nearest
+        // unlock) is the order the rows render in. Terminal
+        // rewards never enter the collection (the query and the
+        // on-read transitions above), so no row can present a
+        // claimed, denied, or expired reward as held.
+        $additionalRewards = $earnedRewards->skip(1)
+            ->map(fn (Reward $reward) => [
+                'reward' => $reward,
+                'claimUrl' => $reward->claim_token_encrypted
+                    ? route('refer.claim.page', ['token' => $reward->claim_token_encrypted])
+                    : null,
+            ])
+            ->values()
+            ->all();
+
         $shareUrl = route('refer.friend', ['token' => $membership->plainShareToken()]);
         $shareMessage = $business->friend_reward_text !== null
             ? $membership->customer->fullName().' invited you to get your Reward: '.$business->friend_reward_text.' at '.$business->name.'. Click here to claim the reward!'
             : $membership->customer->fullName().' invited you to '.$business->name.'. Click here to claim the reward!';
+
+        // ID-08 [F2R-02] (idea-08-design-pass.md Sections 2.4, 4,
+        // 8.3): the passive contagion reminder, for a member who
+        // arrived at THIS business as a redeemed friend and has
+        // not yet created a downstream referral here. A single
+        // nullable payload so the template cannot half-render
+        // it. Every conjunct is load-bearing: flow live at
+        // render (a paused or closed business's invitation
+        // would promise a reward behind a dead flow), member
+        // not removed and share token active (S16), at least
+        // one redeemed referral as the friend, zero referrals
+        // created as referrer (the first downstream referral
+        // retires the line for good, rule F2R-QUIET item 2),
+        // and the provenance name (the referrer of the member's
+        // MOST RECENT redeemed referral) resolves. The
+        // downstream check reads referral ROWS, not the
+        // referral_count column, so it is the same fact the
+        // MEASURE query counts (Section 7.2).
+        $friendToReferrerReminder = null;
+
+        if ($this->flowIsLive($business)
+            && $membership->removed_at === null
+            && $membership->share_token_state === 'active') {
+            $hasDownstreamReferral = Referral::query()
+                ->where('referrer_membership_id', $membership->id)
+                ->exists();
+
+            if (! $hasDownstreamReferral) {
+                $latestRedeemedAsFriend = Referral::query()
+                    ->where('business_id', $business->id)
+                    ->where('referred_customer_id', $membership->customer_id)
+                    ->where('state', Referral::STATE_REDEEMED)
+                    ->orderByDesc('redeemed_at')
+                    ->orderByDesc('id')
+                    ->first();
+                $provenanceFirstName = $latestRedeemedAsFriend?->referrerMembership?->customer?->first_name;
+
+                if ($provenanceFirstName !== null && trim((string) $provenanceFirstName) !== '') {
+                    $friendToReferrerReminder = [
+                        'referrerFirstName' => $provenanceFirstName,
+                    ];
+                }
+            }
+        }
 
         return response()->view('flow.share', [
             'business' => $business,
@@ -452,9 +694,14 @@ class ReferController extends Controller
             'shareQrUrl' => route('refer.share.qr'),
             'referralCount' => (int) $membership->referral_count,
             'returning' => (bool) ($verified['returning'] ?? false),
-            // OD-2: an unset referrer reward reads as the friend
-            // reward, the same default the rest of the flow uses.
-            'referrerRewardText' => $business->referrer_reward_text ?? $business->friend_reward_text,
+            // OR-1 §2.3: the referrer's effective reward, from
+            // the ONE resolver (OD-2's fallback, centralized):
+            // SPLIT reads the referrer text, UNIFIED the reward.
+            'referrerRewardText' => $business->effectiveReferrerRewardText(),
+            'topReward' => $topReward,
+            'rewardClaimUrl' => $rewardClaimUrl,
+            'additionalRewards' => $additionalRewards,
+            'friendToReferrerReminder' => $friendToReferrerReminder,
         ]);
     }
 
@@ -489,7 +736,7 @@ class ReferController extends Controller
         $business = $membership->business;
 
         if (! $this->flowIsLive($business)) {
-            return $this->message('not_active');
+            return $this->message('not_active', $business);
         }
 
         [$flow, $newToken] = $this->beginFlow($request, $business);
@@ -500,6 +747,13 @@ class ReferController extends Controller
             'token' => $token,
             'phoneHelp' => $this->phoneConfirmationLine($request),
             'draft' => $this->draftFor($flow, $business),
+            // RS-N1 (Train B): the OG preview payload, built only
+            // here on the live path (the not_active return above
+            // passes none, so a paused or closed business's link
+            // unfurls with no reward promise). The sender's first
+            // name rides in og:title only; the per-business image
+            // carries no name at all.
+            'og' => app(\App\Services\Share\OgCardRenderer::class)->metaFor($business, $membership->customer->first_name),
         ]), $newToken);
     }
 
@@ -514,12 +768,12 @@ class ReferController extends Controller
         $business = $membership->business;
 
         if (! $this->flowIsLive($business)) {
-            return $this->message('not_active');
+            return $this->message('not_active', $business);
         }
 
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:80'],
-            'last_name' => ['required', 'string', 'max:80'],
+            'last_name' => ['nullable', 'string', 'max:80'],
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:254'],
             'consent' => ['nullable'],
@@ -537,6 +791,74 @@ class ReferController extends Controller
             return back()->withErrors(['phone' => 'Enter a valid US phone number.'])->withInput();
         }
 
+        // SELF-01 (owner-findings fix wave): the self-referral
+        // rule is stated the second the number is entered, at
+        // this step, not after the friend has verified. The
+        // comparison is the completion backstop's own: both
+        // sides are the usPhone() E.164 form, so punctuation
+        // and formatting cannot slip past it. The completion
+        // check in EnrollmentService stays; it is the fraud
+        // backstop behind this early surface.
+        if ($phone === $membership->customer->phone_e164) {
+            return back()->withErrors(['phone' => 'You cannot refer yourself. Please share your link with a friend instead.'])->withInput();
+        }
+
+        // U9 (launch-readiness F-4): the business's-own-number
+        // stop fires here too, at the form, not only at
+        // completion after a code was sent to the business's
+        // phone. The comparison is the completion backstop's own
+        // (EnrollmentService::completeClaim): the entered E.164
+        // against the business's users' phone numbers. The error
+        // text is the flow/self owner_phone page's designed words
+        // verbatim. The completion check stays as the backstop.
+        if ($business->users()->where('phone_e164', $phone)->exists()) {
+            return back()->withErrors(['phone' => "That is the business's own number. This number belongs to {$business->name}, so no reward can be earned with it. Please use the customer's own mobile number."])->withInput();
+        }
+
+        // U1 (launch-readiness F-1): the claim's consent panel is
+        // the same agreement as the enrollment panel, and it gates
+        // the same way (FIX-02): without it the claim does not
+        // advance and no code is requested, because the code and
+        // the reward texts both ride on this consent. This gate
+        // sits after the SELF-01 refusal so a self-referral still
+        // reads as a self-referral, and before startVerification
+        // so no verification is ever started without consent.
+        if (! $request->boolean('consent')) {
+            return back()->withErrors(['consent' => 'Please agree to the texts so we can send your code and your reward updates.'])->withInput();
+        }
+
+        // BREAKER D-1 claim-step gate (2026-10-29): a pair whose
+        // claim the owner already denied is terminal — the friend
+        // is taken straight to that referral's own page (its
+        // unavailable state) and no verification code is burned on
+        // a claim that can never complete. The completion backstop
+        // (EnrollmentService::completeClaim's governing-referral
+        // resolution) stays authoritative. A REDEEMED pair is
+        // deliberately NOT shortcut here: the visit page is a
+        // bearer page, so it is only ever reached after the phone
+        // verifies, where completeClaim resolves to it.
+        $claimant = Customer::query()->where('phone_e164', $phone)->first();
+
+        if ($claimant !== null) {
+            $pairStates = Referral::query()
+                ->where('business_id', $business->id)
+                ->where('referred_customer_id', $claimant->id)
+                ->pluck('state');
+
+            if (! $pairStates->contains(Referral::STATE_REDEEMED) && ! $pairStates->contains(Referral::STATE_PENDING)) {
+                $deniedReferral = Referral::query()
+                    ->where('business_id', $business->id)
+                    ->where('referred_customer_id', $claimant->id)
+                    ->where('state', Referral::STATE_VOIDED)
+                    ->whereNotNull('redeem_token_encrypted')
+                    ->first();
+
+                if ($deniedReferral !== null) {
+                    return redirect()->route('refer.redeem.page', ['token' => $deniedReferral->redeem_token_encrypted]);
+                }
+            }
+        }
+
         [$flow, $newToken] = $this->flowFor($request);
 
         if ($flow === null) {
@@ -548,7 +870,7 @@ class ReferController extends Controller
             'business_id' => $business->id,
             'referrer_membership_id' => $membership->id,
             'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
+            'last_name' => $data['last_name'] ?? '',
             'phone_e164' => $phone,
             'email' => $data['email'] ?? null,
             'consent' => $request->boolean('consent'),
@@ -570,20 +892,162 @@ class ReferController extends Controller
         $referral->applyExpiry();
         $business = $referral->business;
 
+        // The demo business's tokens (Amendment 63) live only
+        // inside the demo guard; on the real surfaces they
+        // answer exactly as a bad link does.
+        if ($business->isDemo()) {
+            return $this->resolutionFailure($request, null, 'bad_link', 'unknown_token');
+        }
+
+        // FE-CANCEL-01 (C-03): a referral voided BY THE ENDING
+        // (its referral_voided event carries the account_closed
+        // reason) gets the ended wording, distinct from a denied
+        // or otherwise voided referral's generic unavailable
+        // state, whose shipped wording stands.
+        $voidedByEnding = $referral->state === Referral::STATE_VOIDED
+            && \App\Models\ReferralEvent::query()
+                ->where('referral_id', $referral->id)
+                ->where('event_type', 'referral_voided')
+                ->where('metadata->reason', 'account_closed')
+                ->exists();
+
         $state = match (true) {
+            $voidedByEnding => 'ended',
             $referral->state === Referral::STATE_REDEEMED => 'redeemed',
             $referral->state === Referral::STATE_EXPIRED => 'expired',
-            $referral->state === Referral::STATE_PENDING && $referral->hold => 'held',
+            // Option B (2026-10-28): a pending referral has no
+            // friend-facing held state — converted flags hold the
+            // referrer's reward at redemption, never this page.
             $referral->state === Referral::STATE_PENDING => 'show',
             default => 'unavailable',
         };
 
         $activeQr = $business->activeQrCode();
 
+        // RS-N2 (Train B, Amendment 39): the contagion prime, on
+        // the friend's REDEEMED receipt only. Every clause is
+        // true in exactly that state: this person came in through
+        // a friend, completed a visit, and holds their own share
+        // link (minted at claim completion). The payload is a
+        // single nullable array so the template cannot
+        // half-render it, and it is built only when the flow is
+        // still live: a business paused or closed after the visit
+        // keeps its receipt but drops the invitation, whose link
+        // would land on the not_active page. A redeemed referral
+        // whose friend has no membership (minted outside the
+        // claim flow) has no link to prime with and gets none.
+        $prime = null;
+
+        if ($state === 'redeemed' && $this->flowIsLive($business)) {
+            $friendMembership = Membership::query()
+                ->where('business_id', $business->id)
+                ->where('customer_id', $referral->referred_customer_id)
+                ->first();
+            $friendShareToken = $friendMembership?->plainShareToken();
+            $referrerFirstName = $referral->referrerMembership?->customer?->first_name;
+
+            if ($friendMembership !== null && $friendShareToken !== null && $referrerFirstName !== null) {
+                $friendHeadline = $business->friendRewardHeadline();
+                // OR-1 §2.3: the referrer's effective reward from
+                // the ONE resolver, as on the share page.
+                $referrerReward = $business->effectiveReferrerRewardText();
+
+                $prime = [
+                    'referrerFirstName' => $referrerFirstName,
+                    'shareUrl' => route('refer.friend', ['token' => $friendShareToken]),
+                    'shareMessage' => $business->friend_reward_text !== null
+                        ? ($referral->referredCustomer?->fullName() ?? 'A friend').' invited you to get your Reward: '.$business->friend_reward_text.' at '.$business->name.'. Click here to claim the reward!'
+                        : ($referral->referredCustomer?->fullName() ?? 'A friend').' invited you to '.$business->name.'. Click here to claim the reward!',
+                    // The friend side composes through
+                    // friendRewardHeadline() so the first-visit
+                    // phrase can never double up against a reward
+                    // text that already carries it (the F-2 rule).
+                    // OR-1 §1.3 B4 (ORS-04): a UNIFIED business
+                    // primes with the one shared value — composed
+                    // from the normalized reward text, NOT the
+                    // friend headline, whose "on your first
+                    // visit" suffix would be false for the
+                    // referrer side of the "you both" claim. A
+                    // SPLIT business keeps the shipped composed
+                    // line byte-identically.
+                    'offerLine' => $friendHeadline === null
+                        ? 'Share your link with a friend, and you both get rewarded when they visit.'
+                        : ($business->rewardsAreSplit()
+                            ? 'Share your link with a friend. They get '.rtrim($friendHeadline, '.').', and you get '.rtrim(trim((string) $referrerReward), '.').' when they visit.'
+                            : 'Share your link with a friend. You both get '.trim(rtrim(trim((string) $business->rewardText()), '.')).' when they visit.'),
+                ];
+            }
+        }
+
+        // ID-08 M1 (idea-08-design-pass.md Section 7.3): the
+        // prime impression row. The shipped prime wrote nothing,
+        // so a flat activation readout could not distinguish
+        // "never seen" from "seen and ignored". Rule, exact:
+        // on this render, state redeemed WITH a non-null prime
+        // payload, write one prime_shown row in the existing
+        // append-only referral_events log (no migration, no new
+        // column; referral_id and membership_id are the log's
+        // keys, the review_ask_shown pattern) if and only if no
+        // prime_shown row already exists for this referral id.
+        // Receipt re-views therefore record exactly once. This
+        // is instrumentation only: it moves no money, changes
+        // no reward state, and sends nothing, and a failure in
+        // it must never break the receipt (the ID-05 discipline
+        // below), so the write is guarded.
+        if ($prime !== null) {
+            try {
+                $alreadyShown = \App\Models\ReferralEvent::query()
+                    ->where('referral_id', $referral->id)
+                    ->where('event_type', 'prime_shown')
+                    ->exists();
+
+                if (! $alreadyShown) {
+                    \App\Models\ReferralEvent::record(
+                        'prime_shown',
+                        'customer',
+                        $business,
+                        $referral,
+                        null,
+                        $friendMembership ?? null,
+                    );
+                }
+            } catch (\Throwable) {
+                // Measurement defaults to absent; the receipt
+                // renders exactly as it would have.
+            }
+        }
+
+        // ID-05 (Amendment 48): the deliberate review ask, on
+        // the redeemed receipt only, decided by the ONE
+        // eligibility service. Holds and flow state are never
+        // suppressors: this runs for every redeemed receipt,
+        // prime or no prime, live flow or paused. A failure in
+        // the ask machinery defaults the ask to ABSENT — a
+        // broken ask must never break a receipt.
+        $reviewAsk = false;
+        if ($state === 'redeemed') {
+            try {
+                $friendMembership = Membership::query()
+                    ->where('business_id', $business->id)
+                    ->where('customer_id', $referral->referred_customer_id)
+                    ->first();
+                $decision = \App\Services\Flow\ReviewAsk::evaluate($business, $friendMembership, $referral);
+                $reviewAsk = $decision['render'];
+                if ($reviewAsk && $decision['record'] && $friendMembership !== null) {
+                    \App\Services\Flow\ReviewAsk::recordShown($business, $friendMembership, $referral, 'redeem');
+                }
+            } catch (\Throwable) {
+                $reviewAsk = false;
+            }
+        }
+
         return response()->view('flow.redeem', [
             'business' => $business,
             'referral' => $referral,
             'state' => $state,
+            'prime' => $prime,
+            'reviewAsk' => $reviewAsk,
+            'reviewClickUrl' => route('refer.redeem.review', ['token' => $token]),
             'qrUrl' => route('refer.redeem.qr', ['token' => $token]),
             'token' => $token,
             // The expired state's one exit (design R7): back to the
@@ -599,6 +1063,76 @@ class ReferController extends Controller
         return $this->tokenQrImage('redeem', $token);
     }
 
+    /**
+     * ID-05 (Amendment 48): the review ask's click route for
+     * the redeem receipt. The tap is recorded once per receipt
+     * (measurement second), then the friend is redirected to
+     * the business's CURRENT Google review link — re-read live
+     * at tap time, never a stored snapshot. If the record is
+     * no longer completed or the link is gone, the tap falls
+     * back to the receipt page: never an error page, never a
+     * stale URL.
+     */
+    public function redeemReviewRedirect(Request $request, string $token): \Illuminate\Http\RedirectResponse
+    {
+        $referral = Referral::query()
+            ->where('redeem_token_hash', OpaqueToken::hash($token))
+            ->first();
+
+        if ($referral === null || $referral->state !== Referral::STATE_REDEEMED) {
+            return redirect()->route('refer.redeem.page', ['token' => $token]);
+        }
+
+        $business = $referral->business;
+        $url = $business->google_review_url;
+
+        if ($url === null || trim((string) $url) === '') {
+            return redirect()->route('refer.redeem.page', ['token' => $token]);
+        }
+
+        try {
+            $membership = Membership::query()
+                ->where('business_id', $business->id)
+                ->where('customer_id', $referral->referred_customer_id)
+                ->first();
+            \App\Services\Flow\ReviewAsk::recordClicked($business, $membership, $referral, 'redeem');
+        } catch (\Throwable) {
+            // The friend's tap is honoured first; measurement second.
+        }
+
+        return redirect()->away($url);
+    }
+
+    /**
+     * ID-05: the click route for the claim receipt; same
+     * contract as the redeem leg.
+     */
+    public function claimReviewRedirect(Request $request, string $token): \Illuminate\Http\RedirectResponse
+    {
+        $reward = Reward::query()
+            ->where('claim_token_hash', OpaqueToken::hash($token))
+            ->first();
+
+        if ($reward === null || $reward->state !== Reward::STATE_CLAIMED) {
+            return redirect()->route('refer.claim.page', ['token' => $token]);
+        }
+
+        $business = $reward->business;
+        $url = $business->google_review_url;
+
+        if ($url === null || trim((string) $url) === '') {
+            return redirect()->route('refer.claim.page', ['token' => $token]);
+        }
+
+        try {
+            \App\Services\Flow\ReviewAsk::recordClicked($business, $reward->membership, $reward, 'claim');
+        } catch (\Throwable) {
+            // The tap is honoured first; measurement second.
+        }
+
+        return redirect()->away($url);
+    }
+
     public function claimPage(Request $request, string $token): Response
     {
         $reward = Reward::query()
@@ -612,12 +1146,29 @@ class ReferController extends Controller
         $reward->applyVesting();
         $business = $reward->business;
 
+        if ($business->isDemo()) {
+            return $this->resolutionFailure($request, null, 'bad_link', 'unknown_token');
+        }
+
         // The closure wind-down end (spec Section 5.5): once the
         // 30 days have run out the reward expires and its claim
         // link returns the same generic page as a bad link.
         $reward->applyClosureExpiry();
+        // M-4: the reward's own 12-month date applies on this
+        // read too. The two expiries answer differently (pass
+        // Section 2.7): closure-expired (the business itself is
+        // gone past its window) keeps the generic page below,
+        // while a time-expired reward at a LIVING business falls
+        // through to the named expired state, which owes the
+        // customer the date it ran out. Two-key fix F3: a legacy
+        // expired row with NO stamped date has no date to name,
+        // so it takes the same generic page (mirroring the staff
+        // guard from c1b4ebc) instead of formatting a null date
+        // in the named branch and 500ing.
+        $reward->applyTimeExpiry();
 
-        if ($reward->state === Reward::STATE_EXPIRED) {
+        if ($reward->state === Reward::STATE_EXPIRED
+            && ($business->closureWindowEnded() || $reward->expires_at === null)) {
             return $this->resolutionFailure($request, $business, 'bad_link', 'expired_token');
         }
 
@@ -637,15 +1188,79 @@ class ReferController extends Controller
         $state = match (true) {
             $reward->state === Reward::STATE_CLAIMED => 'claimed',
             $reward->state === Reward::STATE_DENIED => 'denied',
+            // M-4 named expired state: reachable only for a
+            // time-expired reward (closure-expired returned the
+            // generic page above).
+            $reward->state === Reward::STATE_EXPIRED => 'expired',
             $reward->hold => 'held',
             $reward->state === Reward::STATE_AVAILABLE => 'ready',
             default => 'waiting',
         };
 
+        // ID-05: the same eligibility service on the claimed
+        // receipt, sharing the (business, customer) cooldown
+        // clock with the redeem surface.
+        $reviewAsk = false;
+        if ($state === 'claimed') {
+            try {
+                $decision = \App\Services\Flow\ReviewAsk::evaluate($business, $reward->membership, $reward);
+                $reviewAsk = $decision['render'];
+                if ($reviewAsk && $decision['record'] && $reward->membership !== null) {
+                    \App\Services\Flow\ReviewAsk::recordShown($business, $reward->membership, $reward, 'claim');
+                }
+            } catch (\Throwable) {
+                $reviewAsk = false;
+            }
+        }
+
+        // ID-07 [RR-CP-01] (Amendment 51): the reshare block on
+        // the READY state only, below the QR in the template.
+        // A single nullable payload so the template cannot
+        // half-render it. Gates mirror the SMS appendage's
+        // RR-GATE in render form: the flow is live right now
+        // (flowIsActive at render: a ready reward on a paused
+        // business keeps its QR and loses the block) and the
+        // membership's share link is live (not removed, token
+        // active: TS3-12). No cap here: the page is pull-only,
+        // rendered on the referrer's own visit to their own
+        // page, and it is the only reshare surface for
+        // opted-out referrers, who receive no text at all.
+        $reshare = null;
+        if ($state === 'ready' && $business->flowIsActive()) {
+            $membership = $reward->membership;
+            $shareToken = $membership?->plainShareToken();
+
+            if ($membership !== null
+                && $membership->removed_at === null
+                && $membership->share_token_state === 'active'
+                && $shareToken !== null
+                && $shareToken !== '') {
+                $reshare = [
+                    // [F2R-03] for the came-as-a-friend cohort
+                    // (ID-08 Section 7.2 provenance join), the
+                    // block's first line when present.
+                    'cameAsFriend' => Referral::query()
+                        ->where('business_id', $business->id)
+                        ->where('referred_customer_id', $membership->customer_id)
+                        ->where('state', Referral::STATE_REDEEMED)
+                        ->exists(),
+                    'shareUrl' => route('refer.friend', ['token' => $shareToken]),
+                    // Composed exactly as the share page composes
+                    // its message (ReferController::share).
+                    'shareMessage' => $business->friend_reward_text !== null
+                        ? $membership->customer->fullName().' invited you to get your Reward: '.$business->friend_reward_text.' at '.$business->name.'. Click here to claim the reward!'
+                        : $membership->customer->fullName().' invited you to '.$business->name.'. Click here to claim the reward!',
+                ];
+            }
+        }
+
         return response()->view('flow.claim', [
             'business' => $business,
             'reward' => $reward,
             'state' => $state,
+            'reviewAsk' => $reviewAsk,
+            'reshare' => $reshare,
+            'reviewClickUrl' => route('refer.claim.review', ['token' => $token]),
             'showAvailableDate' => $inOwnSession,
             'qrUrl' => route('refer.claim.qr', ['token' => $token]),
         ]);
@@ -700,7 +1315,7 @@ class ReferController extends Controller
      * @return array{0: FlowSession, 1: ?string} the session and the
      *   new cookie token when one was minted
      */
-    private function beginFlow(Request $request, Business $business): array
+    private function beginFlow(Request $request, Business $business, ?QrCode $qr = null): array
     {
         $flow = $this->flows->fromRequest($request);
 
@@ -708,6 +1323,10 @@ class ReferController extends Controller
             [$flow, $token] = $this->flows->start([
                 'qr_business_id' => $business->id,
                 'scan_business_id' => $business->id,
+                // QRK-05: which placement's code brought the
+                // customer here, for the scan event's metadata.
+                // Friend-link arrivals pass no code and carry none.
+                'qr_code_id' => $qr?->id,
             ]);
 
             return [$flow, $token];
@@ -717,7 +1336,12 @@ class ReferController extends Controller
             $this->flows->put($flow, [
                 'qr_business_id' => $business->id,
                 'scan_business_id' => $business->id,
+                'qr_code_id' => $qr?->id,
             ]);
+        } elseif ($qr !== null) {
+            // Same store, a different spot's code: the scan this
+            // flow produces belongs to the code just scanned.
+            $this->flows->put($flow, ['qr_code_id' => $qr->id]);
         }
 
         return [$flow, null];
@@ -871,12 +1495,32 @@ class ReferController extends Controller
 
     private function message(string $state, ?Business $business = null, ?int $status = null, ?string $returnUrl = null): Response
     {
+        // Activation redesign (census C-34; design pass
+        // Section 4.3): the allowance pause gets its OWN friend
+        // page. A not-active failure whose block reason is the
+        // exhausted allowance renders 'paused_for_card' — the
+        // business named, temporary by construction, and
+        // already-claimed rewards stated still good at the
+        // counter — and never the generic not-active page.
+        // Every other cause keeps the shipped page. The branch
+        // lives here, in the one message() path, so landing,
+        // enroll, friend landing, and the claim endpoints can
+        // never drift apart.
+        if ($state === 'not_active' && $business !== null
+            && $business->flowBlockReason() === 'allowance_exhausted') {
+            $state = 'paused_for_card';
+        }
+
         // The does-not-resolve family answers 404 (spec Section 3
-        // Step 1, inventory REF-LAND-02): unknown, revoked, and
-        // not-yet-active codes are indistinguishable and absent.
-        // Past the failed-resolution budget the same body answers
-        // 429 instead (Section 10.4).
-        $status ??= in_array($state, ['inactive_qr', 'not_active', 'bad_link'], true) ? 404 : 200;
+        // Step 1, inventory REF-LAND-02): unknown and revoked codes
+        // stay indistinguishable and absent. A resolved business
+        // whose program is not active is different (FE-INACTIVE-01):
+        // it gets the named not-active page, which still answers
+        // 404. Past the failed-resolution budget the same body
+        // answers 429 instead (Section 10.4). The allowance-paused
+        // page keeps the same 404 status for resolution-guard
+        // consistency (design pass Section 4.3).
+        $status ??= in_array($state, ['inactive_qr', 'not_active', 'bad_link', 'paused_for_card'], true) ? 404 : 200;
 
         return response()->view('flow.message', [
             'state' => $state,
@@ -915,11 +1559,15 @@ class ReferController extends Controller
      */
     private function tokenQrImage(string $kind, string $token): Response
     {
-        $found = OpaqueToken::isWellFormed($token) && (
-            $kind === 'redeem'
-                ? Referral::query()->where('redeem_token_hash', OpaqueToken::hash($token))->exists()
-                : Reward::query()->where('claim_token_hash', OpaqueToken::hash($token))->exists()
-        );
+        // A demo token's QR (Amendment 63) is served only by the
+        // demo surface; here it is a 404 like any unknown token.
+        $model = OpaqueToken::isWellFormed($token)
+            ? ($kind === 'redeem'
+                ? Referral::query()->where('redeem_token_hash', OpaqueToken::hash($token))->first()
+                : Reward::query()->where('claim_token_hash', OpaqueToken::hash($token))->first())
+            : null;
+
+        $found = $model !== null && ! $model->business->isDemo();
 
         if (! $found) {
             abort(404);

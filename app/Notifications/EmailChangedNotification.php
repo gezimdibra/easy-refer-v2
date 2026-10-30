@@ -25,10 +25,23 @@ class EmailChangedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        // EU-S2: custom shell view; lines kept as the content record.
+        $lines = [
+            'The email address on your Easy Refer owner account was changed to '.$this->newEmail.'.',
+            'The new address is not verified yet. Verify it so your receipts and password resets reach you.',
+            'If this was not you, contact support right away so we can help secure your account.',
+        ];
+
+        $mail = (new MailMessage)
             ->subject('Your Easy Refer account email was changed')
-            ->line('The email address on your Easy Refer owner account was changed to '.$this->newEmail.'.')
-            ->line('The new address must be verified before your public QR code and billing can resume.')
-            ->line('If this was not you, contact support right away so we can help secure your account.');
+            ->view('emails.notifications.notice', [
+                'headline' => 'Your Easy Refer account email was changed',
+                'lines' => $lines,
+            ]);
+        foreach ($lines as $line) {
+            $mail->line($line);
+        }
+
+        return $mail;
     }
 }

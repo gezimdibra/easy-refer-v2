@@ -34,6 +34,16 @@ class SendFriendLinkSms implements ShouldQueue
             return;
         }
 
+        // OB-06 (Amendment 45): the invite is re-checked at
+        // handle time. A referral that has left pending
+        // (redeemed, voided, expired) or is held for review no
+        // longer has a claim to invite the friend to; the send
+        // is skipped silently, as the job's other guards do.
+        $referral->applyExpiry();
+        if ($referral->state !== Referral::STATE_PENDING || $referral->hold) {
+            return;
+        }
+
         $friend = $referral->referredCustomer;
         $business = $referral->business;
 

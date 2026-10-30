@@ -27,13 +27,31 @@ class SmsCampaign extends Model
     /**
      * @var list<string>
      */
+    /** The win-back segment scope (ID-03, Amendment 46). */
+    public const SEGMENT_LAPSED_REFERRERS = 'lapsed_referrers';
+
+    /** The top-referrer recognition provenance (ID-02, Amendment 48). */
+    public const PROVENANCE_TOP_REFERRER = 'top_referrer';
+
     protected $fillable = [
         'business_id',
         'body',
+        'audience_segment',
+        'provenance',
+        'recipient_membership_id',
+        'standings_month',
+        'standings_count',
+        'standings_form',
+        'body_customized',
+        'origin',
+        'winback_exempt_campaign_id',
         'recipient_count',
         'segment_count',
         'metered_cents',
         'not_sent_count',
+        'recent_spacing_skipped_count',
+        'recent_cap_skipped_count',
+        'winback_cooldown_skipped_count',
         'status',
         'created_by',
         'sent_at',
@@ -49,6 +67,13 @@ class SmsCampaign extends Model
             'segment_count' => 'integer',
             'metered_cents' => 'integer',
             'not_sent_count' => 'integer',
+            'recent_spacing_skipped_count' => 'integer',
+            'recent_cap_skipped_count' => 'integer',
+            'winback_cooldown_skipped_count' => 'integer',
+            'winback_exempt_campaign_id' => 'integer',
+            'recipient_membership_id' => 'integer',
+            'standings_count' => 'integer',
+            'body_customized' => 'boolean',
             'sent_at' => 'datetime',
         ];
     }
@@ -66,5 +91,16 @@ class SmsCampaign extends Model
     public function recipients(): HasMany
     {
         return $this->hasMany(SmsCampaignRecipient::class, 'campaign_id');
+    }
+
+    /** The one person a recognition campaign may send to (ID-02). */
+    public function recipientMembership(): BelongsTo
+    {
+        return $this->belongsTo(Membership::class, 'recipient_membership_id');
+    }
+
+    public function isRecognition(): bool
+    {
+        return $this->provenance === self::PROVENANCE_TOP_REFERRER;
     }
 }

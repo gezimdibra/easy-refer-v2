@@ -38,6 +38,14 @@ class SmsCampaignRecipient extends Model
 
     public const SKIP_DAILY_CAP = 'daily_cap';
 
+    /** F1 (Amendment 45): the job-time recency re-check's skip. */
+    public const SKIP_RECENTLY_TEXTED = 'recently_texted';
+
+    /** ID-03 (Amendment 46): the job-time segment re-checks. */
+    public const SKIP_NO_LONGER_LAPSED = 'no_longer_lapsed';
+
+    public const SKIP_WINBACK_COOLDOWN = 'winback_cooldown';
+
     /**
      * @var list<string>
      */
@@ -54,6 +62,7 @@ class SmsCampaignRecipient extends Model
         'segments',
         'amount_cents',
         'billing_record_id',
+        'written_off_at',
     ];
 
     /**
@@ -64,6 +73,7 @@ class SmsCampaignRecipient extends Model
         return [
             'segments' => 'integer',
             'amount_cents' => 'integer',
+            'written_off_at' => 'datetime',
         ];
     }
 

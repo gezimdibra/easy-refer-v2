@@ -30,11 +30,38 @@ class BillingCardController extends Controller
 {
     public function store(Request $request, CardOnFileService $cards): RedirectResponse
     {
+        // FE-CANCEL-01 (GAP 3 extension): while closed, adding
+        // a first card is gated exactly like replace (see the
+        // middleware note): writable only while a balance is
+        // owed, so an ended owner who never had a card can
+        // still pay. Open businesses are unaffected.
+        $business = $request->user()->business;
+
+        if ($business->isClosed() && ! $business->hasOutstandingBillingBalance()) {
+            return redirect()
+                ->route('dashboard')
+                ->withErrors(['account' => 'Your program has ended, so this cannot be changed. You can still view your history.']);
+        }
+
         return $this->save($request, $cards);
     }
 
     public function replace(Request $request, CardOnFileService $cards): RedirectResponse
     {
+        // FE-CANCEL-01 (GAP 3): while a business is closed, card
+        // replace is writable ONLY while a balance is owed (the
+        // middleware admits the route; the balance condition
+        // lives here). A settled ended account has no reason to
+        // touch its card, and the attempt gets the same closed
+        // redirect every other refused write gets.
+        $business = $request->user()->business;
+
+        if ($business->isClosed() && ! $business->hasOutstandingBillingBalance()) {
+            return redirect()
+                ->route('dashboard')
+                ->withErrors(['account' => 'Your program has ended, so this cannot be changed. You can still view your history.']);
+        }
+
         return $this->save($request, $cards);
     }
 

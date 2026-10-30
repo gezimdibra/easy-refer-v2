@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendFriendLinkSms;
 use App\Models\AuditLog;
+use App\Models\BillingRecord;
+use App\Models\Business;
 use App\Models\Referral;
 use App\Models\ReferralEvent;
 use App\Models\SmsMessage;
+use App\Services\Billing\VisitValuation;
 use App\Support\HoldReasons;
 use App\Support\OpaqueToken;
+use App\Support\ReferralFeeLine;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -51,7 +55,11 @@ class ReferralsController extends Controller
         // not whatever the last sweeper left behind.
         Referral::applyExpiryForBusiness($business);
 
-        $base = Referral::query()->where('business_id', $business->id);
+        // Demo double exclusion (A-18 Finding 3): business_id
+        // scoping to the owner's own business is the flag leg
+        // (the demo business has no owner account), and the
+        // helper adds the source stamp leg on top.
+        $base = \App\Support\DemoExclusion::referrals(Referral::query()->where('business_id', $business->id));
 
         $counts = [
             'all' => (clone $base)->count(),
@@ -70,7 +78,7 @@ class ReferralsController extends Controller
         ];
 
         $referrals = $base
-            ->with(['referrerMembership.customer', 'referredCustomer', 'reward'])
+            ->with(['referrerMembership.customer', 'referredCustomer', 'reward', 'reward.business', 'billingEvent'])
             ->when($filter === 'held', fn ($query) => $query->where('hold', true))
             ->when(isset($stateForFilter[$filter]), fn ($query) => $query->where('state', $stateForFilter[$filter]))
             ->orderByDesc('created_at')
@@ -91,6 +99,10 @@ class ReferralsController extends Controller
             'filter' => $filter,
             'filters' => self::FILTERS,
             'counts' => $counts,
+            // RS2-1 (Amendment 44): one fee line per referral on
+            // this page, from ONE settlement walk for the whole
+            // request — never a walk per row.
+            'feeLines' => $this->feeLines($business, $referrals->getCollection()->all()),
         ]);
     }
 
@@ -100,7 +112,7 @@ class ReferralsController extends Controller
         abort_unless($referral->business_id === $business->id, 404);
 
         $referral->applyExpiry();
-        $referral->load(['referrerMembership.customer', 'referredCustomer', 'reward']);
+        $referral->load(['referrerMembership.customer', 'referredCustomer', 'reward', 'billingEvent']);
 
         $events = ReferralEvent::query()
             ->where('referral_id', $referral->id)
@@ -111,7 +123,11 @@ class ReferralsController extends Controller
             'business' => $business,
             'referral' => $referral,
             'events' => $events,
-            'holdReasons' => $referral->hold ? HoldReasons::sentences($referral->hold_rules ?? []) : [],
+            // RS2-1 (Amendment 44): the detail fee line renders
+            // for EVERY referral state (the list omits the
+            // no-fee states; the detail carries the full truth).
+            'feeLine' => $this->feeLines($business, [$referral])[$referral->id]['detail'],
+            'holdReasons' => $referral->hold ? HoldReasons::sentencesForHold($referral->hold_rules ?? []) : [],
             // The current redeem link, shown to the owner so a
             // referral whose friend was never texted the link is
             // never stranded (REFL-08). Pending referrals only:
@@ -120,6 +136,76 @@ class ReferralsController extends Controller
                 ? route('refer.redeem.page', ['token' => $referral->redeem_token_encrypted])
                 : null,
         ]);
+    }
+
+    /**
+     * RS2-1 fee lines for a set of referrals (Amendment 44).
+     * The settlement walk runs at most once per call, and only
+     * when some referral actually carries a billing event; the
+     * claiming records' states load in one query. Each line is
+     * ReferralFeeLine's, keyed by referral id.
+     *
+     * @param  list<Referral>  $referrals
+     * @return array<int, array{detail: string, list: ?string}>
+     */
+    private function feeLines(Business $business, array $referrals): array
+    {
+        $hasEvents = collect($referrals)->contains(
+            fn (Referral $referral) => $referral->billingEvent !== null,
+        );
+
+        $settled = $hasEvents
+            ? (new VisitValuation)->settle($business)['settled']
+            : [];
+
+        $recordIds = collect($referrals)
+            ->map(fn (Referral $referral) => $referral->billingEvent?->billing_record_id)
+            ->filter()
+            ->unique()
+            ->all();
+
+        $recordStates = $recordIds === []
+            ? []
+            : BillingRecord::query()->whereIn('id', $recordIds)->pluck('state', 'id')->all();
+
+        // TS3-01 (Sweep-03, Amendment 52): the void reason for
+        // voided rows, in one query: closure's writer records
+        // a referral_voided event with reason account_closed;
+        // the denial writer records review_deny instead. Only
+        // the closure sub-state takes the no-cause fee line.
+        $voidedIds = collect($referrals)
+            ->filter(fn (Referral $referral) => $referral->state === Referral::STATE_VOIDED)
+            ->map(fn (Referral $referral) => $referral->id)
+            ->all();
+
+        $closureVoidedIds = $voidedIds === []
+            ? []
+            : ReferralEvent::query()
+                ->whereIn('referral_id', $voidedIds)
+                ->where('event_type', 'referral_voided')
+                ->get()
+                ->filter(fn (ReferralEvent $event) => ($event->metadata['reason'] ?? null) === 'account_closed')
+                ->map(fn (ReferralEvent $event) => $event->referral_id)
+                ->all();
+
+        $lines = [];
+
+        foreach ($referrals as $referral) {
+            $event = $referral->billingEvent;
+
+            $lines[$referral->id] = ReferralFeeLine::present(
+                $referral,
+                $event,
+                $event !== null ? ($settled[$event->id] ?? null) : null,
+                $event !== null && $event->billing_record_id !== null
+                    ? ($recordStates[$event->billing_record_id] ?? null)
+                    : null,
+                $business,
+                in_array($referral->id, $closureVoidedIds, true),
+            );
+        }
+
+        return $lines;
     }
 
     public function regenerate(Request $request, Referral $referral): RedirectResponse

@@ -24,10 +24,26 @@ class PasswordChangedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        // EU-S2: custom shell view; lines kept as the content record.
+        $lines = [
+            'The password for your Easy Refer owner account was just changed.',
+            'If this was not you, sign in and change your password right away, then contact support so we can help secure your account.',
+        ];
+        $url = route('login');
+
+        $mail = (new MailMessage)
             ->subject('Your Easy Refer password was changed')
-            ->line('The password for your Easy Refer owner account was just changed.')
-            ->line('If this was not you, sign in and change your password right away, then contact support so we can help secure your account.')
-            ->action('Sign in', route('login'));
+            ->action('Sign in', $url)
+            ->view('emails.notifications.notice', [
+                'headline' => 'Your Easy Refer password was changed',
+                'lines' => $lines,
+                'url' => $url,
+                'actionLabel' => 'Sign in',
+            ]);
+        foreach ($lines as $line) {
+            $mail->line($line);
+        }
+
+        return $mail;
     }
 }

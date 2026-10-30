@@ -66,10 +66,21 @@ class UndoController extends Controller
 
     private function restoreRewardTexts(Request $request, $business, array $data): void
     {
-        $business->forceFill([
+        // OR-1 §2.4/E5: the snapshot carries the split flag and
+        // all three restore together — restoring two texts
+        // without the flag could resurrect them under the wrong
+        // configuration. Snapshots minted before OR-1 carry no
+        // flag; those restore texts only, as they did before.
+        $fill = [
             'friend_reward_text' => $data['friend_reward_text'],
             'referrer_reward_text' => $data['referrer_reward_text'],
-        ])->save();
+        ];
+
+        if (array_key_exists('reward_split', $data)) {
+            $fill['reward_split'] = (bool) $data['reward_split'];
+        }
+
+        $business->forceFill($fill)->save();
 
         AuditLog::write('business.reward_texts_restored', $request->user(), [], $business);
     }

@@ -66,6 +66,10 @@ class MarketingController extends Controller
         // verticals still pass faqSubset() below.
         return view('marketing.home', [
             'plan' => Plan::launch(),
+            // G6 demo (Amendment 63): the demo block renders its
+            // resting line instead of the frame when starts are
+            // paused (the design pass's resting state).
+            'demoResting' => app(\App\Services\Demo\DemoService::class)->resting(),
         ]);
     }
 
@@ -112,6 +116,13 @@ class MarketingController extends Controller
 
         foreach (array_keys(self::VERTICALS) as $vertical) {
             $urls[] = route('vertical', ['vertical' => $vertical]);
+        }
+
+        // B2 (M-6 blog week 1): published posts are public URLs
+        // too. Unpublished posts stay out, exactly as they stay
+        // off the index and 404 at their own address.
+        foreach (Post::query()->whereNotNull('published_at')->orderByDesc('published_at')->get() as $post) {
+            $urls[] = route('blog.post', ['slug' => $post->slug]);
         }
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
@@ -182,8 +193,8 @@ class MarketingController extends Controller
     }
 
     /**
-     * The twelve approved FAQ entries (inventory FAQ-01 to
-     * FAQ-12, in the release 08b S-06 order: money questions
+     * The thirteen approved FAQ entries (inventory FAQ-01 to
+     * FAQ-12 plus M-4's FAQ-13 appended last, in the release 08b S-06 order: money questions
      * together at positions 3 and 4, FAQ-07 last of the original
      * set and FAQ page only), with the pricing answers' amounts
      * interpolated from the plan table and config so the page can
@@ -219,7 +230,7 @@ class MarketingController extends Controller
             ],
             [
                 'q' => 'How much does it cost?',
-                'a' => "Only when a referred friend visits and redeems: {$perVisit}. No monthly fee. First {$free} visits free. Never more than {$cap} a month. Say {$exampleVisits} referred friends visit in a month. That is one {$exampleCharge} charge. In your first month, the first {$free} are free. The same {$exampleVisits} visits cost {$exampleFirstMonth} that month. A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.",
+                'a' => "Only when a referred friend visits and redeems: {$perVisit}. No monthly fee. First {$free} visits free. Never more than {$cap} a month in visit charges. Say {$exampleVisits} referred friends visit in a month. That is one {$exampleCharge} charge. In your first month, the first {$free} are free. The same {$exampleVisits} visits cost {$exampleFirstMonth} that month. A visit counts when a referred friend comes in and uses their reward. We confirm their phone first, and every visit is checked before it counts.",
             ],
             [
                 'q' => 'Is there a setup fee?',
@@ -227,7 +238,7 @@ class MarketingController extends Controller
             ],
             [
                 'q' => 'How do I track referrals?',
-                'a' => 'The owner dashboard shows your referrals, rewards, customers, and campaign results in real time.',
+                'a' => 'The owner dashboard shows your referrals, rewards, customers, and campaign results.',
             ],
             [
                 'q' => 'Is my data secure?',
@@ -235,11 +246,11 @@ class MarketingController extends Controller
             ],
             [
                 'q' => 'Do I need a card to start?',
-                'a' => "Yes. Your QR code turns on once a card is on file. Nothing is charged until after your first {$free} free visits. You can cancel any time before then.",
+                'a' => "No. Your QR code turns on once your friend reward is set, and your first {$free} visits are free with no card at all. After those, your code pauses until a card is on file. Nothing is charged until after your first {$free} free visits. You can cancel any time before then.",
             ],
             [
                 'q' => 'How long does setup take?',
-                'a' => 'Minutes. Sign up in four short steps. Then set your reward, print your QR code, and add your card.',
+                'a' => 'Minutes. Sign up in three short steps. Then set your reward, print your QR code, and add your card.',
             ],
             [
                 'q' => 'Which businesses does Easy Refer fit?',
@@ -251,11 +262,23 @@ class MarketingController extends Controller
             ],
             [
                 'q' => 'How do I cancel?',
-                'a' => 'Close your account any time in Settings, under Account. Billing stops after a final check of your visits. Rewards your customers already earned stay good for 30 days.',
+                // M-4 [M4-FAQ-11]: the branched closure clause —
+                // a reward whose own use-by date falls inside the
+                // 30 days ends on its own date, so the unbranched
+                // sentence would be false for it.
+                'a' => 'End your program any time in Settings, under Account. Your code turns off right away, we charge one final bill for the visits and texts you already have, and rewards your customers already earned stay good for 30 days, or until their own use by date if that comes first. Your account stays open so you can see your history.',
             ],
             [
                 'q' => 'What if a customer never scans the code?',
                 'a' => 'Nothing happens, and nothing is charged. You pay only when a referred friend visits and redeems a reward. Put the code where customers cannot miss it.',
+            ],
+            [
+                // M-4 [M4-FAQ-13]: appended LAST so the subset
+                // indices above never move. The vesting range and
+                // the expiry term render from config, never
+                // hand-typed numbers (the FAQ-03 discipline).
+                'q' => 'How long do rewards last?',
+                'a' => "A friend's reward is given at their visit. The referrer's reward is ready after a short wait, ".(int) config('referrals.vesting_days_min').' to '.(int) config('referrals.vesting_days_max').' days, and stays good for '.(int) config('referrals.reward_expiry_months', 12).' months from the day it is ready. The date is on the reward itself, and we text the referrer a reminder before it runs out.',
             ],
         ];
     }

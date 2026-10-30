@@ -65,4 +65,31 @@ class PaymentMethod extends Model
             ->where('is_default', true)
             ->first();
     }
+
+    /**
+     * The one card-state definition, shared by the Billing page
+     * and the Settings index (SV-02; SA-07, Amendment 35): a
+     * card is expired once its expiry month has passed.
+     */
+    public function isExpired(): bool
+    {
+        return $this->exp_year < now()->year
+            || ($this->exp_year === now()->year && $this->exp_month < now()->month);
+    }
+
+    /**
+     * An unexpired card whose expiry (the end of its expiry
+     * month) lands within 60 days: it warns before it can fail
+     * a charge. An expired card never doubles as "soon".
+     */
+    public function expiresSoon(): bool
+    {
+        if ($this->isExpired()) {
+            return false;
+        }
+
+        return \Illuminate\Support\Carbon::create($this->exp_year, $this->exp_month, 1)
+            ->endOfMonth()
+            ->lessThanOrEqualTo(now()->addDays(60));
+    }
 }

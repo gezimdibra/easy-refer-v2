@@ -22,9 +22,11 @@ class BillingForecastMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    /** @param array{visits: int, chargeOn: string, amount: string}|null $facts */
     public function __construct(
         public Business $business,
         public string $body,
+        public ?array $facts = null,
     ) {}
 
     public function envelope(): Envelope
@@ -37,6 +39,7 @@ class BillingForecastMail extends Mailable
         return new Content(view: 'emails.billing-forecast', with: [
             'business' => $this->business,
             'body' => $this->body,
+            'facts' => $this->facts,
             'billingUrl' => route('settings.billing'),
         ]);
     }

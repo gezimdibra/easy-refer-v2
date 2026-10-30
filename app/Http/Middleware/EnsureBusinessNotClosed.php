@@ -15,6 +15,15 @@ use Symfony\Component\HttpFoundation\Response;
  * alongside auth; it never applies to the staff or customer flows,
  * whose claim completions are governed by the redemption service
  * (minted rewards stay claimable through the wind-down).
+ *
+ * Train A2 (F-06, ruling C-1): review resolution is the owner-side
+ * half of that same wind-down. A reward or referral held at
+ * closure (or held by a wind-down claim) must stay resolvable for
+ * the whole window the close screen promises, so the four Review
+ * release/deny routes are writable when closed. They finish
+ * decisions the open business already owed; each is state-guarded
+ * and audited in the redemption service, and a release after day
+ * 30 is harmless (the reward is closure-expired on its next read).
  */
 class EnsureBusinessNotClosed
 {
@@ -35,6 +44,24 @@ class EnsureBusinessNotClosed
         'settings.account.close',
         'two-factor.challenge.store',
         'verification.send',
+        'reviews.referrals.release',
+        'reviews.referrals.deny',
+        'reviews.rewards.release',
+        'reviews.rewards.deny',
+        // FE-CANCEL-01 (GAP 3): card REPLACE joins the list so
+        // an ended owner with a balance can put a working card
+        // on the account. The balance condition itself is
+        // enforced in BillingCardController (the middleware
+        // cannot express it); card REMOVE never joins, so a
+        // card stays trapped on file while money is owed.
+        'settings.billing.card.replace',
+        // GAP 3 extension (build deviation, recorded): card
+        // STORE joins under the same owed gate, for the ended
+        // owner who never had a card (allowance-era balance).
+        // Without it the E-10 line "you can update your card
+        // any time in Settings, under Billing" would be false
+        // for exactly the no-card balance case.
+        'settings.billing.card.store',
     ];
 
     public function handle(Request $request, Closure $next): Response
@@ -49,7 +76,7 @@ class EnsureBusinessNotClosed
         ) {
             return redirect()
                 ->route('dashboard')
-                ->withErrors(['account' => 'Your account is closed, so this cannot be changed. You can still view your history.']);
+                ->withErrors(['account' => 'Your program has ended, so this cannot be changed. You can still view your history.']);
         }
 
         return $next($request);
